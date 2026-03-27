@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,12 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -19,11 +23,16 @@ interface Guide {
   description: string;
   color: string;
   icon: string;
+  gender: string;
+  personality: string;
+  voice_id: string;
 }
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  hasAudio?: boolean;
+  audioBase64?: string;
 }
 
 const guides: Guide[] = [
@@ -33,6 +42,9 @@ const guides: Guide[] = [
     description: 'Passionate and transformative, guides through action',
     color: '#ef4444',
     icon: 'flame',
+    gender: 'masculine',
+    personality: 'passionate, direct, transformative',
+    voice_id: 'TxGEqnHWrfWFTfGW9XjX',
   },
   {
     name: 'Aqua',
@@ -40,6 +52,9 @@ const guides: Guide[] = [
     description: 'Intuitive and healing, guides through emotion',
     color: '#3b82f6',
     icon: 'water',
+    gender: 'feminine',
+    personality: 'intuitive, healing, emotionally wise',
+    voice_id: 'EXAVITQu4vr4xnSDxMaL',
   },
   {
     name: 'Terra',
@@ -47,6 +62,9 @@ const guides: Guide[] = [
     description: 'Grounded and stable, guides through wisdom',
     color: '#10b981',
     icon: 'leaf',
+    gender: 'masculine',
+    personality: 'grounded, practical, stable',
+    voice_id: 'VR6AewLTigWG4xSOukaG',
   },
   {
     name: 'Aether',
@@ -54,23 +72,142 @@ const guides: Guide[] = [
     description: 'Intellectual and free, guides through thought',
     color: '#a855f7',
     icon: 'cloudy',
+    gender: 'feminine',
+    personality: 'intellectual, free-spirited, enlightening',
+    voice_id: 'ThT5KcBeYPX3keUQqHPh',
   },
 ];
 
 export default function SpiritGuides() {
+  const [showBirthdayInput, setShowBirthdayInput] = useState(false);
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
+  const [suggestedGuide, setSuggestedGuide] = useState<Guide | null>(null);
   const [selectedGuide, setSelectedGuide] = useState<Guide | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [playingAudioIndex, setPlayingAudioIndex] = useState<number | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  useEffect(() => {
+    checkBirthdayStored();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
+
+  const checkBirthdayStored = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('user_birthday');
+      if (!stored) {
+        setShowBirthdayInput(true);
+      }
+    } catch (error) {
+      console.error('Error checking birthday:', error);
+    }
+  };
+
+  const submitBirthday = async () => {
+    const month = parseInt(birthMonth);
+    const day = parseInt(birthDay);
+
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/zodiac/element/${month}/${day}`
+      );
+      const data = await response.json();
+
+      await AsyncStorage.setItem(
+        'user_birthday',
+        JSON.stringify({ month, day, zodiac: data.zodiac_sign, element: data.element })
+      );
+
+      const matchedGuide = guides.find((g) => g.name === data.spirit_guide.name);
+      if (matchedGuide) {
+        setSuggestedGuide(matchedGuide);
+      }
+
+      setShowBirthdayInput(false);
+    } catch (error) {
+      console.error('Error submitting birthday:', error);
+    }
+  };
 
   const selectGuide = (guide: Guide) => {
     setSelectedGuide(guide);
+    const pronoun = guide.gender === 'feminine' ? 'her' : 'him';
     setMessages([
       {
         role: 'assistant',
         content: `Greetings, seeker. I am ${guide.name}, guide of ${guide.element}. How may I illuminate your path?`,
       },
     ]);
+    // Auto-play greeting
+    generateAndPlayAudio(`Greetings, seeker. I am ${guide.name}, guide of ${guide.element}. How may I illuminate your path?`, guide.name, 0);
+  };
+
+  const generateAndPlayAudio = async (text: string, guideName: string, messageIndex: number) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: text,
+          guide_name: guideName,
+        }),
+      });
+
+      const data = await response.json();
+
+      // Update message with audio
+      setMessages((prev) =>
+        prev.map((msg, idx) =>
+          idx === messageIndex
+            ? { ...msg, hasAudio: true, audioBase64: data.audio_base64 }
+            : msg
+        )
+      );
+
+      // Play audio
+      await playAudio(data.audio_base64, messageIndex);
+    } catch (error) {
+      console.error('Error generating audio:', error);
+    }
+  };
+
+  const playAudio = async (audioBase64: string, messageIndex: number) => {
+    try {
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+      }
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: `data:audio/mpeg;base64,${audioBase64}` },
+        { shouldPlay: true }
+      );
+
+      soundRef.current = sound;
+      setPlayingAudioIndex(messageIndex);
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setPlayingAudioIndex(null);
+        }
+      });
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      setPlayingAudioIndex(null);
+    }
   };
 
   const sendMessage = async () => {
@@ -93,7 +230,17 @@ export default function SpiritGuides() {
         }),
       });
       const data = await response.json();
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
+
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.response,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // Auto-generate and play audio for response
+      const newMessageIndex = messages.length + 1;
+      generateAndPlayAudio(data.response, selectedGuide.name, newMessageIndex);
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -101,21 +248,95 @@ export default function SpiritGuides() {
     }
   };
 
+  const replayAudio = (message: Message, index: number) => {
+    if (message.audioBase64) {
+      playAudio(message.audioBase64, index);
+    }
+  };
+
+  if (showBirthdayInput) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.birthdayContainer}>
+          <Ionicons name="star" size={80} color="#b794f6" />
+          <Text style={styles.birthdayTitle}>Discover Your Spirit Guide</Text>
+          <Text style={styles.birthdaySubtitle}>
+            Enter your birthday to be paired with the spirit guide of your zodiac element
+          </Text>
+
+          <View style={styles.birthdayInputs}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Month</Text>
+              <TextInput
+                style={styles.birthdayInput}
+                value={birthMonth}
+                onChangeText={setBirthMonth}
+                keyboardType="number-pad"
+                placeholder="MM"
+                placeholderTextColor="#9f7aea"
+                maxLength={2}
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Day</Text>
+              <TextInput
+                style={styles.birthdayInput}
+                value={birthDay}
+                onChangeText={setBirthDay}
+                keyboardType="number-pad"
+                placeholder="DD"
+                placeholderTextColor="#9f7aea"
+                maxLength={2}
+              />
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.submitButton} onPress={submitBirthday}>
+            <Ionicons name="checkmark-circle" size={24} color="#fff" />
+            <Text style={styles.submitButtonText}>Find My Guide</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={() => setShowBirthdayInput(false)}
+          >
+            <Text style={styles.skipButtonText}>Skip for now</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
   if (!selectedGuide) {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.selectionContainer}>
           <View style={styles.header}>
             <Ionicons name="chatbubbles" size={60} color="#b794f6" />
-            <Text style={styles.title}>Choose Your Spirit Guide</Text>
-            <Text style={styles.subtitle}>Select an elemental guide to begin</Text>
+            <Text style={styles.title}>Spirit Guides</Text>
+            <Text style={styles.subtitle}>Select your guide to begin</Text>
           </View>
+
+          {suggestedGuide && (
+            <View style={styles.suggestedCard}>
+              <Ionicons name="star" size={24} color="#f59e0b" />
+              <Text style={styles.suggestedText}>
+                Based on your zodiac, we recommend {suggestedGuide.name} ({suggestedGuide.element})
+              </Text>
+            </View>
+          )}
 
           <View style={styles.guidesGrid}>
             {guides.map((guide) => (
               <TouchableOpacity
                 key={guide.name}
-                style={styles.guideCard}
+                style={[
+                  styles.guideCard,
+                  suggestedGuide?.name === guide.name && styles.guideCardSuggested,
+                ]}
                 onPress={() => selectGuide(guide)}
                 activeOpacity={0.7}
               >
@@ -124,6 +345,9 @@ export default function SpiritGuides() {
                 </View>
                 <Text style={styles.guideName}>{guide.name}</Text>
                 <Text style={styles.guideElement}>{guide.element}</Text>
+                <Text style={styles.guideGender}>
+                  {guide.gender === 'feminine' ? '♀' : '♂'} {guide.gender}
+                </Text>
                 <Text style={styles.guideDescription}>{guide.description}</Text>
               </TouchableOpacity>
             ))}
@@ -140,12 +364,20 @@ export default function SpiritGuides() {
       keyboardVerticalOffset={100}
     >
       <View style={styles.chatHeader}>
-        <TouchableOpacity onPress={() => setSelectedGuide(null)} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => {
+            setSelectedGuide(null);
+            setMessages([]);
+          }}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
         </TouchableOpacity>
         <View style={styles.chatHeaderInfo}>
           <Text style={styles.chatHeaderName}>{selectedGuide.name}</Text>
-          <Text style={styles.chatHeaderElement}>Guide of {selectedGuide.element}</Text>
+          <Text style={styles.chatHeaderElement}>
+            Guide of {selectedGuide.element} • {selectedGuide.gender}
+          </Text>
         </View>
         <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
           <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
@@ -169,11 +401,30 @@ export default function SpiritGuides() {
             >
               {message.content}
             </Text>
+            {message.role === 'assistant' && (
+              <TouchableOpacity
+                style={styles.audioButton}
+                onPress={() => replayAudio(message, index)}
+                disabled={!message.hasAudio}
+              >
+                <Ionicons
+                  name={
+                    playingAudioIndex === index
+                      ? 'volume-high'
+                      : message.hasAudio
+                      ? 'play'
+                      : 'time'
+                  }
+                  size={16}
+                  color={message.hasAudio ? '#b794f6' : '#9f7aea'}
+                />
+              </TouchableOpacity>
+            )}
           </View>
         ))}
         {loading && (
           <View style={[styles.messageBubble, styles.assistantMessage]}>
-            <Text style={styles.assistantMessageText}>...</Text>
+            <ActivityIndicator size="small" color="#e9d5ff" />
           </View>
         )}
       </ScrollView>
@@ -205,6 +456,74 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f0321',
   },
+  birthdayContainer: {
+    flex: 1,
+    padding: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  birthdayTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginTop: 24,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  birthdaySubtitle: {
+    fontSize: 16,
+    color: '#c4b5fd',
+    textAlign: 'center',
+    marginBottom: 40,
+    lineHeight: 24,
+  },
+  birthdayInputs: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 32,
+  },
+  inputGroup: {
+    alignItems: 'center',
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#c4b5fd',
+    marginBottom: 8,
+  },
+  birthdayInput: {
+    width: 80,
+    height: 60,
+    backgroundColor: '#2d1b4e',
+    borderRadius: 12,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    textAlign: 'center',
+    borderWidth: 2,
+    borderColor: '#7c3aed',
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    gap: 12,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  skipButton: {
+    marginTop: 16,
+    padding: 12,
+  },
+  skipButtonText: {
+    color: '#9f7aea',
+    fontSize: 16,
+  },
   selectionContainer: {
     padding: 20,
   },
@@ -224,6 +543,23 @@ const styles = StyleSheet.create({
     color: '#c4b5fd',
     marginTop: 8,
   },
+  suggestedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a0033',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: '#f59e0b',
+    gap: 12,
+  },
+  suggestedText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#e9d5ff',
+    lineHeight: 20,
+  },
   guidesGrid: {
     gap: 16,
   },
@@ -234,6 +570,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#2d1b4e',
+  },
+  guideCardSuggested: {
+    borderColor: '#f59e0b',
+    borderWidth: 2,
   },
   guideIcon: {
     width: 80,
@@ -252,6 +592,11 @@ const styles = StyleSheet.create({
   guideElement: {
     fontSize: 16,
     color: '#b794f6',
+    marginBottom: 8,
+  },
+  guideGender: {
+    fontSize: 14,
+    color: '#c4b5fd',
     marginBottom: 12,
   },
   guideDescription: {
@@ -318,6 +663,10 @@ const styles = StyleSheet.create({
   },
   assistantMessageText: {
     color: '#e9d5ff',
+  },
+  audioButton: {
+    marginTop: 8,
+    padding: 4,
   },
   inputContainer: {
     flexDirection: 'row',

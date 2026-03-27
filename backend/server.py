@@ -11,6 +11,9 @@ import uuid
 from datetime import datetime
 import random
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from elevenlabs import ElevenLabs, VoiceSettings
+import base64
+import io
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -22,6 +25,59 @@ db = client[os.environ['DB_NAME']]
 
 # Gemini API key
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
+
+# ElevenLabs client for TTS
+ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
+eleven_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+
+# Spirit Guide Voice Configuration
+# Using ElevenLabs pre-made voices with appropriate genders
+SPIRIT_GUIDE_VOICES = {
+    "Ignis": {
+        "voice_id": "TxGEqnHWrfWFTfGW9XjX",  # Josh - Deep masculine voice for Fire
+        "gender": "masculine",
+        "element": "Fire",
+        "personality": "passionate, direct, transformative"
+    },
+    "Aqua": {
+        "voice_id": "EXAVITQu4vr4xnSDxMaL",  # Bella - Calm feminine voice for Water
+        "gender": "feminine",
+        "element": "Water",
+        "personality": "intuitive, healing, emotionally wise"
+    },
+    "Terra": {
+        "voice_id": "VR6AewLTigWG4xSOukaG",  # Arnold - Grounded masculine voice for Earth
+        "gender": "masculine",
+        "element": "Earth",
+        "personality": "grounded, practical, stable"
+    },
+    "Aether": {
+        "voice_id": "ThT5KcBeYPX3keUQqHPh",  # Dorothy - Clear feminine voice for Air
+        "gender": "feminine",
+        "element": "Air",
+        "personality": "intellectual, free-spirited, enlightening"
+    }
+}
+
+# Zodiac to Element mapping
+ZODIAC_TO_ELEMENT = {
+    # Fire signs
+    "aries": "Fire",
+    "leo": "Fire",
+    "sagittarius": "Fire",
+    # Water signs
+    "cancer": "Water",
+    "scorpio": "Water",
+    "pisces": "Water",
+    # Earth signs
+    "taurus": "Earth",
+    "virgo": "Earth",
+    "capricorn": "Earth",
+    # Air signs
+    "gemini": "Air",
+    "libra": "Air",
+    "aquarius": "Air"
+}
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -445,6 +501,131 @@ async def get_meditation_sessions(limit: int = 30):
     except Exception as e:
         logging.error(f"Error fetching sessions: {e}")
         return []
+
+# TTS and Voice endpoints
+class TTSRequest(BaseModel):
+    text: str
+    guide_name: Optional[str] = None  # Ignis, Aqua, Terra, or Aether
+    voice_id: Optional[str] = None
+    
+class TTSResponse(BaseModel):
+    audio_base64: str
+    text: str
+    guide_name: Optional[str] = None
+
+@api_router.post("/tts/generate", response_model=TTSResponse)
+async def generate_tts(request: TTSRequest):
+    """Generate text-to-speech audio using ElevenLabs"""
+    try:
+        # Determine which voice to use
+        if request.guide_name and request.guide_name in SPIRIT_GUIDE_VOICES:
+            voice_id = SPIRIT_GUIDE_VOICES[request.guide_name]["voice_id"]
+            guide_name = request.guide_name
+        elif request.voice_id:
+            voice_id = request.voice_id
+            guide_name = None
+        else:
+            # Default to Aether (Air guide)
+            voice_id = SPIRIT_GUIDE_VOICES["Aether"]["voice_id"]
+            guide_name = "Aether"
+        
+        # Generate audio using ElevenLabs
+        voice_settings = VoiceSettings(
+            stability=0.75,
+            similarity_boost=0.75,
+            style=0.5,
+            use_speaker_boost=True
+        )
+        
+        audio_generator = eleven_client.text_to_speech.convert(
+            text=request.text,
+            voice_id=voice_id,
+            model_id="eleven_multilingual_v2",
+            voice_settings=voice_settings
+        )
+        
+        # Collect audio data
+        audio_data = b""
+        for chunk in audio_generator:
+            audio_data += chunk
+        
+        # Convert to base64
+        audio_b64 = base64.b64encode(audio_data).decode()
+        
+        return TTSResponse(
+            audio_base64=audio_b64,
+            text=request.text,
+            guide_name=guide_name
+        )
+        
+    except Exception as e:
+        logging.error(f"Error generating TTS: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating TTS: {str(e)}")
+
+@api_router.get("/spirit-guides/voices")
+async def get_spirit_guide_voices():
+    """Get all spirit guide voice configurations"""
+    return SPIRIT_GUIDE_VOICES
+
+@api_router.get("/zodiac/element/{birth_month}/{birth_day}")
+async def get_zodiac_element(birth_month: int, birth_day: int):
+    """Get element and spirit guide based on birthday"""
+    try:
+        # Determine zodiac sign
+        zodiac_sign = None
+        if (birth_month == 3 and birth_day >= 21) or (birth_month == 4 and birth_day <= 19):
+            zodiac_sign = "aries"
+        elif (birth_month == 4 and birth_day >= 20) or (birth_month == 5 and birth_day <= 20):
+            zodiac_sign = "taurus"
+        elif (birth_month == 5 and birth_day >= 21) or (birth_month == 6 and birth_day <= 20):
+            zodiac_sign = "gemini"
+        elif (birth_month == 6 and birth_day >= 21) or (birth_month == 7 and birth_day <= 22):
+            zodiac_sign = "cancer"
+        elif (birth_month == 7 and birth_day >= 23) or (birth_month == 8 and birth_day <= 22):
+            zodiac_sign = "leo"
+        elif (birth_month == 8 and birth_day >= 23) or (birth_month == 9 and birth_day <= 22):
+            zodiac_sign = "virgo"
+        elif (birth_month == 9 and birth_day >= 23) or (birth_month == 10 and birth_day <= 22):
+            zodiac_sign = "libra"
+        elif (birth_month == 10 and birth_day >= 23) or (birth_month == 11 and birth_day <= 21):
+            zodiac_sign = "scorpio"
+        elif (birth_month == 11 and birth_day >= 22) or (birth_month == 12 and birth_day <= 21):
+            zodiac_sign = "sagittarius"
+        elif (birth_month == 12 and birth_day >= 22) or (birth_month == 1 and birth_day <= 19):
+            zodiac_sign = "capricorn"
+        elif (birth_month == 1 and birth_day >= 20) or (birth_month == 2 and birth_day <= 18):
+            zodiac_sign = "aquarius"
+        elif (birth_month == 2 and birth_day >= 19) or (birth_month == 3 and birth_day <= 20):
+            zodiac_sign = "pisces"
+        
+        if not zodiac_sign:
+            raise HTTPException(status_code=400, detail="Invalid birth date")
+        
+        # Get element for zodiac sign
+        element = ZODIAC_TO_ELEMENT[zodiac_sign]
+        
+        # Find matching spirit guide
+        spirit_guide = None
+        for guide_name, guide_info in SPIRIT_GUIDE_VOICES.items():
+            if guide_info["element"] == element:
+                spirit_guide = {
+                    "name": guide_name,
+                    "element": element,
+                    "gender": guide_info["gender"],
+                    "personality": guide_info["personality"],
+                    "voice_id": guide_info["voice_id"]
+                }
+                break
+        
+        return {
+            "zodiac_sign": zodiac_sign.capitalize(),
+            "element": element,
+            "spirit_guide": spirit_guide
+        }
+        
+    except Exception as e:
+        logging.error(f"Error determining zodiac: {e}")
+        raise HTTPException(status_code=500, detail="Error determining zodiac sign")
 
 # Include the router in the main app
 app.include_router(api_router)

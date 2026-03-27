@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { Audio } from 'expo-av';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');
@@ -33,9 +34,20 @@ export default function Oracle() {
   const [showReading, setShowReading] = useState(false);
   const [savedReadings, setSavedReadings] = useState<Reading[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
   
   const cardFlipAnim = useRef(new Animated.Value(0)).current;
   const cardScaleAnim = useRef(new Animated.Value(1)).current;
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
 
   const drawCard = async () => {
     setLoading(true);
@@ -100,6 +112,55 @@ export default function Oracle() {
       setShowHistory(true);
     } catch (error) {
       console.error('Error loading history:', error);
+    }
+  };
+
+  const playInterpretation = async (guideName: string) => {
+    if (!currentReading) return;
+    
+    setAudioLoading(true);
+    try {
+      // Stop any currently playing audio
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+      }
+
+      const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: currentReading.interpretation,
+          guide_name: guideName,
+        }),
+      });
+
+      const data = await response.json();
+
+      // Play the audio
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: `data:audio/mpeg;base64,${data.audio_base64}` },
+        { shouldPlay: true }
+      );
+
+      soundRef.current = sound;
+      setIsPlayingAudio(true);
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlayingAudio(false);
+        }
+      });
+    } catch (error) {
+      console.error('Error playing interpretation:', error);
+    } finally {
+      setAudioLoading(false);
+    }
+  };
+
+  const stopAudio = async () => {
+    if (soundRef.current) {
+      await soundRef.current.stopAsync();
+      setIsPlayingAudio(false);
     }
   };
 
@@ -225,6 +286,38 @@ export default function Oracle() {
                       <Text style={styles.interpretationTitle}>Interpretation</Text>
                     </View>
                     <Text style={styles.interpretation}>{currentReading.interpretation}</Text>
+                    
+                    <View style={styles.audioControlsSection}>
+                      <Text style={styles.audioLabel}>Listen to interpretation:</Text>
+                      <View style={styles.audioButtons}>
+                        {['Ignis', 'Aqua', 'Terra', 'Aether'].map((guideName) => (
+                          <TouchableOpacity
+                            key={guideName}
+                            style={[
+                              styles.guideAudioButton,
+                              isPlayingAudio && styles.guideAudioButtonDisabled,
+                            ]}
+                            onPress={() => playInterpretation(guideName)}
+                            disabled={isPlayingAudio || audioLoading}
+                          >
+                            {audioLoading ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                              <>
+                                <Ionicons name="volume-high" size={16} color="#fff" />
+                                <Text style={styles.guideAudioButtonText}>{guideName}</Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {isPlayingAudio && (
+                        <TouchableOpacity style={styles.stopAudioButton} onPress={stopAudio}>
+                          <Ionicons name="stop-circle" size={20} color="#ef4444" />
+                          <Text style={styles.stopAudioText}>Stop</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                 </>
               )}
@@ -584,5 +677,52 @@ const styles = StyleSheet.create({
   historyDate: {
     fontSize: 12,
     color: '#9f7aea',
+  },
+  audioControlsSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#2d1b4e',
+  },
+  audioLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#c4b5fd',
+    marginBottom: 12,
+  },
+  audioButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  guideAudioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 6,
+  },
+  guideAudioButtonDisabled: {
+    opacity: 0.5,
+  },
+  guideAudioButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  stopAudioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  stopAudioText: {
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
