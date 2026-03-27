@@ -1,62 +1,203 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAudioPlayer } from '../../hooks/useAudioPlayer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface BinauralProgram {
   id: string;
   name: string;
-  frequency: string;
-  benefit: string;
-  icon: string;
+  frequency_range: string;
+  base_frequency: number;
+  beat_frequency: number;
+  benefits: string[];
   color: string;
 }
 
-const programs: BinauralProgram[] = [
-  {
-    id: 'delta',
-    name: 'Deep Sleep (Delta)',
-    frequency: '0.5 - 4 Hz',
-    benefit: 'Promotes deep sleep and healing',
-    icon: 'moon',
-    color: '#4c1d95',
-  },
-  {
-    id: 'theta',
-    name: 'Meditation (Theta)',
-    frequency: '4 - 8 Hz',
-    benefit: 'Enhances meditation and creativity',
-    icon: 'eye',
-    color: '#7c3aed',
-  },
-  {
-    id: 'alpha',
-    name: 'Relaxation (Alpha)',
-    frequency: '8 - 13 Hz',
-    benefit: 'Reduces stress and anxiety',
-    icon: 'leaf',
-    color: '#a855f7',
-  },
-  {
-    id: 'beta',
-    name: 'Focus (Beta)',
-    frequency: '13 - 30 Hz',
-    benefit: 'Improves concentration and alertness',
-    icon: 'flash',
-    color: '#c084fc',
-  },
-];
-
 export default function BinauralMeditation() {
   const router = useRouter();
+  const [programs, setPrograms] = useState<BinauralProgram[]>([]);
   const [selectedProgram, setSelectedProgram] = useState<BinauralProgram | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const audioPlayer = useAudioPlayer();
+
+  useEffect(() => {
+    loadPrograms();
+  }, []);
+
+  // Track session duration
+  useEffect(() => {
+    if (audioPlayer.state.isPlaying && sessionStartTime) {
+      const interval = setInterval(() => {
+        setSessionDuration(Math.floor((Date.now() - sessionStartTime) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [audioPlayer.state.isPlaying, sessionStartTime]);
+
+  const loadPrograms = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/meditation/binaural/frequencies`);
+      const data = await response.json();
+      setPrograms(data);
+    } catch (error) {
+      console.error('Error loading programs:', error);
+      Alert.alert('Error', 'Failed to load binaural programs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProgramSelect = async (program: BinauralProgram) => {
+    setSelectedProgram(program);
+    
+    // Show info about the program
+    Alert.alert(
+      program.name,
+      `Frequency: ${program.frequency_range}\n\nBenefits:\n• ${program.benefits.join('\n• ')}\n\nNote: For best results, use headphones.`,
+      [
+        { text: 'OK', style: 'default' }
+      ]
+    );
+  };
+
+  const startSession = async () => {
+    if (!selectedProgram) return;
+
+    try {
+      // In production, load actual binaural beat audio
+      // For now, we'll simulate the experience
+      Alert.alert(
+        'Binaural Session Starting',
+        'Put on your headphones and find a comfortable position. The session will begin shortly.',
+        [
+          {
+            text: 'Start',
+            onPress: () => {
+              setSessionStartTime(Date.now());
+              setSessionDuration(0);
+              // In production: audioPlayer.loadAudio(audioUrl);
+              // Then: audioPlayer.play();
+            }
+          },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    } catch (error) {
+      console.error('Error starting session:', error);
+      Alert.alert('Error', 'Failed to start meditation session');
+    }
+  };
+
+  const stopSession = async () => {
+    if (sessionStartTime && sessionDuration > 30) {
+      // Save session if it was at least 30 seconds
+      try {
+        await fetch(`${BACKEND_URL}/api/meditation/session/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'binaural',
+            frequency: selectedProgram?.id,
+            duration_seconds: sessionDuration,
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        
+        // Also save to AsyncStorage for local tracking
+        const sessions = await AsyncStorage.getItem('meditation_sessions') || '[]';
+        const sessionList = JSON.parse(sessions);
+        sessionList.unshift({
+          type: 'Binaural - ' + selectedProgram?.name,
+          duration: Math.floor(sessionDuration / 60) + ' min',
+          date: new Date().toISOString(),
+        });
+        await AsyncStorage.setItem('meditation_sessions', JSON.stringify(sessionList.slice(0, 50)));
+      } catch (error) {
+        console.error('Error saving session:', error);
+      }
+    }
+
+    audioPlayer.stop();
+    setSessionStartTime(null);
+    setSessionDuration(0);
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#b794f6" />
+      </View>
+    );
+  }
+
+  // Active session view
+  if (sessionStartTime) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.sessionContainer}>
+          <View style={[styles.cosmicBackground, { backgroundColor: selectedProgram?.color + '20' }]}>
+            <View style={styles.pulsingOrb}>
+              <View style={[styles.orbOuter, { backgroundColor: selectedProgram?.color }]} />
+              <View style={[styles.orbMiddle, { backgroundColor: selectedProgram?.color }]} />
+              <View style={[styles.orbInner, { backgroundColor: selectedProgram?.color }]} />
+            </View>
+          </View>
+
+          <View style={styles.sessionOverlay}>
+            <Text style={styles.sessionTitle}>{selectedProgram?.name}</Text>
+            <Text style={styles.sessionFrequency}>{selectedProgram?.frequency_range}</Text>
+            
+            <View style={styles.durationDisplay}>
+              <Text style={styles.durationText}>{formatDuration(sessionDuration)}</Text>
+              <Text style={styles.durationLabel}>meditation time</Text>
+            </View>
+
+            <View style={styles.waveformContainer}>
+              <View style={styles.waveform}>
+                {[...Array(15)].map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.wavebar,
+                      {
+                        height: 20 + Math.sin((Date.now() / 200) + i) * 30,
+                        backgroundColor: selectedProgram?.color || '#7c3aed',
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.stopButton} onPress={stopSession}>
+              <Ionicons name="stop" size={32} color="#fff" />
+              <Text style={styles.stopButtonText}>End Session</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -71,14 +212,16 @@ export default function BinauralMeditation() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.infoCard}>
           <Ionicons name="headset" size={40} color="#b794f6" />
-          <Text style={styles.infoTitle}>What is Binaural Meditation?</Text>
+          <Text style={styles.infoTitle}>What are Binaural Beats?</Text>
           <Text style={styles.infoText}>
             Binaural beats synchronize your brainwaves to specific frequencies, enhancing
-            meditation, relaxation, and mental clarity. Use headphones for best results.
+            meditation, relaxation, and mental clarity. Each ear receives a slightly different
+            frequency, creating a perceived "beat" that influences brainwave activity.
           </Text>
+          <Text style={styles.infoImportant}>🎧 Headphones Required</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Choose a Program</Text>
+        <Text style={styles.sectionTitle}>Choose a Frequency</Text>
 
         {programs.map((program) => (
           <TouchableOpacity
@@ -87,16 +230,22 @@ export default function BinauralMeditation() {
               styles.programCard,
               selectedProgram?.id === program.id && styles.programCardActive,
             ]}
-            onPress={() => setSelectedProgram(program)}
+            onPress={() => handleProgramSelect(program)}
             activeOpacity={0.7}
           >
             <View style={[styles.programIcon, { backgroundColor: program.color }]}>
-              <Ionicons name={program.icon as any} size={32} color="#fff" />
+              <Ionicons name="pulse" size={32} color="#fff" />
             </View>
             <View style={styles.programInfo}>
               <Text style={styles.programName}>{program.name}</Text>
-              <Text style={styles.programFrequency}>{program.frequency}</Text>
-              <Text style={styles.programBenefit}>{program.benefit}</Text>
+              <Text style={styles.programFrequency}>{program.frequency_range}</Text>
+              <View style={styles.benefitsContainer}>
+                {program.benefits.slice(0, 2).map((benefit, index) => (
+                  <Text key={index} style={styles.benefitTag}>
+                    {benefit}
+                  </Text>
+                ))}
+              </View>
             </View>
             {selectedProgram?.id === program.id && (
               <Ionicons name="checkmark-circle" size={24} color="#10b981" />
@@ -105,50 +254,22 @@ export default function BinauralMeditation() {
         ))}
 
         {selectedProgram && (
-          <View style={styles.playerSection}>
-            <View
-              style={[
-                styles.visualizer,
-                { backgroundColor: selectedProgram.color + '20' },
-              ]}
-            >
-              <View style={styles.waveform}>
-                {[...Array(20)].map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.wavebar,
-                      {
-                        height: isPlaying ? Math.random() * 60 + 20 : 20,
-                        backgroundColor: selectedProgram.color,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.playButton,
-                { backgroundColor: selectedProgram.color },
-              ]}
-              onPress={() => setIsPlaying(!isPlaying)}
-            >
-              <Ionicons
-                name={isPlaying ? 'pause' : 'play'}
-                size={40}
-                color="#fff"
-              />
-            </TouchableOpacity>
-
-            <Text style={styles.instruction}>
-              {isPlaying
-                ? 'Find a comfortable position and focus on your breath...'
-                : 'Tap to begin your binaural meditation session'}
-            </Text>
-          </View>
+          <TouchableOpacity
+            style={[styles.startButton, { backgroundColor: selectedProgram.color }]}
+            onPress={startSession}
+          >
+            <Ionicons name="play" size={24} color="#fff" />
+            <Text style={styles.startButtonText}>Begin Meditation</Text>
+          </TouchableOpacity>
         )}
+
+        <View style={styles.noticeCard}>
+          <Ionicons name="information-circle" size={24} color="#f59e0b" />
+          <Text style={styles.noticeText}>
+            Note: This is a demonstration. For production use, integrate actual binaural beat
+            audio files (30-minute tracks) for each frequency range.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -158,6 +279,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f0321',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -200,6 +325,13 @@ const styles = StyleSheet.create({
     color: '#c4b5fd',
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 12,
+  },
+  infoImportant: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#b794f6',
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 18,
@@ -240,24 +372,127 @@ const styles = StyleSheet.create({
   programFrequency: {
     fontSize: 14,
     color: '#b794f6',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  programBenefit: {
+  benefitsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  benefitTag: {
+    fontSize: 11,
+    color: '#c4b5fd',
+    backgroundColor: '#2d1b4e',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 25,
+    marginTop: 8,
+    marginBottom: 24,
+    gap: 12,
+  },
+  startButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  noticeCard: {
+    flexDirection: 'row',
+    backgroundColor: '#1a0033',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    gap: 12,
+  },
+  noticeText: {
+    flex: 1,
     fontSize: 13,
     color: '#c4b5fd',
+    lineHeight: 18,
   },
-  playerSection: {
-    marginTop: 24,
+  sessionContainer: {
+    flex: 1,
+  },
+  cosmicBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  pulsingOrb: {
+    position: 'absolute',
+    top: '30%',
+    left: '50%',
+    transform: [{ translateX: -100 }, { translateY: -100 }],
+    width: 200,
+    height: 200,
     alignItems: 'center',
-  },
-  visualizer: {
-    width: '100%',
-    height: 120,
-    borderRadius: 16,
-    marginBottom: 24,
-    overflow: 'hidden',
     justifyContent: 'center',
-    padding: 16,
+  },
+  orbOuter: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    opacity: 0.2,
+  },
+  orbMiddle: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    opacity: 0.4,
+  },
+  orbInner: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    opacity: 0.6,
+  },
+  sessionOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  sessionTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  sessionFrequency: {
+    fontSize: 18,
+    color: '#c4b5fd',
+    marginBottom: 40,
+  },
+  durationDisplay: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  durationText: {
+    fontSize: 64,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+  },
+  durationLabel: {
+    fontSize: 16,
+    color: '#c4b5fd',
+    marginTop: 8,
+  },
+  waveformContainer: {
+    width: '100%',
+    height: 80,
+    marginBottom: 40,
   },
   waveform: {
     flexDirection: 'row',
@@ -266,21 +501,22 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   wavebar: {
-    width: 4,
-    borderRadius: 2,
+    width: 6,
+    borderRadius: 3,
   },
-  playButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  stopButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-  },
-  instruction: {
-    fontSize: 14,
-    color: '#c4b5fd',
-    textAlign: 'center',
+    backgroundColor: '#7c3aed',
     paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    gap: 12,
+  },
+  stopButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

@@ -333,6 +333,107 @@ async def get_journal_entries(limit: int = 50):
         logging.error(f"Error fetching entries: {e}")
         return []
 
+@api_router.get("/meditation/binaural/frequencies")
+async def get_binaural_frequencies():
+    """Get available binaural beat frequencies"""
+    frequencies = [
+        {
+            "id": "delta",
+            "name": "Delta (Deep Sleep)",
+            "frequency_range": "0.5-4 Hz",
+            "base_frequency": 200,
+            "beat_frequency": 2,
+            "benefits": ["Deep sleep", "Healing", "Pain relief", "Deep relaxation"],
+            "color": "#4c1d95"
+        },
+        {
+            "id": "theta",
+            "name": "Theta (Meditation)",
+            "frequency_range": "4-8 Hz",
+            "base_frequency": 200,
+            "beat_frequency": 6,
+            "benefits": ["Deep meditation", "Creativity", "Intuition", "Memory"],
+            "color": "#7c3aed"
+        },
+        {
+            "id": "alpha",
+            "name": "Alpha (Relaxation)",
+            "frequency_range": "8-13 Hz",
+            "base_frequency": 200,
+            "beat_frequency": 10,
+            "benefits": ["Relaxation", "Stress reduction", "Light meditation", "Learning"],
+            "color": "#a855f7"
+        },
+        {
+            "id": "beta",
+            "name": "Beta (Focus)",
+            "frequency_range": "13-30 Hz",
+            "base_frequency": 200,
+            "beat_frequency": 20,
+            "benefits": ["Focus", "Concentration", "Alertness", "Problem solving"],
+            "color": "#c084fc"
+        },
+        {
+            "id": "gamma",
+            "name": "Gamma (Peak Performance)",
+            "frequency_range": "30-100 Hz",
+            "base_frequency": 200,
+            "beat_frequency": 40,
+            "benefits": ["Peak focus", "Cognitive enhancement", "Information processing", "Memory recall"],
+            "color": "#e9d5ff"
+        }
+    ]
+    return frequencies
+
+@api_router.get("/meditation/binaural/audio/{frequency_id}")
+async def get_binaural_audio_info(frequency_id: str):
+    """Get binaural audio information and streaming URL"""
+    # In a production app, you would:
+    # 1. Serve actual pre-recorded binaural beat audio files
+    # 2. Generate audio using a synthesis library
+    # 3. Use a third-party binaural beat API
+    
+    audio_urls = {
+        "delta": "https://www.soundhealing.com/samples/delta-waves.mp3",
+        "theta": "https://www.soundhealing.com/samples/theta-waves.mp3",
+        "alpha": "https://www.soundhealing.com/samples/alpha-waves.mp3",
+        "beta": "https://www.soundhealing.com/samples/beta-waves.mp3",
+        "gamma": "https://www.soundhealing.com/samples/gamma-waves.mp3"
+    }
+    
+    # Note: These are placeholder URLs for demonstration
+    # Replace with actual hosted binaural beat audio files
+    return {
+        "frequency_id": frequency_id,
+        "audio_url": audio_urls.get(frequency_id),
+        "format": "mp3",
+        "duration_minutes": 30,
+        "sample_rate": 44100,
+        "note": "For production, replace with actual binaural beat audio files"
+    }
+
+@api_router.post("/meditation/session/save")
+async def save_meditation_session(session: dict):
+    """Save a meditation session to track progress"""
+    try:
+        session['_id'] = str(uuid.uuid4())
+        session['completed_at'] = datetime.utcnow().isoformat()
+        await db.meditation_sessions.insert_one(session)
+        return {"success": True, "session_id": session['_id']}
+    except Exception as e:
+        logging.error(f"Error saving meditation session: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save session")
+
+@api_router.get("/meditation/sessions")
+async def get_meditation_sessions(limit: int = 30):
+    """Get meditation session history"""
+    try:
+        sessions = await db.meditation_sessions.find().sort("completed_at", -1).limit(limit).to_list(limit)
+        return sessions
+    except Exception as e:
+        logging.error(f"Error fetching sessions: {e}")
+        return []
+
 # Include the router in the main app
 app.include_router(api_router)
 
