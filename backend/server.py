@@ -18,6 +18,7 @@ import io
 import bcrypt
 import jwt
 import httpx
+import stripe
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -41,6 +42,11 @@ JWT_EXPIRATION_DAYS = 7
 
 # Emergent Auth Configuration
 EMERGENT_AUTH_SESSION_ENDPOINT = os.environ.get('EMERGENT_AUTH_SESSION_ENDPOINT')
+
+# Stripe Configuration
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+stripe.api_key = STRIPE_SECRET_KEY
+MONTHLY_PRICE_AMOUNT = 399  # $3.99 in cents
 
 # Spirit Guide Voice Configuration
 # Using ElevenLabs pre-made voices with appropriate genders
