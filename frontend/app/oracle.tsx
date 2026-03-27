@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,21 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const { width } = Dimensions.get('window');
 
 interface Reading {
   card: {
     name: string;
     element: string;
     description: string;
+    image_url: string;
   };
   interpretation: string;
   timestamp: string;
@@ -26,16 +31,44 @@ export default function Oracle() {
   const [loading, setLoading] = useState(false);
   const [currentReading, setCurrentReading] = useState<Reading | null>(null);
   const [showReading, setShowReading] = useState(false);
+  const [savedReadings, setSavedReadings] = useState<Reading[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  
+  const cardFlipAnim = useRef(new Animated.Value(0)).current;
+  const cardScaleAnim = useRef(new Animated.Value(1)).current;
 
   const drawCard = async () => {
     setLoading(true);
+    
+    // Card shuffle animation
+    Animated.sequence([
+      Animated.timing(cardScaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardScaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     try {
       const response = await fetch(`${BACKEND_URL}/api/oracle/draw`, {
         method: 'POST',
       });
       const data = await response.json();
       setCurrentReading(data);
+      
+      // Card flip animation
+      cardFlipAnim.setValue(0);
       setShowReading(true);
+      Animated.timing(cardFlipAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
     } catch (error) {
       console.error('Error drawing card:', error);
     } finally {
@@ -51,10 +84,22 @@ export default function Oracle() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(currentReading),
       });
+      setSavedReadings([currentReading, ...savedReadings]);
       setShowReading(false);
       setCurrentReading(null);
     } catch (error) {
       console.error('Error saving reading:', error);
+    }
+  };
+
+  const loadHistory = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/oracle/readings`);
+      const data = await response.json();
+      setSavedReadings(data);
+      setShowHistory(true);
+    } catch (error) {
+      console.error('Error loading history:', error);
     }
   };
 
@@ -73,6 +118,11 @@ export default function Oracle() {
     }
   };
 
+  const cardRotateY = cardFlipAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -83,9 +133,22 @@ export default function Oracle() {
         </View>
 
         <View style={styles.cardContainer}>
-          <View style={styles.cardBack}>
-            <Ionicons name="moon" size={80} color="#b794f6" />
-          </View>
+          <Animated.View
+            style={[
+              styles.cardWrapper,
+              {
+                transform: [{ scale: cardScaleAnim }],
+              },
+            ]}
+          >
+            <View style={styles.cardBack}>
+              <View style={styles.cardBackPattern}>
+                <Ionicons name="moon" size={80} color="#b794f6" />
+                <Text style={styles.cardBackText}>Oracle Cards</Text>
+                <Text style={styles.cardBackSubtext}>Spirit Guide Wisdom</Text>
+              </View>
+            </View>
+          </Animated.View>
         </View>
 
         <TouchableOpacity
@@ -104,51 +167,137 @@ export default function Oracle() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.historyButton} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.historyButton} onPress={loadHistory} activeOpacity={0.7}>
           <Ionicons name="time" size={20} color="#c4b5fd" />
           <Text style={styles.historyButtonText}>View Past Readings</Text>
         </TouchableOpacity>
+
+        <View style={styles.instructionCard}>
+          <Text style={styles.instructionText}>
+            🌙 Close your eyes and focus on your question{'\n'}
+            ✨ When ready, tap "Draw a Card"{'\n'}
+            🔮 Trust the guidance you receive
+          </Text>
+        </View>
       </ScrollView>
 
-      <Modal visible={showReading} animationType="slide" transparent>
+      {/* Reading Modal */}
+      <Modal visible={showReading} animationType="fade" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ScrollView>
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={styles.modalContent}>
               {currentReading && (
                 <>
-                  <View style={styles.modalHeader}>
-                    <View
-                      style={[
-                        styles.elementBadge,
-                        { backgroundColor: getElementColor(currentReading.card.element) },
-                      ]}
-                    >
-                      <Text style={styles.elementText}>{currentReading.card.element}</Text>
+                  <Animated.View
+                    style={[
+                      styles.cardImageContainer,
+                      {
+                        transform: [{ rotateY: cardRotateY }],
+                      },
+                    ]}
+                  >
+                    <Image
+                      source={{ uri: currentReading.card.image_url }}
+                      style={styles.cardImage}
+                      contentFit="cover"
+                      transition={300}
+                    />
+                    <View style={styles.cardImageOverlay}>
+                      <View
+                        style={[
+                          styles.elementBadge,
+                          { backgroundColor: getElementColor(currentReading.card.element) },
+                        ]}
+                      >
+                        <Text style={styles.elementText}>{currentReading.card.element}</Text>
+                      </View>
                     </View>
-                  </View>
+                  </Animated.View>
+
                   <Text style={styles.cardName}>{currentReading.card.name}</Text>
                   <Text style={styles.cardDescription}>{currentReading.card.description}</Text>
+
                   <View style={styles.divider} />
-                  <Text style={styles.interpretationTitle}>Interpretation</Text>
-                  <Text style={styles.interpretation}>{currentReading.interpretation}</Text>
+
+                  <View style={styles.interpretationSection}>
+                    <View style={styles.interpretationHeader}>
+                      <Ionicons name="book" size={24} color="#b794f6" />
+                      <Text style={styles.interpretationTitle}>Interpretation</Text>
+                    </View>
+                    <Text style={styles.interpretation}>{currentReading.interpretation}</Text>
+                  </View>
                 </>
               )}
-            </ScrollView>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={saveReading}
-              >
-                <Ionicons name="save" size={20} color="#fff" />
-                <Text style={styles.modalButtonText}>Save Reading</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.closeButton]}
-                onPress={() => setShowReading(false)}
-              >
-                <Text style={styles.modalButtonText}>Close</Text>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.saveButton]}
+                  onPress={saveReading}
+                >
+                  <Ionicons name="save" size={20} color="#fff" />
+                  <Text style={styles.modalButtonText}>Save Reading</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.closeButton]}
+                  onPress={() => {
+                    setShowReading(false);
+                    setCurrentReading(null);
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* History Modal */}
+      <Modal visible={showHistory} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.historyModal}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyTitle}>Past Readings</Text>
+              <TouchableOpacity onPress={() => setShowHistory(false)}>
+                <Ionicons name="close" size={28} color="#e9d5ff" />
               </TouchableOpacity>
             </View>
+
+            <ScrollView>
+              {savedReadings.length === 0 ? (
+                <View style={styles.emptyHistory}>
+                  <Ionicons name="sparkles-outline" size={60} color="#9f7aea" />
+                  <Text style={styles.emptyText}>No saved readings yet</Text>
+                </View>
+              ) : (
+                savedReadings.map((reading, index) => (
+                  <View key={index} style={styles.historyCard}>
+                    <Image
+                      source={{ uri: reading.card.image_url }}
+                      style={styles.historyCardImage}
+                      contentFit="cover"
+                    />
+                    <View style={styles.historyCardContent}>
+                      <View
+                        style={[
+                          styles.historyElementBadge,
+                          { backgroundColor: getElementColor(reading.card.element) },
+                        ]}
+                      >
+                        <Text style={styles.historyElementText}>{reading.card.element}</Text>
+                      </View>
+                      <Text style={styles.historyCardName}>{reading.card.name}</Text>
+                      <Text style={styles.historyCardDescription} numberOfLines={2}>
+                        {reading.card.description}
+                      </Text>
+                      <Text style={styles.historyDate}>
+                        {new Date(reading.timestamp).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -185,15 +334,35 @@ const styles = StyleSheet.create({
   cardContainer: {
     marginBottom: 40,
   },
+  cardWrapper: {
+    width: width * 0.7,
+    aspectRatio: 2 / 3,
+    maxWidth: 280,
+  },
   cardBack: {
-    width: 200,
-    height: 300,
+    flex: 1,
     backgroundColor: '#1a0033',
     borderRadius: 20,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#b794f6',
+    overflow: 'hidden',
+  },
+  cardBackPattern: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#2d1b4e',
+  },
+  cardBackText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginTop: 16,
+  },
+  cardBackSubtext: {
+    fontSize: 14,
+    color: '#c4b5fd',
+    marginTop: 8,
   },
   drawButton: {
     flexDirection: 'row',
@@ -224,23 +393,50 @@ const styles = StyleSheet.create({
     color: '#c4b5fd',
     fontSize: 16,
   },
+  instructionCard: {
+    backgroundColor: '#1a0033',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 32,
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  instructionText: {
+    fontSize: 14,
+    color: '#c4b5fd',
+    lineHeight: 24,
+    textAlign: 'center',
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
+  },
+  modalScrollContent: {
     padding: 20,
   },
   modalContent: {
     backgroundColor: '#1a0033',
     borderRadius: 24,
     padding: 24,
-    maxHeight: '90%',
     borderWidth: 1,
     borderColor: '#2d1b4e',
   },
-  modalHeader: {
-    alignItems: 'center',
-    marginBottom: 16,
+  cardImageContainer: {
+    width: '100%',
+    aspectRatio: 2 / 3,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardImageOverlay: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
   },
   elementBadge: {
     paddingHorizontal: 16,
@@ -254,7 +450,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   cardName: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#e9d5ff',
     textAlign: 'center',
@@ -271,17 +467,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#2d1b4e',
     marginVertical: 20,
   },
+  interpretationSection: {
+    marginBottom: 20,
+  },
+  interpretationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
   interpretationTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#b794f6',
-    marginBottom: 12,
   },
   interpretation: {
     fontSize: 16,
     color: '#e9d5ff',
     lineHeight: 24,
-    marginBottom: 20,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -307,5 +510,79 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  historyModal: {
+    flex: 1,
+    backgroundColor: '#1a0033',
+    marginTop: 60,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2d1b4e',
+  },
+  historyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+  },
+  emptyHistory: {
+    alignItems: 'center',
+    paddingTop: 80,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#c4b5fd',
+    marginTop: 16,
+  },
+  historyCard: {
+    flexDirection: 'row',
+    backgroundColor: '#2d1b4e',
+    borderRadius: 16,
+    margin: 12,
+    overflow: 'hidden',
+  },
+  historyCardImage: {
+    width: 100,
+    height: 150,
+  },
+  historyCardContent: {
+    flex: 1,
+    padding: 12,
+  },
+  historyElementBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  historyElementText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  historyCardName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#e9d5ff',
+    marginBottom: 6,
+  },
+  historyCardDescription: {
+    fontSize: 13,
+    color: '#c4b5fd',
+    marginBottom: 8,
+  },
+  historyDate: {
+    fontSize: 12,
+    color: '#9f7aea',
   },
 });

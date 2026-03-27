@@ -29,79 +29,91 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
-# Oracle Cards - Spirit Guide themed
+# Oracle Cards - Spirit Guide themed with beautiful illustrations
 ORACLE_CARDS = [
     {
         "name": "The Fire Phoenix",
         "element": "Fire",
         "description": "Transformation through passion and rebirth",
-        "keywords": ["transformation", "passion", "renewal", "energy"]
+        "keywords": ["transformation", "passion", "renewal", "energy"],
+        "image_url": "https://images.unsplash.com/photo-1764555719665-d2c91587a6e6"
     },
     {
         "name": "The Flame Dancer",
         "element": "Fire",
         "description": "Creative expression and bold action",
-        "keywords": ["creativity", "action", "courage", "expression"]
+        "keywords": ["creativity", "action", "courage", "expression"],
+        "image_url": "https://images.unsplash.com/photo-1762882936976-3cea8cbd6e3e"
     },
     {
         "name": "The Sacred Ember",
         "element": "Fire",
         "description": "Inner spark and divine inspiration",
-        "keywords": ["inspiration", "motivation", "divine spark", "purpose"]
+        "keywords": ["inspiration", "motivation", "divine spark", "purpose"],
+        "image_url": "https://images.pexels.com/photos/36022109/pexels-photo-36022109.jpeg"
     },
     {
         "name": "The Ocean Depths",
         "element": "Water",
         "description": "Deep emotions and subconscious wisdom",
-        "keywords": ["emotions", "intuition", "depth", "subconscious"]
+        "keywords": ["emotions", "intuition", "depth", "subconscious"],
+        "image_url": "https://images.unsplash.com/photo-1628371164958-887b4c79a6be"
     },
     {
         "name": "The Healing Spring",
         "element": "Water",
         "description": "Emotional cleansing and renewal",
-        "keywords": ["healing", "cleansing", "forgiveness", "renewal"]
+        "keywords": ["healing", "cleansing", "forgiveness", "renewal"],
+        "image_url": "https://images.unsplash.com/photo-1752139925820-d8267dc25182"
     },
     {
         "name": "The Moon Tide",
         "element": "Water",
         "description": "Cycles, intuition, and psychic ability",
-        "keywords": ["cycles", "intuition", "psychic", "feminine energy"]
+        "keywords": ["cycles", "intuition", "psychic", "feminine energy"],
+        "image_url": "https://images.unsplash.com/photo-1633403999090-064ea7537d68"
     },
     {
         "name": "The Ancient Tree",
         "element": "Earth",
         "description": "Grounding, wisdom, and stability",
-        "keywords": ["grounding", "wisdom", "stability", "growth"]
+        "keywords": ["grounding", "wisdom", "stability", "growth"],
+        "image_url": "https://images.unsplash.com/photo-1761635555180-ba6f3e7cb057"
     },
     {
         "name": "The Sacred Mountain",
         "element": "Earth",
         "description": "Achievement and endurance",
-        "keywords": ["achievement", "endurance", "strength", "foundation"]
+        "keywords": ["achievement", "endurance", "strength", "foundation"],
+        "image_url": "https://images.pexels.com/photos/1242987/pexels-photo-1242987.jpeg"
     },
     {
         "name": "The Blooming Garden",
         "element": "Earth",
         "description": "Abundance and manifestation",
-        "keywords": ["abundance", "manifestation", "prosperity", "nurturing"]
+        "keywords": ["abundance", "manifestation", "prosperity", "nurturing"],
+        "image_url": "https://images.unsplash.com/photo-1703825864851-b5f379b9e3fc"
     },
     {
         "name": "The Whispering Wind",
         "element": "Air",
         "description": "Messages and mental clarity",
-        "keywords": ["messages", "clarity", "communication", "thought"]
+        "keywords": ["messages", "clarity", "communication", "thought"],
+        "image_url": "https://images.unsplash.com/photo-1715616501682-a8eb6bf657e8"
     },
     {
         "name": "The Sky Dancer",
         "element": "Air",
         "description": "Freedom and new perspectives",
-        "keywords": ["freedom", "perspective", "liberation", "change"]
+        "keywords": ["freedom", "perspective", "liberation", "change"],
+        "image_url": "https://images.unsplash.com/photo-1765813142498-fbee89bd66e5"
     },
     {
         "name": "The Sacred Breath",
         "element": "Air",
         "description": "Life force and spiritual connection",
-        "keywords": ["life force", "spirit", "connection", "awareness"]
+        "keywords": ["life force", "spirit", "connection", "awareness"],
+        "image_url": "https://images.pexels.com/photos/6931694/pexels-photo-6931694.jpeg"
     }
 ]
 
