@@ -121,10 +121,7 @@ export default function AstralTravel() {
           <Ionicons name="warning" size={32} color="#f59e0b" />
           <Text style={styles.warningTitle}>Important Guidelines</Text>
           <Text style={styles.warningText}>
-            • Practice in a safe, comfortable space{'\n'}
-            • Never attempt while driving or operating machinery{'\n'}
-            • Start with beginner levels{'\n'}
-            • Set a clear intention to return to your body
+            {`• Practice in a safe, comfortable space\n• Never attempt while driving or operating machinery\n• Start with beginner levels\n• Set a clear intention to return to your body`}
           </Text>
         </View>
 

@@ -1,19 +1,23 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import random
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from elevenlabs import ElevenLabs, VoiceSettings
 import base64
 import io
+import bcrypt
+import jwt
+import httpx
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -29,6 +33,14 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 # ElevenLabs client for TTS
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
 eleven_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+
+# JWT Configuration
+JWT_SECRET = os.environ.get('JWT_SECRET', 'change_this_secret_key')
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_DAYS = 7
+
+# Emergent Auth Configuration
+EMERGENT_AUTH_SESSION_ENDPOINT = os.environ.get('EMERGENT_AUTH_SESSION_ENDPOINT')
 
 # Spirit Guide Voice Configuration
 # Using ElevenLabs pre-made voices with appropriate genders
