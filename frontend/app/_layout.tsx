@@ -105,6 +105,16 @@ function ProtectedLayout() {
         }}
       />
       <Drawer.Screen
+        name="settings"
+        options={{
+          drawerLabel: 'Settings',
+          title: 'Settings',
+          drawerIcon: ({ color, size}) => (
+            <Ionicons name="settings" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="auth/login"
         options={{
           drawerItemStyle: { display: 'none' },
@@ -112,6 +122,12 @@ function ProtectedLayout() {
       />
       <Drawer.Screen
         name="auth/signup"
+        options={{
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
+        name="auth/callback"
         options={{
           drawerItemStyle: { display: 'none' },
         }}

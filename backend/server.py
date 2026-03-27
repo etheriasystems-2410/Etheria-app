@@ -383,9 +383,20 @@ async def draw_oracle_card():
         )
 
 @api_router.post("/oracle/save")
-async def save_oracle_reading(reading: SaveReadingRequest):
+async def save_oracle_reading(reading: SaveReadingRequest, request: Request):
     """Save an oracle reading to database"""
     try:
+        # Get current user
+        user = await get_current_user(request)
+        
+        reading_dict = reading.dict()
+        reading_dict['_id'] = str(uuid.uuid4())
+        reading_dict['user_id'] = user['user_id']  # Associate with user
+        reading_dict['saved_at'] = datetime.utcnow().isoformat()
+        await db.oracle_readings.insert_one(reading_dict)
+        return {"success": True, "message": "Reading saved"}
+    except HTTPException:
+        # If not authenticated, save without user_id
         reading_dict = reading.dict()
         reading_dict['_id'] = str(uuid.uuid4())
         reading_dict['saved_at'] = datetime.utcnow().isoformat()
@@ -396,11 +407,18 @@ async def save_oracle_reading(reading: SaveReadingRequest):
         raise HTTPException(status_code=500, detail="Failed to save reading")
 
 @api_router.get("/oracle/readings")
-async def get_saved_readings(limit: int = 20):
-    """Get saved oracle readings"""
+async def get_saved_readings(request: Request, limit: int = 20):
+    """Get saved oracle readings for current user"""
     try:
-        readings = await db.oracle_readings.find().sort("saved_at", -1).limit(limit).to_list(limit)
+        # Get current user
+        user = await get_current_user(request)
+        readings = await db.oracle_readings.find(
+            {"user_id": user['user_id']}
+        ).sort("saved_at", -1).limit(limit).to_list(limit)
         return readings
+    except HTTPException:
+        # If not authenticated, return empty array
+        return []
     except Exception as e:
         logging.error(f"Error fetching readings: {e}")
         return []
@@ -462,9 +480,19 @@ async def generate_guided_meditation(duration_minutes: int = 10, focus: str = "g
         raise HTTPException(status_code=500, detail="Failed to generate meditation")
 
 @api_router.post("/journal/save")
-async def save_journal_entry(entry: dict):
+async def save_journal_entry(entry: dict, request: Request):
     """Save a journal entry"""
     try:
+        # Get current user
+        user = await get_current_user(request)
+        
+        entry['_id'] = str(uuid.uuid4())
+        entry['user_id'] = user['user_id']  # Associate with user
+        entry['created_at'] = datetime.utcnow().isoformat()
+        await db.journal_entries.insert_one(entry)
+        return {"success": True, "id": entry['_id']}
+    except HTTPException:
+        # If not authenticated, save without user_id
         entry['_id'] = str(uuid.uuid4())
         entry['created_at'] = datetime.utcnow().isoformat()
         await db.journal_entries.insert_one(entry)
@@ -474,11 +502,18 @@ async def save_journal_entry(entry: dict):
         raise HTTPException(status_code=500, detail="Failed to save entry")
 
 @api_router.get("/journal/entries")
-async def get_journal_entries(limit: int = 50):
-    """Get journal entries"""
+async def get_journal_entries(request: Request, limit: int = 50):
+    """Get journal entries for current user"""
     try:
-        entries = await db.journal_entries.find().sort("created_at", -1).limit(limit).to_list(limit)
+        # Get current user
+        user = await get_current_user(request)
+        entries = await db.journal_entries.find(
+            {"user_id": user['user_id']}
+        ).sort("created_at", -1).limit(limit).to_list(limit)
         return entries
+    except HTTPException:
+        # If not authenticated, return empty array
+        return []
     except Exception as e:
         logging.error(f"Error fetching entries: {e}")
         return []
@@ -563,9 +598,19 @@ async def get_binaural_audio_info(frequency_id: str):
     }
 
 @api_router.post("/meditation/session/save")
-async def save_meditation_session(session: dict):
+async def save_meditation_session(session: dict, request: Request):
     """Save a meditation session to track progress"""
     try:
+        # Get current user
+        user = await get_current_user(request)
+        
+        session['_id'] = str(uuid.uuid4())
+        session['user_id'] = user['user_id']  # Associate with user
+        session['completed_at'] = datetime.utcnow().isoformat()
+        await db.meditation_sessions.insert_one(session)
+        return {"success": True, "session_id": session['_id']}
+    except HTTPException:
+        # If not authenticated, save without user_id
         session['_id'] = str(uuid.uuid4())
         session['completed_at'] = datetime.utcnow().isoformat()
         await db.meditation_sessions.insert_one(session)
@@ -575,11 +620,18 @@ async def save_meditation_session(session: dict):
         raise HTTPException(status_code=500, detail="Failed to save session")
 
 @api_router.get("/meditation/sessions")
-async def get_meditation_sessions(limit: int = 30):
-    """Get meditation session history"""
+async def get_meditation_sessions(request: Request, limit: int = 30):
+    """Get meditation session history for current user"""
     try:
-        sessions = await db.meditation_sessions.find().sort("completed_at", -1).limit(limit).to_list(limit)
+        # Get current user
+        user = await get_current_user(request)
+        sessions = await db.meditation_sessions.find(
+            {"user_id": user['user_id']}
+        ).sort("completed_at", -1).limit(limit).to_list(limit)
         return sessions
+    except HTTPException:
+        # If not authenticated, return empty array
+        return []
     except Exception as e:
         logging.error(f"Error fetching sessions: {e}")
         return []
@@ -891,6 +943,36 @@ async def logout(request: Request):
     response = JSONResponse(content={"success": True})
     response.delete_cookie("session_token", path="/")
     return response
+
+# User Profile Endpoints
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = None
+    picture: Optional[str] = None
+
+@api_router.patch("/user/update-profile")
+async def update_profile(request: Request, data: UpdateProfileRequest):
+    """Update user profile"""
+    user = await get_current_user(request)
+    
+    update_data = {}
+    if data.name:
+        update_data["name"] = data.name
+    if data.picture:
+        update_data["picture"] = data.picture
+    
+    if update_data:
+        await db.users.update_one(
+            {"user_id": user["user_id"]},
+            {"$set": update_data}
+        )
+    
+    # Return updated user
+    updated_user = await db.users.find_one(
+        {"user_id": user["user_id"]},
+        {"_id": 0, "password_hash": 0}
+    )
+    
+    return updated_user
 
 # Include the router in the main app
 app.include_router(api_router)
