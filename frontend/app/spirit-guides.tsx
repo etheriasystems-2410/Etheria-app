@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Modal,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -92,7 +93,11 @@ export default function SpiritGuides() {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [playingAudioIndex, setPlayingAudioIndex] = useState<number | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const [generatingAudio, setGeneratingAudio] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Check if user has access to Spirit Guides feature
   const hasAccess = isPremium || checkFeatureAccess('spirit_guides');
@@ -100,6 +105,7 @@ export default function SpiritGuides() {
   useEffect(() => {
     if (hasAccess) {
       checkBirthdayStored();
+      loadMutePreference();
     }
   }, [hasAccess]);
 
@@ -110,6 +116,29 @@ export default function SpiritGuides() {
       }
     };
   }, []);
+
+  const loadMutePreference = async () => {
+    try {
+      const muted = await AsyncStorage.getItem('spirit_guides_muted');
+      if (muted === 'true') {
+        setIsMuted(true);
+      }
+    } catch (error) {
+      console.error('Error loading mute preference:', error);
+    }
+  };
+
+  const toggleMute = async () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    await AsyncStorage.setItem('spirit_guides_muted', newMuted ? 'true' : 'false');
+    
+    // Stop current audio if muting
+    if (newMuted && soundRef.current) {
+      await soundRef.current.stopAsync();
+      setPlayingAudioIndex(null);
+    }
+  };
 
   const checkBirthdayStored = async () => {
     try {
@@ -154,18 +183,27 @@ export default function SpiritGuides() {
 
   const selectGuide = (guide: Guide) => {
     setSelectedGuide(guide);
-    const pronoun = guide.gender === 'feminine' ? 'her' : 'him';
+    setAudioError(null);
+    const greeting = `Greetings, seeker. I am ${guide.name}, guide of ${guide.element}. How may I illuminate your path?`;
     setMessages([
       {
         role: 'assistant',
-        content: `Greetings, seeker. I am ${guide.name}, guide of ${guide.element}. How may I illuminate your path?`,
+        content: greeting,
       },
     ]);
-    // Auto-play greeting
-    generateAndPlayAudio(`Greetings, seeker. I am ${guide.name}, guide of ${guide.element}. How may I illuminate your path?`, guide.name, 0);
+    // Auto-play greeting if not muted
+    if (!isMuted) {
+      generateAndPlayAudio(greeting, guide.name, 0);
+    }
   };
 
   const generateAndPlayAudio = async (text: string, guideName: string, messageIndex: number) => {
+    // Skip if muted
+    if (isMuted) return;
+    
+    setGeneratingAudio(true);
+    setAudioError(null);
+    
     try {
       const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
         method: 'POST',
@@ -177,6 +215,14 @@ export default function SpiritGuides() {
       });
 
       const data = await response.json();
+      
+      // Check if TTS was successful
+      if (!data.success || !data.audio_base64) {
+        // TTS failed but we don't crash - show error message
+        setAudioError(data.error || 'Voice temporarily unavailable');
+        console.log('TTS unavailable:', data.error);
+        return;
+      }
 
       // Update message with audio
       setMessages((prev) =>
@@ -187,15 +233,29 @@ export default function SpiritGuides() {
         )
       );
 
-      // Play audio
-      await playAudio(data.audio_base64, messageIndex);
+      // Play audio if not muted
+      if (!isMuted) {
+        await playAudio(data.audio_base64, messageIndex);
+      }
     } catch (error) {
       console.error('Error generating audio:', error);
+      setAudioError('Voice generation failed');
+    } finally {
+      setGeneratingAudio(false);
     }
   };
 
   const playAudio = async (audioBase64: string, messageIndex: number) => {
+    // Skip if muted
+    if (isMuted) return;
+    
     try {
+      // Validate audio data
+      if (!audioBase64 || audioBase64.length < 100) {
+        console.log('Invalid audio data, skipping playback');
+        return;
+      }
+      
       if (soundRef.current) {
         await soundRef.current.unloadAsync();
       }
@@ -216,6 +276,7 @@ export default function SpiritGuides() {
     } catch (error) {
       console.error('Error playing audio:', error);
       setPlayingAudioIndex(null);
+      // Don't show error for playback issues, just silently fail
     }
   };
 
@@ -420,12 +481,44 @@ export default function SpiritGuides() {
             Guide of {selectedGuide.element} • {selectedGuide.gender}
           </Text>
         </View>
-        <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
-          <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
+        <View style={styles.chatHeaderRight}>
+          {/* Mute Toggle Button */}
+          <TouchableOpacity
+            style={[styles.muteButton, isMuted && styles.muteButtonActive]}
+            onPress={toggleMute}
+          >
+            <Ionicons
+              name={isMuted ? 'volume-mute' : 'volume-high'}
+              size={20}
+              color={isMuted ? '#ef4444' : '#b794f6'}
+            />
+          </TouchableOpacity>
+          <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
+            <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
+          </View>
         </View>
       </View>
 
-      <ScrollView style={styles.messagesContainer} contentContainerStyle={styles.messagesContent}>
+      {/* Audio Status Banner */}
+      {audioError && (
+        <View style={styles.audioErrorBanner}>
+          <Ionicons name="volume-mute" size={16} color="#fbbf24" />
+          <Text style={styles.audioErrorText}>{audioError}</Text>
+        </View>
+      )}
+      {generatingAudio && (
+        <View style={styles.audioGeneratingBanner}>
+          <ActivityIndicator size="small" color="#b794f6" />
+          <Text style={styles.audioGeneratingText}>Generating voice...</Text>
+        </View>
+      )}
+
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.messagesContainer} 
+        contentContainerStyle={styles.messagesContent}
+        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+      >
         {messages.map((message, index) => (
           <View
             key={index}
@@ -787,5 +880,53 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 14,
     color: '#9f7aea',
+  },
+  chatHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  muteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2d1b4e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+  },
+  muteButtonActive: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: '#ef4444',
+  },
+  audioErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(251, 191, 36, 0.3)',
+  },
+  audioErrorText: {
+    color: '#fbbf24',
+    fontSize: 13,
+    flex: 1,
+  },
+  audioGeneratingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(183, 148, 246, 0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(183, 148, 246, 0.3)',
+  },
+  audioGeneratingText: {
+    color: '#b794f6',
+    fontSize: 13,
   },
 });

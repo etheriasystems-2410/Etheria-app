@@ -678,9 +678,11 @@ class TTSRequest(BaseModel):
     voice_id: Optional[str] = None
     
 class TTSResponse(BaseModel):
-    audio_base64: str
+    audio_base64: Optional[str] = None
     text: str
     guide_name: Optional[str] = None
+    error: Optional[str] = None
+    success: bool = True
 
 @api_router.post("/tts/generate", response_model=TTSResponse)
 async def generate_tts(request: TTSRequest):
@@ -697,6 +699,16 @@ async def generate_tts(request: TTSRequest):
             # Default to Aether (Air guide)
             voice_id = SPIRIT_GUIDE_VOICES["Aether"]["voice_id"]
             guide_name = "Aether"
+        
+        # Check if ElevenLabs API key is configured
+        if not ELEVENLABS_API_KEY:
+            return TTSResponse(
+                audio_base64=None,
+                text=request.text,
+                guide_name=guide_name,
+                error="TTS not configured",
+                success=False
+            )
         
         # Generate audio using ElevenLabs
         voice_settings = VoiceSettings(
@@ -724,12 +736,22 @@ async def generate_tts(request: TTSRequest):
         return TTSResponse(
             audio_base64=audio_b64,
             text=request.text,
-            guide_name=guide_name
+            guide_name=guide_name,
+            success=True
         )
         
     except Exception as e:
+        error_msg = str(e)
         logging.error(f"Error generating TTS: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generating TTS: {str(e)}")
+        
+        # Return graceful error instead of 500
+        return TTSResponse(
+            audio_base64=None,
+            text=request.text,
+            guide_name=request.guide_name,
+            error="Voice generation temporarily unavailable. Please try again later.",
+            success=False
+        )
 
 @api_router.get("/spirit-guides/voices")
 async def get_spirit_guide_voices():
