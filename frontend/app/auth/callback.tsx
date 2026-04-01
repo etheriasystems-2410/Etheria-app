@@ -28,34 +28,60 @@ export default function AuthCallback() {
       // First check expo-router params (works for both web and mobile deep links)
       if (params.session_id) {
         sessionId = params.session_id as string;
+        console.log('Got session_id from params:', sessionId);
       }
 
       // On web, also check hash fragment and query params
       if (!sessionId && Platform.OS === 'web') {
-        // Check the hash fragment
+        // Check the hash fragment (Emergent returns session_id here)
         const hash = window.location.hash;
+        console.log('Checking hash:', hash);
         if (hash) {
           const hashParams = new URLSearchParams(hash.substring(1));
           sessionId = hashParams.get('session_id');
+          console.log('Got session_id from hash:', sessionId);
         }
         
         // Also check query params as fallback
         if (!sessionId) {
           const urlParams = new URLSearchParams(window.location.search);
           sessionId = urlParams.get('session_id');
+          console.log('Got session_id from query:', sessionId);
         }
       }
 
-      // For mobile, check if we got it via deep link
+      // For mobile, check if we got it via deep link URL
       if (!sessionId && Platform.OS !== 'web') {
-        const url = await Linking.getInitialURL();
-        if (url) {
-          const parsed = Linking.parse(url);
-          sessionId = parsed.queryParams?.session_id as string;
+        try {
+          const url = await Linking.getInitialURL();
+          console.log('Initial URL:', url);
+          if (url) {
+            // Try to parse the URL
+            const parsed = Linking.parse(url);
+            console.log('Parsed URL:', JSON.stringify(parsed));
+            
+            // Check queryParams
+            if (parsed.queryParams?.session_id) {
+              sessionId = parsed.queryParams.session_id as string;
+              console.log('Got session_id from parsed queryParams:', sessionId);
+            }
+            
+            // Also check if session_id is in the path or fragment
+            if (!sessionId && url.includes('session_id=')) {
+              const match = url.match(/session_id=([^&\s#]+)/);
+              if (match) {
+                sessionId = match[1];
+                console.log('Got session_id from URL regex:', sessionId);
+              }
+            }
+          }
+        } catch (e) {
+          console.log('Error getting initial URL:', e);
         }
       }
 
       if (!sessionId) {
+        console.log('No session ID found in any location');
         throw new Error('No session ID found. Please try logging in again.');
       }
 

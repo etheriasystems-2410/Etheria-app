@@ -124,6 +124,7 @@ export default function Login() {
     } else {
       // For native apps, use WebBrowser for auth session
       try {
+        setLoading(true);
         // Create the redirect URL using expo-linking
         const redirectUrl = Linking.createURL('/auth/callback');
         const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
@@ -133,26 +134,50 @@ export default function Login() {
         
         const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
         
-        console.log('Auth result:', result);
+        console.log('Auth result type:', result.type);
+        if (result.type === 'success') {
+          console.log('Auth result URL:', (result as any).url);
+        }
         
-        if (result.type === 'success' && result.url) {
+        if (result.type === 'success' && (result as any).url) {
+          const resultUrl = (result as any).url as string;
           // Parse the session_id from the returned URL
+          // Emergent OAuth returns: redirect_url#session_id=xxx
           let sessionId: string | null = null;
           
-          try {
-            const url = new URL(result.url);
-            sessionId = url.searchParams.get('session_id');
-            
-            // Also check hash fragment
-            if (!sessionId && url.hash) {
-              const hashParams = new URLSearchParams(url.hash.substring(1));
+          // Method 1: Check hash fragment first (most common for OAuth)
+          if (resultUrl.includes('#')) {
+            const hashPart = resultUrl.split('#')[1];
+            if (hashPart) {
+              const hashParams = new URLSearchParams(hashPart);
               sessionId = hashParams.get('session_id');
+              console.log('Session ID from hash:', sessionId);
             }
-          } catch (e) {
-            // URL parsing failed, try regex
-            const match = result.url.match(/session_id=([^&]+)/);
+          }
+          
+          // Method 2: Check query params
+          if (!sessionId && resultUrl.includes('?')) {
+            try {
+              const url = new URL(resultUrl);
+              sessionId = url.searchParams.get('session_id');
+              console.log('Session ID from query:', sessionId);
+            } catch (e) {
+              // URL parsing might fail for exp:// URLs
+              const queryMatch = resultUrl.match(/\?([^#]*)/);
+              if (queryMatch) {
+                const queryParams = new URLSearchParams(queryMatch[1]);
+                sessionId = queryParams.get('session_id');
+                console.log('Session ID from manual query parse:', sessionId);
+              }
+            }
+          }
+          
+          // Method 3: Regex fallback for any location
+          if (!sessionId) {
+            const match = resultUrl.match(/session_id=([^&\s#]+)/);
             if (match) {
-              sessionId = match[1];
+              sessionId = decodeURIComponent(match[1]);
+              console.log('Session ID from regex:', sessionId);
             }
           }
           
@@ -160,7 +185,8 @@ export default function Login() {
             // Process the callback
             await processOAuthCallback(sessionId);
           } else {
-            Alert.alert('Login Failed', 'No session ID returned. Please try again.');
+            console.log('Full result URL:', resultUrl);
+            Alert.alert('Login Failed', 'No session ID returned from authentication. Please try again.');
           }
         } else if (result.type === 'cancel') {
           // User cancelled - do nothing
@@ -171,6 +197,8 @@ export default function Login() {
       } catch (error: any) {
         console.error('Google login error:', error);
         Alert.alert('Login Error', error.message || 'Failed to complete Google login. Please try again.');
+      } finally {
+        setLoading(false);
       }
     }
   };
