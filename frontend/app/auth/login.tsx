@@ -10,13 +10,13 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
-  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 
 // Simple math captcha generator
 const generateCaptcha = () => {
@@ -123,18 +123,38 @@ export default function Login() {
       window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
     } else {
       // For native apps, use WebBrowser for auth session
-      // This opens an in-app browser that handles the OAuth flow and returns with the session
       try {
+        // Create the redirect URL using expo-linking
         const redirectUrl = Linking.createURL('/auth/callback');
         const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
         
+        console.log('Opening auth URL:', authUrl);
+        console.log('Redirect URL:', redirectUrl);
+        
         const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+        
+        console.log('Auth result:', result);
         
         if (result.type === 'success' && result.url) {
           // Parse the session_id from the returned URL
-          const url = new URL(result.url);
-          const sessionId = url.searchParams.get('session_id') || 
-                           url.hash?.replace('#', '').split('&').find(p => p.startsWith('session_id='))?.split('=')[1];
+          let sessionId: string | null = null;
+          
+          try {
+            const url = new URL(result.url);
+            sessionId = url.searchParams.get('session_id');
+            
+            // Also check hash fragment
+            if (!sessionId && url.hash) {
+              const hashParams = new URLSearchParams(url.hash.substring(1));
+              sessionId = hashParams.get('session_id');
+            }
+          } catch (e) {
+            // URL parsing failed, try regex
+            const match = result.url.match(/session_id=([^&]+)/);
+            if (match) {
+              sessionId = match[1];
+            }
+          }
           
           if (sessionId) {
             // Process the callback
@@ -143,11 +163,14 @@ export default function Login() {
             Alert.alert('Login Failed', 'No session ID returned. Please try again.');
           }
         } else if (result.type === 'cancel') {
-          // User cancelled
+          // User cancelled - do nothing
+          console.log('User cancelled login');
+        } else if (result.type === 'dismiss') {
+          console.log('Browser dismissed');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Google login error:', error);
-        Alert.alert('Login Error', 'Failed to complete Google login. Please try again.');
+        Alert.alert('Login Error', error.message || 'Failed to complete Google login. Please try again.');
       }
     }
   };
