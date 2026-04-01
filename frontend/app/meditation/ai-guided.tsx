@@ -61,6 +61,7 @@ export default function AIGuidedMeditation() {
   
   // TTS state
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
@@ -86,8 +87,16 @@ export default function AIGuidedMeditation() {
     setupAudioMode();
   }, []);
 
+  // Auto-start TTS when script is generated
+  useEffect(() => {
+    if (script && !isMuted) {
+      beginSession();
+    }
+  }, [script]);
+
   const generateMeditation = async () => {
     setLoading(true);
+    setAudioError(null);
     try {
       const response = await fetch(
         `${BACKEND_URL}/api/meditation/generate-guided?duration_minutes=${duration}&focus=${selectedFocus}`,
@@ -95,6 +104,7 @@ export default function AIGuidedMeditation() {
       );
       const data = await response.json();
       setScript(data.script);
+      // TTS will auto-start via useEffect
     } catch (error) {
       console.error('Error generating meditation:', error);
       Alert.alert('Error', 'Failed to generate meditation. Please try again.');
@@ -104,7 +114,7 @@ export default function AIGuidedMeditation() {
   };
 
   const beginSession = async () => {
-    if (!script) return;
+    if (!script || isMuted) return;
     
     setGeneratingAudio(true);
     setAudioError(null);
@@ -124,7 +134,6 @@ export default function AIGuidedMeditation() {
       
       if (!data.audio_base64) {
         setAudioError(data.error || 'Voice generation unavailable');
-        Alert.alert('Voice Unavailable', 'Could not generate voice guidance. You can read the meditation script instead.');
         return;
       }
       
@@ -152,7 +161,6 @@ export default function AIGuidedMeditation() {
     } catch (error) {
       console.error('Error generating audio:', error);
       setAudioError('Failed to generate voice guidance');
-      Alert.alert('Error', 'Failed to start voice-guided session. Please try again.');
     } finally {
       setGeneratingAudio(false);
     }
@@ -167,10 +175,25 @@ export default function AIGuidedMeditation() {
     setIsPlaying(false);
   };
 
+  const toggleMute = async () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    
+    if (newMuted && audioPlayerRef.current) {
+      // Stop audio when muting
+      await audioPlayerRef.current.stop();
+      setIsPlaying(false);
+    } else if (!newMuted && script && !isPlaying) {
+      // Resume/start audio when unmuting
+      await beginSession();
+    }
+  };
+
   const togglePlayback = async () => {
     if (isPlaying) {
       await stopSession();
     } else {
+      setIsMuted(false); // Unmute when manually starting
       await beginSession();
     }
   };
@@ -189,41 +212,83 @@ export default function AIGuidedMeditation() {
             <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Your Meditation</Text>
-          <View style={{ width: 24 }} />
+          {/* Mute Button in Header */}
+          <TouchableOpacity onPress={toggleMute} style={styles.muteButton}>
+            <Ionicons 
+              name={isMuted ? "volume-mute" : "volume-high"} 
+              size={24} 
+              color={isMuted ? "#ef4444" : "#10b981"} 
+            />
+          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scriptContainer} contentContainerStyle={styles.scriptContent}>
+          {/* Audio Status Banner */}
+          {generatingAudio && (
+            <View style={styles.audioBanner}>
+              <ActivityIndicator color="#a855f7" size="small" />
+              <Text style={styles.audioBannerText}>Generating voice guidance...</Text>
+            </View>
+          )}
+          
+          {isPlaying && !isMuted && (
+            <View style={[styles.audioBanner, styles.playingBanner]}>
+              <Ionicons name="volume-high" size={20} color="#10b981" />
+              <Text style={[styles.audioBannerText, { color: '#10b981' }]}>Voice guidance playing...</Text>
+            </View>
+          )}
+          
+          {isMuted && (
+            <View style={[styles.audioBanner, styles.mutedBanner]}>
+              <Ionicons name="volume-mute" size={20} color="#ef4444" />
+              <Text style={[styles.audioBannerText, { color: '#ef4444' }]}>Voice muted - tap speaker icon to unmute</Text>
+            </View>
+          )}
+          
           {audioError && (
             <View style={styles.errorBanner}>
               <Ionicons name="warning" size={20} color="#f59e0b" />
               <Text style={styles.errorText}>{audioError}</Text>
             </View>
           )}
+          
           <Text style={styles.scriptText}>{script}</Text>
         </ScrollView>
 
         <View style={styles.scriptControls}>
-          {generatingAudio ? (
-            <View style={styles.loadingButton}>
-              <ActivityIndicator color="#fff" />
-              <Text style={styles.playButtonText}>Generating Voice...</Text>
-            </View>
-          ) : (
+          <View style={styles.controlsRow}>
+            {/* Large Mute/Unmute Button */}
+            <TouchableOpacity 
+              style={[styles.controlButton, isMuted && styles.mutedControlButton]} 
+              onPress={toggleMute}
+            >
+              <Ionicons 
+                name={isMuted ? "volume-mute" : "volume-high"} 
+                size={28} 
+                color="#fff" 
+              />
+              <Text style={styles.controlButtonText}>
+                {isMuted ? "Unmute" : "Mute"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Play/Stop Button */}
             <TouchableOpacity 
               style={[styles.playButton, isPlaying && styles.stopButton]} 
               onPress={togglePlayback}
+              disabled={generatingAudio}
             >
               <Ionicons name={isPlaying ? "stop" : "play"} size={32} color="#fff" />
               <Text style={styles.playButtonText}>
-                {isPlaying ? "Stop Session" : "Begin Session"}
+                {isPlaying ? "Stop" : "Play"}
               </Text>
             </TouchableOpacity>
-          )}
+          </View>
           
           {isPlaying && (
             <View style={styles.playingIndicator}>
-              <Ionicons name="volume-high" size={20} color="#10b981" />
-              <Text style={styles.playingText}>Voice guidance playing...</Text>
+              <Ionicons name="musical-notes" size={20} color="#10b981" />
+              <Text style={styles.playingText}>Session in progress...</Text>
             </View>
           )}
         </View>
@@ -515,5 +580,50 @@ const styles = StyleSheet.create({
     color: '#10b981',
     fontSize: 14,
     fontWeight: '500',
+  },
+  muteButton: {
+    padding: 8,
+  },
+  audioBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  playingBanner: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  mutedBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  audioBannerText: {
+    color: '#a855f7',
+    fontSize: 14,
+    flex: 1,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  controlButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    paddingVertical: 18,
+    borderRadius: 25,
+    gap: 8,
+  },
+  mutedControlButton: {
+    backgroundColor: '#ef4444',
+  },
+  controlButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
