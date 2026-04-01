@@ -142,9 +142,10 @@ export default function AIGuidedMeditation() {
   const parseScriptWithPauses = (script: string): Array<{type: 'text' | 'pause', content: string, duration?: number}> => {
     const segments: Array<{type: 'text' | 'pause', content: string, duration?: number}> = [];
     
-    // Regex to match various pause patterns:
-    // [pause for X seconds], (pause X seconds), ...pause..., [X second pause], etc.
-    const pauseRegex = /\[pause(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?)?\]|\(pause(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?)?\)|\.{3,}\s*(?:pause|breathe|relax)(?:\s+for)?\s*(\d+)?\s*(?:seconds?|secs?)?\.{0,3}|\[(\d+)\s*(?:second|sec)s?\s+pause\]|\((\d+)\s*(?:second|sec)s?\s+pause\)|(?:pause|take a moment|breathe deeply|allow yourself)(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?)/gi;
+    // Regex to match ONLY explicit pause markers with brackets/parentheses:
+    // [pause for X seconds], [PAUSE Xs], (pause X seconds), [X second pause], etc.
+    // Does NOT match natural language like "take a moment" or "breathe deeply"
+    const pauseRegex = /\[pause(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?|s)?\s*\]|\[PAUSE\s+(\d+)\s*(?:seconds?|secs?|s)?\s*\]|\(pause(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?|s)?\s*\)|\[(\d+)\s*(?:second|sec)s?\s+pause\]|\((\d+)\s*(?:second|sec)s?\s+pause\)/gi;
     
     let lastIndex = 0;
     let match;
@@ -159,7 +160,7 @@ export default function AIGuidedMeditation() {
       }
       
       // Extract pause duration (check all capture groups)
-      const duration = parseInt(match[1] || match[2] || match[3] || match[4] || match[5] || match[6] || '5', 10);
+      const duration = parseInt(match[1] || match[2] || match[3] || match[4] || match[5] || '5', 10);
       segments.push({ type: 'pause', content: match[0], duration: Math.min(duration, 30) }); // Cap at 30 seconds
       
       lastIndex = match.index + match[0].length;
@@ -177,6 +178,8 @@ export default function AIGuidedMeditation() {
     if (segments.length === 0) {
       segments.push({ type: 'text', content: script });
     }
+    
+    console.log('Parsed segments count:', segments.length, 'Pauses found:', segments.filter(s => s.type === 'pause').length);
     
     return segments;
   };
