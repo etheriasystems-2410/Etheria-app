@@ -15,7 +15,15 @@ function ProtectedLayout() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === 'auth';
+    const isHomePage = segments.length === 0 || (segments.length === 1 && segments[0] === '(drawer)');
+    const isIndexPage = segments[0] === 'index' || segments.length === 0;
+    
+    // Allow home page without authentication
+    if (isIndexPage || isHomePage) {
+      return;
+    }
 
+    // Redirect to login for protected routes
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/auth/login');
     } else if (isAuthenticated && inAuthGroup) {
