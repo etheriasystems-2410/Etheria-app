@@ -395,35 +395,94 @@ async def get_training_modules():
     """Get all training modules"""
     return TRAINING_MODULES
 
+class MultiCardDrawRequest(BaseModel):
+    spread_type: str = "single"
+    card_count: int = 1
+    positions: List[str] = ["Guidance"]
+
 @api_router.post("/oracle/draw")
-async def draw_oracle_card():
-    """Draw a random oracle card and get AI interpretation"""
-    card = random.choice(ORACLE_CARDS)
+async def draw_oracle_card(request: MultiCardDrawRequest = None):
+    """Draw oracle cards and get AI interpretation"""
+    # Handle both old single-card and new multi-card requests
+    if request is None or request.card_count == 1:
+        # Single card draw (original behavior)
+        card = random.choice(ORACLE_CARDS)
+        
+        try:
+            chat = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=f"oracle-{uuid.uuid4()}",
+                system_message="You are a wise spiritual guide providing oracle card interpretations. Give meaningful, insightful readings that help people on their spiritual journey. Keep responses under 200 words."
+            ).with_model("gemini", "gemini-2.5-pro")
+            
+            prompt = f"The seeker has drawn the card '{card['name']}' from the {card['element']} element. Card description: {card['description']}. Keywords: {', '.join(card['keywords'])}. Provide a spiritual interpretation and guidance for this card."
+            
+            user_message = UserMessage(text=prompt)
+            interpretation = await chat.send_message(user_message)
+            
+            return {
+                "spread_type": "single",
+                "cards": [{
+                    "card": card,
+                    "position": "Guidance",
+                    "interpretation": interpretation
+                }],
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logging.error(f"Error generating interpretation: {e}")
+            return {
+                "spread_type": "single",
+                "cards": [{
+                    "card": card,
+                    "position": "Guidance",
+                    "interpretation": f"The {card['name']} speaks of {card['description'].lower()}. This card brings the energy of {card['element']} into your life."
+                }],
+                "timestamp": datetime.utcnow().isoformat()
+            }
     
-    # Generate interpretation using Gemini
-    try:
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"oracle-{uuid.uuid4()}",
-            system_message="You are a wise spiritual guide providing oracle card interpretations. Give meaningful, insightful readings that help people on their spiritual journey. Keep responses under 200 words."
-        ).with_model("gemini", "gemini-2.5-pro")
+    # Multi-card spread
+    card_count = min(request.card_count, 10)  # Limit to 10 cards max
+    positions = request.positions[:card_count]
+    
+    # Draw unique cards
+    drawn_cards = random.sample(ORACLE_CARDS, min(card_count, len(ORACLE_CARDS)))
+    
+    cards_result = []
+    
+    for i, card in enumerate(drawn_cards):
+        position = positions[i] if i < len(positions) else f"Card {i+1}"
         
-        prompt = f"The seeker has drawn the card '{card['name']}' from the {card['element']} element. Card description: {card['description']}. Keywords: {', '.join(card['keywords'])}. Provide a spiritual interpretation and guidance for this card."
-        
-        user_message = UserMessage(text=prompt)
-        interpretation = await chat.send_message(user_message)
-        
-        return OracleReading(
-            card=card,
-            interpretation=interpretation
-        )
-    except Exception as e:
-        logging.error(f"Error generating interpretation: {e}")
-        # Fallback interpretation
-        return OracleReading(
-            card=card,
-            interpretation=f"The {card['name']} speaks of {card['description'].lower()}. This card brings the energy of {card['element']} into your life. Reflect on these keywords: {', '.join(card['keywords'])}."
-        )
+        try:
+            chat = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=f"oracle-{uuid.uuid4()}",
+                system_message=f"You are a wise spiritual guide providing oracle card interpretations for a {request.spread_type} spread. Give meaningful, insightful readings. Keep responses under 150 words."
+            ).with_model("gemini", "gemini-2.5-pro")
+            
+            prompt = f"In a {request.spread_type} spread, the seeker has drawn '{card['name']}' ({card['element']} element) in the '{position}' position. Card description: {card['description']}. Keywords: {', '.join(card['keywords'])}. Interpret this card specifically for the {position} position in this spread."
+            
+            user_message = UserMessage(text=prompt)
+            interpretation = await chat.send_message(user_message)
+            
+            cards_result.append({
+                "card": card,
+                "position": position,
+                "interpretation": interpretation
+            })
+        except Exception as e:
+            logging.error(f"Error generating interpretation for card {i}: {e}")
+            cards_result.append({
+                "card": card,
+                "position": position,
+                "interpretation": f"The {card['name']} in the {position} position speaks of {card['description'].lower()}. This {card['element']} energy influences this aspect of your reading."
+            })
+    
+    return {
+        "spread_type": request.spread_type,
+        "cards": cards_result,
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 @api_router.post("/oracle/save")
 async def save_oracle_reading(reading: SaveReadingRequest, request: Request):
