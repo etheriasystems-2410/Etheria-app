@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as WebBrowser from 'expo-web-browser';
 
 // Simple math captcha generator
 const generateCaptcha = () => {
@@ -114,16 +115,81 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     // Using Emergent Google OAuth - derive redirect URL dynamically
     if (Platform.OS === 'web') {
       const redirectUrl = window.location.origin + '/auth/callback';
       window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
     } else {
-      // For native apps, use Linking to open the OAuth URL
-      const redirectUrl = 'exp://'; // For Expo Go
-      Linking.openURL(`https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`);
+      // For native apps, use WebBrowser for auth session
+      // This opens an in-app browser that handles the OAuth flow and returns with the session
+      try {
+        const redirectUrl = Linking.createURL('/auth/callback');
+        const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+        
+        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+        
+        if (result.type === 'success' && result.url) {
+          // Parse the session_id from the returned URL
+          const url = new URL(result.url);
+          const sessionId = url.searchParams.get('session_id') || 
+                           url.hash?.replace('#', '').split('&').find(p => p.startsWith('session_id='))?.split('=')[1];
+          
+          if (sessionId) {
+            // Process the callback
+            await processOAuthCallback(sessionId);
+          } else {
+            Alert.alert('Login Failed', 'No session ID returned. Please try again.');
+          }
+        } else if (result.type === 'cancel') {
+          // User cancelled
+        }
+      } catch (error) {
+        console.error('Google login error:', error);
+        Alert.alert('Login Error', 'Failed to complete Google login. Please try again.');
+      }
+    }
+  };
+
+  const processOAuthCallback = async (sessionId: string) => {
+    setLoading(true);
+    try {
+      const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${BACKEND_URL}/api/auth/google-callback?session_id=${sessionId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Authentication failed');
+      }
+
+      const userData = await response.json();
+
+      // Extract session token
+      const setCookie = response.headers.get('set-cookie');
+      if (setCookie) {
+        const tokenMatch = setCookie.match(/session_token=([^;]+)/);
+        if (tokenMatch) {
+          await AsyncStorage.setItem('session_token', tokenMatch[1]);
+        }
+      }
+
+      if (userData.session_token) {
+        await AsyncStorage.setItem('session_token', userData.session_token);
+      }
+
+      // Store user data
+      await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+
+      // Redirect to home
+      router.replace('/');
+    } catch (error: any) {
+      Alert.alert('Login Failed', error.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
     }
   };
 

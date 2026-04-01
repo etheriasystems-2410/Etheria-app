@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function AuthCallback() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const hasProcessed = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('Authenticating...');
@@ -21,15 +23,20 @@ export default function AuthCallback() {
 
   const handleOAuthCallback = async () => {
     try {
-      // Get session_id from URL hash (Emergent OAuth returns it in the hash fragment)
       let sessionId: string | null = null;
 
-      if (Platform.OS === 'web') {
-        // On web, check the hash fragment
+      // First check expo-router params (works for both web and mobile deep links)
+      if (params.session_id) {
+        sessionId = params.session_id as string;
+      }
+
+      // On web, also check hash fragment and query params
+      if (!sessionId && Platform.OS === 'web') {
+        // Check the hash fragment
         const hash = window.location.hash;
         if (hash) {
-          const params = new URLSearchParams(hash.substring(1)); // Remove the #
-          sessionId = params.get('session_id');
+          const hashParams = new URLSearchParams(hash.substring(1));
+          sessionId = hashParams.get('session_id');
         }
         
         // Also check query params as fallback
@@ -39,8 +46,17 @@ export default function AuthCallback() {
         }
       }
 
+      // For mobile, check if we got it via deep link
+      if (!sessionId && Platform.OS !== 'web') {
+        const url = await Linking.getInitialURL();
+        if (url) {
+          const parsed = Linking.parse(url);
+          sessionId = parsed.queryParams?.session_id as string;
+        }
+      }
+
       if (!sessionId) {
-        throw new Error('No session ID found in URL');
+        throw new Error('No session ID found. Please try logging in again.');
       }
 
       setStatus('Exchanging session...');
@@ -48,7 +64,7 @@ export default function AuthCallback() {
       // Exchange session_id for user data
       const response = await fetch(`${BACKEND_URL}/api/auth/google-callback?session_id=${sessionId}`, {
         method: 'POST',
-        credentials: 'include', // Important for cookies
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -59,15 +75,18 @@ export default function AuthCallback() {
       const userData = await response.json();
       setStatus('Setting up session...');
 
-      // Try to get session token from response headers (for cookie)
-      // On web, the cookie is set automatically by the browser
-      // For React Native, we need to extract and store it
+      // Extract session token from response or cookies
       const setCookie = response.headers.get('set-cookie');
       if (setCookie) {
         const tokenMatch = setCookie.match(/session_token=([^;]+)/);
         if (tokenMatch) {
           await AsyncStorage.setItem('session_token', tokenMatch[1]);
         }
+      }
+
+      // If the response includes a token directly, use it
+      if (userData.session_token) {
+        await AsyncStorage.setItem('session_token', userData.session_token);
       }
 
       // Store user data for immediate access
