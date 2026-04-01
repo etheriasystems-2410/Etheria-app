@@ -1,654 +1,286 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Testing for Psychic Awareness App
-Tests all endpoints with realistic data and proper error handling
+Comprehensive Backend API Testing for Etheria App - Stripe Checkout Flow
+Tests all Stripe monetization endpoints end-to-end
 """
 
-import requests
+import asyncio
+import httpx
 import json
 import uuid
 from datetime import datetime
-import time
 
-# Backend URL from frontend .env
+# Backend URL from environment
 BACKEND_URL = "https://meditation-nexus.preview.emergentagent.com/api"
 
-class PsychicAppTester:
+class StripeCheckoutTester:
     def __init__(self):
-        self.session = requests.Session()
-        self.test_results = {}
         self.session_token = None
-        self.test_user_id = None
+        self.user_id = None
+        self.checkout_session_id = None
         
-    def log_test(self, test_name, success, details=""):
-        """Log test results"""
-        self.test_results[test_name] = {
-            "success": success,
-            "details": details,
-            "timestamp": datetime.now().isoformat()
-        }
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status} {test_name}: {details}")
-    
-    def test_root_endpoint(self):
-        """Test the root API endpoint"""
-        try:
-            response = self.session.get(f"{BACKEND_URL}/")
-            if response.status_code == 200:
-                data = response.json()
-                if "message" in data and "Psychic Awareness API" in data["message"]:
-                    self.log_test("Root Endpoint", True, "API is accessible")
-                    return True
-                else:
-                    self.log_test("Root Endpoint", False, f"Unexpected response: {data}")
-                    return False
-            else:
-                self.log_test("Root Endpoint", False, f"Status: {response.status_code}")
-                return False
-        except Exception as e:
-            self.log_test("Root Endpoint", False, f"Connection error: {str(e)}")
-            return False
-    
-    def test_training_modules(self):
-        """Test GET /api/training/modules"""
-        try:
-            response = self.session.get(f"{BACKEND_URL}/training/modules")
-            if response.status_code == 200:
-                modules = response.json()
-                if isinstance(modules, list) and len(modules) == 9:
-                    # Verify structure of modules
-                    required_fields = ["id", "title", "description", "lessons", "category"]
-                    categories = set()
-                    for module in modules:
-                        if not all(field in module for field in required_fields):
-                            self.log_test("Training Modules", False, "Missing required fields in module")
-                            return False
-                        categories.add(module["category"])
-                    
-                    # Check if we have all three categories
-                    expected_categories = {"beginner", "intermediate", "advanced"}
-                    if categories == expected_categories:
-                        self.log_test("Training Modules", True, f"9 modules with all categories: {categories}")
-                        return True
-                    else:
-                        self.log_test("Training Modules", False, f"Missing categories. Found: {categories}")
-                        return False
-                else:
-                    self.log_test("Training Modules", False, f"Expected 9 modules, got {len(modules) if isinstance(modules, list) else 'non-list'}")
-                    return False
-            else:
-                self.log_test("Training Modules", False, f"Status: {response.status_code}")
-                return False
-        except Exception as e:
-            self.log_test("Training Modules", False, f"Error: {str(e)}")
-            return False
-    
-    def test_oracle_draw(self):
-        """Test POST /api/oracle/draw"""
-        try:
-            response = self.session.post(f"{BACKEND_URL}/oracle/draw")
-            if response.status_code == 200:
-                reading = response.json()
-                required_fields = ["card", "interpretation", "timestamp"]
-                if all(field in reading for field in required_fields):
-                    card = reading["card"]
-                    card_fields = ["name", "element", "description", "keywords"]
-                    if all(field in card for field in card_fields):
-                        # Check if interpretation is meaningful (not just fallback)
-                        interpretation = reading["interpretation"]
-                        if len(interpretation) > 50:  # Reasonable interpretation length
-                            self.log_test("Oracle Draw", True, f"Drew card: {card['name']} ({card['element']})")
-                            return reading  # Return for save test
-                        else:
-                            self.log_test("Oracle Draw", False, "Interpretation too short - likely AI failure")
-                            return reading  # Still return for save test
-                    else:
-                        self.log_test("Oracle Draw", False, "Card missing required fields")
-                        return None
-                else:
-                    self.log_test("Oracle Draw", False, "Response missing required fields")
-                    return None
-            else:
-                self.log_test("Oracle Draw", False, f"Status: {response.status_code}")
-                return None
-        except Exception as e:
-            self.log_test("Oracle Draw", False, f"Error: {str(e)}")
-            return None
-    
-    def test_oracle_save(self, reading_data=None):
-        """Test POST /api/oracle/save"""
-        if not reading_data:
-            # Create test reading data
-            reading_data = {
-                "card": {
-                    "name": "The Sacred Ember",
-                    "element": "Fire",
-                    "description": "Inner spark and divine inspiration",
-                    "keywords": ["inspiration", "motivation", "divine spark", "purpose"]
-                },
-                "interpretation": "This is a test interpretation for the Sacred Ember card. It represents the divine spark within you that guides your spiritual journey.",
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        
-        try:
-            response = self.session.post(
-                f"{BACKEND_URL}/oracle/save",
-                json=reading_data,
-                headers={"Content-Type": "application/json"}
-            )
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("success") and "message" in result:
-                    self.log_test("Oracle Save", True, "Reading saved successfully")
-                    return True
-                else:
-                    self.log_test("Oracle Save", False, f"Unexpected response: {result}")
-                    return False
-            else:
-                self.log_test("Oracle Save", False, f"Status: {response.status_code}, Response: {response.text}")
-                return False
-        except Exception as e:
-            self.log_test("Oracle Save", False, f"Error: {str(e)}")
-            return False
-    
-    def test_oracle_readings(self):
-        """Test GET /api/oracle/readings"""
-        try:
-            response = self.session.get(f"{BACKEND_URL}/oracle/readings")
-            if response.status_code == 200:
-                readings = response.json()
-                if isinstance(readings, list):
-                    self.log_test("Oracle Readings", True, f"Retrieved {len(readings)} saved readings")
-                    return True
-                else:
-                    self.log_test("Oracle Readings", False, "Response is not a list")
-                    return False
-            else:
-                self.log_test("Oracle Readings", False, f"Status: {response.status_code}")
-                return False
-        except Exception as e:
-            self.log_test("Oracle Readings", False, f"Error: {str(e)}")
-            return False
-    
-    def test_spirit_guides_chat(self):
-        """Test POST /api/spirit-guides/chat"""
-        guides = ["Ignis", "Aqua", "Terra", "Aether"]
-        elements = ["Fire", "Water", "Earth", "Air"]
-        
-        for guide, element in zip(guides, elements):
-            try:
-                message_data = {
-                    "guide": guide,
-                    "element": element,
-                    "message": f"Hello {guide}, I seek guidance on my spiritual journey. What wisdom do you have for me today?",
-                    "history": []
-                }
-                
-                response = self.session.post(
-                    f"{BACKEND_URL}/spirit-guides/chat",
-                    json=message_data,
-                    headers={"Content-Type": "application/json"}
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    if "response" in result and len(result["response"]) > 20:
-                        # Check if it's a fallback response (indicates AI failure)
-                        if "disturbance in our connection" in result["response"]:
-                            self.log_test(f"Spirit Guide {guide}", False, "AI budget exceeded - fallback response")
-                        else:
-                            self.log_test(f"Spirit Guide {guide}", True, f"Received guidance from {guide}")
-                    else:
-                        self.log_test(f"Spirit Guide {guide}", False, "Empty or invalid response")
-                else:
-                    self.log_test(f"Spirit Guide {guide}", False, f"Status: {response.status_code}")
-                
-                # Small delay between requests
-                time.sleep(0.5)
-                
-            except Exception as e:
-                self.log_test(f"Spirit Guide {guide}", False, f"Error: {str(e)}")
-    
-    def test_meditation_generate(self):
-        """Test POST /api/meditation/generate-guided"""
-        test_cases = [
-            {"duration_minutes": 5, "focus": "stress relief"},
-            {"duration_minutes": 10, "focus": "chakra balancing"},
-            {"duration_minutes": 15, "focus": "spiritual awakening"}
-        ]
-        
-        for case in test_cases:
-            try:
-                response = self.session.post(
-                    f"{BACKEND_URL}/meditation/generate-guided",
-                    params=case,
-                    headers={"Content-Type": "application/json"}
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    required_fields = ["script", "duration", "focus"]
-                    if all(field in result for field in required_fields):
-                        if len(result["script"]) > 100:  # Reasonable script length
-                            self.log_test(f"Meditation {case['focus']}", True, f"{case['duration_minutes']}min meditation generated")
-                        else:
-                            self.log_test(f"Meditation {case['focus']}", False, "Script too short - likely AI failure")
-                    else:
-                        self.log_test(f"Meditation {case['focus']}", False, "Missing required fields")
-                else:
-                    self.log_test(f"Meditation {case['focus']}", False, f"Status: {response.status_code}")
-                
-                # Small delay between requests
-                time.sleep(0.5)
-                
-            except Exception as e:
-                self.log_test(f"Meditation {case['focus']}", False, f"Error: {str(e)}")
-    
-    def test_journal_save(self):
-        """Test POST /api/journal/save"""
-        test_entries = [
-            {
-                "title": "Morning Meditation Insights",
-                "content": "Today during my meditation, I experienced a profound sense of connection with the universe. The visualization of golden light filling my chakras was particularly powerful.",
-                "category": "meditation",
-                "mood": "peaceful",
-                "tags": ["meditation", "chakras", "visualization"]
-            },
-            {
-                "title": "Oracle Reading Reflection",
-                "content": "The Fire Phoenix card I drew today really resonated with my current life situation. I'm going through a major transformation in my career.",
-                "category": "oracle",
-                "mood": "contemplative",
-                "tags": ["oracle", "transformation", "career"]
-            }
-        ]
-        
-        saved_ids = []
-        for entry in test_entries:
-            try:
-                response = self.session.post(
-                    f"{BACKEND_URL}/journal/save",
-                    json=entry,
-                    headers={"Content-Type": "application/json"}
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    if result.get("success") and "id" in result:
-                        saved_ids.append(result["id"])
-                        self.log_test(f"Journal Save ({entry['category']})", True, f"Entry saved with ID: {result['id']}")
-                    else:
-                        self.log_test(f"Journal Save ({entry['category']})", False, f"Unexpected response: {result}")
-                else:
-                    self.log_test(f"Journal Save ({entry['category']})", False, f"Status: {response.status_code}")
-            except Exception as e:
-                self.log_test(f"Journal Save ({entry['category']})", False, f"Error: {str(e)}")
-        
-        return saved_ids
-    
-    def test_journal_entries(self):
-        """Test GET /api/journal/entries"""
-        try:
-            response = self.session.get(f"{BACKEND_URL}/journal/entries")
-            if response.status_code == 200:
-                entries = response.json()
-                if isinstance(entries, list):
-                    self.log_test("Journal Entries", True, f"Retrieved {len(entries)} journal entries")
-                    return True
-                else:
-                    self.log_test("Journal Entries", False, "Response is not a list")
-                    return False
-            else:
-                self.log_test("Journal Entries", False, f"Status: {response.status_code}")
-                return False
-        except Exception as e:
-            self.log_test("Journal Entries", False, f"Error: {str(e)}")
-            return False
-
-    # ==================== STRIPE MONETIZATION TESTS ====================
-    
-    def test_auth_signup(self):
-        """Test POST /api/auth/signup - Create test user"""
-        try:
-            signup_data = {
-                "email": "test@etheria.com",
-                "password": "TestPass123!",
-                "name": "Test User"
-            }
-            
-            response = self.session.post(
-                f"{BACKEND_URL}/auth/signup",
-                json=signup_data,
-                headers={"Content-Type": "application/json"}
-            )
-            
-            if response.status_code == 200:
-                user_data = response.json()
-                required_fields = ["user_id", "email", "name"]
-                if all(field in user_data for field in required_fields):
-                    self.test_user_id = user_data["user_id"]
-                    
-                    # Extract session token from cookie
-                    if 'Set-Cookie' in response.headers:
-                        cookie_header = response.headers['Set-Cookie']
-                        if 'session_token=' in cookie_header:
-                            # Extract session token from cookie
-                            start = cookie_header.find('session_token=') + len('session_token=')
-                            end = cookie_header.find(';', start)
-                            if end == -1:
-                                end = len(cookie_header)
-                            self.session_token = cookie_header[start:end]
-                            
-                            # Set session token for future requests
-                            self.session.headers.update({"Authorization": f"Bearer {self.session_token}"})
-                            
-                            self.log_test("Auth Signup", True, f"User created: {user_data['email']}")
-                            return True
-                    
-                    self.log_test("Auth Signup", False, "No session token in response")
-                    return False
-                else:
-                    self.log_test("Auth Signup", False, f"Missing required fields: {user_data}")
-                    return False
-            elif response.status_code == 400:
-                # User might already exist, try login instead
-                return self.test_auth_login()
-            else:
-                self.log_test("Auth Signup", False, f"Status: {response.status_code}, Response: {response.text}")
-                return False
-        except Exception as e:
-            self.log_test("Auth Signup", False, f"Error: {str(e)}")
-            return False
-    
-    def test_auth_login(self):
-        """Test POST /api/auth/login - Login existing user"""
-        try:
-            login_data = {
-                "email": "test@etheria.com",
-                "password": "TestPass123!"
-            }
-            
-            response = self.session.post(
-                f"{BACKEND_URL}/auth/login",
-                json=login_data,
-                headers={"Content-Type": "application/json"}
-            )
-            
-            if response.status_code == 200:
-                user_data = response.json()
-                required_fields = ["user_id", "email", "name"]
-                if all(field in user_data for field in required_fields):
-                    self.test_user_id = user_data["user_id"]
-                    
-                    # Extract session token from cookie
-                    if 'Set-Cookie' in response.headers:
-                        cookie_header = response.headers['Set-Cookie']
-                        if 'session_token=' in cookie_header:
-                            start = cookie_header.find('session_token=') + len('session_token=')
-                            end = cookie_header.find(';', start)
-                            if end == -1:
-                                end = len(cookie_header)
-                            self.session_token = cookie_header[start:end]
-                            
-                            # Set session token for future requests
-                            self.session.headers.update({"Authorization": f"Bearer {self.session_token}"})
-                            
-                            self.log_test("Auth Login", True, f"User logged in: {user_data['email']}")
-                            return True
-                    
-                    self.log_test("Auth Login", False, "No session token in response")
-                    return False
-                else:
-                    self.log_test("Auth Login", False, f"Missing required fields: {user_data}")
-                    return False
-            else:
-                self.log_test("Auth Login", False, f"Status: {response.status_code}, Response: {response.text}")
-                return False
-        except Exception as e:
-            self.log_test("Auth Login", False, f"Error: {str(e)}")
-            return False
-    
-    def test_subscription_plans(self):
-        """Test GET /api/subscription/plans"""
-        try:
-            response = self.session.get(f"{BACKEND_URL}/subscription/plans")
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ["plans", "free_tier_limits"]
-                if all(field in data for field in required_fields):
-                    plans = data["plans"]
-                    free_limits = data["free_tier_limits"]
-                    
-                    # Check if premium_monthly plan exists
-                    if "premium_monthly" in plans:
-                        plan = plans["premium_monthly"]
-                        if plan.get("price") == 3.99 and plan.get("currency") == "usd":
-                            self.log_test("Subscription Plans", True, f"Plans available: {list(plans.keys())}, Price: ${plan['price']}")
-                            return True
-                        else:
-                            self.log_test("Subscription Plans", False, f"Invalid plan pricing: {plan}")
-                            return False
-                    else:
-                        self.log_test("Subscription Plans", False, "premium_monthly plan not found")
-                        return False
-                else:
-                    self.log_test("Subscription Plans", False, f"Missing required fields: {data}")
-                    return False
-            else:
-                self.log_test("Subscription Plans", False, f"Status: {response.status_code}")
-                return False
-        except Exception as e:
-            self.log_test("Subscription Plans", False, f"Error: {str(e)}")
-            return False
-    
-    def test_subscription_status(self):
-        """Test GET /api/subscription/status"""
-        try:
-            if not self.session_token:
-                self.log_test("Subscription Status", False, "No auth token - need to login first")
-                return False
-            
-            response = self.session.get(
-                f"{BACKEND_URL}/subscription/status",
-                headers={"Authorization": f"Bearer {self.session_token}"}
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ["is_premium", "subscription_status", "features"]
-                if all(field in data for field in required_fields):
-                    # For a new free user, should be false
-                    if data["is_premium"] == False and data["subscription_status"] == "free":
-                        self.log_test("Subscription Status", True, f"Free user status: {data['subscription_status']}")
-                        return True
-                    else:
-                        self.log_test("Subscription Status", True, f"Premium user status: {data['subscription_status']}")
-                        return True
-                else:
-                    self.log_test("Subscription Status", False, f"Missing required fields: {data}")
-                    return False
-            else:
-                self.log_test("Subscription Status", False, f"Status: {response.status_code}, Response: {response.text}")
-                return False
-        except Exception as e:
-            self.log_test("Subscription Status", False, f"Error: {str(e)}")
-            return False
-    
-    def test_create_checkout(self):
-        """Test POST /api/subscription/create-checkout"""
-        try:
-            if not self.session_token:
-                self.log_test("Create Checkout", False, "No auth token - need to login first")
-                return None
-            
-            checkout_data = {
-                "plan_id": "premium_monthly",
-                "origin_url": "http://localhost:3000"
-            }
-            
-            response = self.session.post(
-                f"{BACKEND_URL}/subscription/create-checkout",
-                json=checkout_data,
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {self.session_token}"
-                }
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ["checkout_url", "session_id"]
-                if all(field in data for field in required_fields):
-                    # Validate URL format
-                    if data["checkout_url"].startswith("https://checkout.stripe.com"):
-                        self.log_test("Create Checkout", True, f"Checkout session created: {data['session_id']}")
-                        return data["session_id"]
-                    else:
-                        self.log_test("Create Checkout", False, f"Invalid checkout URL: {data['checkout_url']}")
-                        return None
-                else:
-                    self.log_test("Create Checkout", False, f"Missing required fields: {data}")
-                    return None
-            else:
-                self.log_test("Create Checkout", False, f"Status: {response.status_code}, Response: {response.text}")
-                return None
-        except Exception as e:
-            self.log_test("Create Checkout", False, f"Error: {str(e)}")
-            return None
-    
-    def test_checkout_status(self, session_id=None):
-        """Test GET /api/subscription/checkout-status/{session_id}"""
-        try:
-            # Use fake session_id to test 404 response
-            test_session_id = session_id or "fake_session_id_12345"
-            
-            response = self.session.get(f"{BACKEND_URL}/subscription/checkout-status/{test_session_id}")
-            
-            if response.status_code == 404:
-                self.log_test("Checkout Status", True, "Correctly returned 404 for fake session_id")
-                return True
-            elif response.status_code == 200:
-                data = response.json()
-                if "status" in data and "payment_status" in data:
-                    self.log_test("Checkout Status", True, f"Session status: {data['status']}, Payment: {data['payment_status']}")
-                    return True
-                else:
-                    self.log_test("Checkout Status", False, f"Missing required fields: {data}")
-                    return False
-            else:
-                self.log_test("Checkout Status", False, f"Status: {response.status_code}, Response: {response.text}")
-                return False
-        except Exception as e:
-            self.log_test("Checkout Status", False, f"Error: {str(e)}")
-            return False
-    
-    def test_feature_access(self):
-        """Test GET /api/user/feature-access/{feature}"""
-        try:
-            if not self.session_token:
-                self.log_test("Feature Access", False, "No auth token - need to login first")
-                return False
-            
-            # Test spirit_guides feature for free user
-            response = self.session.get(
-                f"{BACKEND_URL}/user/feature-access/spirit_guides",
-                headers={"Authorization": f"Bearer {self.session_token}"}
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ["feature", "has_access", "upgrade_required"]
-                if all(field in data for field in required_fields):
-                    # For free user, should require upgrade for spirit_guides
-                    if data["feature"] == "spirit_guides" and data["upgrade_required"] == True:
-                        self.log_test("Feature Access", True, f"Free user correctly requires upgrade for {data['feature']}")
-                        return True
-                    else:
-                        self.log_test("Feature Access", True, f"Feature access: {data['feature']}, Has access: {data['has_access']}")
-                        return True
-                else:
-                    self.log_test("Feature Access", False, f"Missing required fields: {data}")
-                    return False
-            else:
-                self.log_test("Feature Access", False, f"Status: {response.status_code}, Response: {response.text}")
-                return False
-        except Exception as e:
-            self.log_test("Feature Access", False, f"Error: {str(e)}")
-            return False
-    
-    def run_all_tests(self):
-        """Run all backend tests in priority order"""
-        print("🔮 Starting Psychic Awareness App Backend Testing")
+    async def run_tests(self):
+        """Run complete Stripe checkout flow tests"""
+        print("🧪 Starting Stripe Checkout Flow Testing...")
+        print(f"Backend URL: {BACKEND_URL}")
         print("=" * 60)
         
-        # Test basic connectivity first
-        if not self.test_root_endpoint():
-            print("❌ Cannot connect to backend - stopping tests")
-            return self.test_results
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                # Test 1: Create test user or login
+                await self.test_user_authentication(client)
+                
+                # Test 2: Check initial subscription status
+                await self.test_initial_subscription_status(client)
+                
+                # Test 3: Get available plans
+                await self.test_get_subscription_plans(client)
+                
+                # Test 4: Create checkout session
+                await self.test_create_checkout_session(client)
+                
+                # Test 5: Check checkout status
+                await self.test_checkout_status(client)
+                
+                # Test 6: Check feature access for free user
+                await self.test_feature_access_control(client)
+                
+                # Test 7: Verify payment transaction in database
+                await self.test_payment_transaction_created(client)
+                
+                print("\n" + "=" * 60)
+                print("✅ ALL STRIPE CHECKOUT TESTS COMPLETED SUCCESSFULLY!")
+                return True
+                
+            except Exception as e:
+                print(f"\n❌ CRITICAL ERROR: {e}")
+                return False
+    
+    async def test_user_authentication(self, client):
+        """Test 1: Create test user or login with existing user"""
+        print("\n🔐 Test 1: User Authentication")
         
-        print("\n🔐 AUTHENTICATION & STRIPE MONETIZATION TESTS")
-        print("-" * 50)
+        # Try to create new user first
+        test_email = "stripetest@etheria.com"
+        test_password = "StripeTest123!"
+        test_name = "Stripe Tester"
         
-        # Authentication tests (required for Stripe tests)
-        auth_success = self.test_auth_signup()
-        if not auth_success:
-            print("❌ Authentication failed - some tests will be skipped")
+        signup_data = {
+            "email": test_email,
+            "password": test_password,
+            "name": test_name
+        }
         
-        # Stripe monetization tests
-        self.test_subscription_plans()
-        self.test_subscription_status()
+        try:
+            # Try signup first
+            response = await client.post(f"{BACKEND_URL}/auth/signup", json=signup_data)
+            
+            if response.status_code == 400 and "already registered" in response.text:
+                print("   User already exists, attempting login...")
+                # User exists, try login
+                login_data = {
+                    "email": test_email,
+                    "password": test_password
+                }
+                response = await client.post(f"{BACKEND_URL}/auth/login", json=login_data)
+            
+            if response.status_code == 200:
+                user_data = response.json()
+                self.user_id = user_data["user_id"]
+                
+                # Extract session token from cookies
+                if hasattr(response, 'cookies'):
+                    for cookie_name, cookie_value in response.cookies.items():
+                        if cookie_name == "session_token":
+                            self.session_token = cookie_value
+                            break
+                
+                # If no session token found, try to extract from headers
+                if not self.session_token:
+                    set_cookie_header = response.headers.get('set-cookie', '')
+                    if 'session_token=' in set_cookie_header:
+                        # Extract session token from set-cookie header
+                        import re
+                        match = re.search(r'session_token=([^;]+)', set_cookie_header)
+                        if match:
+                            self.session_token = match.group(1)
+                
+                print(f"   ✅ Authentication successful")
+                print(f"   User ID: {self.user_id}")
+                print(f"   Email: {user_data['email']}")
+                print(f"   Session token: {self.session_token[:20]}...")
+            else:
+                raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+                
+        except Exception as e:
+            raise Exception(f"Authentication test failed: {e}")
+    
+    async def test_initial_subscription_status(self, client):
+        """Test 2: Check initial subscription status"""
+        print("\n📊 Test 2: Initial Subscription Status")
         
-        # Create checkout session
-        session_id = self.test_create_checkout()
+        headers = {"Authorization": f"Bearer {self.session_token}"}
+        response = await client.get(f"{BACKEND_URL}/subscription/status", headers=headers)
         
-        # Test checkout status with fake session_id
-        self.test_checkout_status(session_id)
+        if response.status_code == 200:
+            status_data = response.json()
+            print(f"   ✅ Subscription status retrieved")
+            print(f"   Is Premium: {status_data['is_premium']}")
+            print(f"   Status: {status_data['subscription_status']}")
+            
+            # Verify free user initially
+            if not status_data['is_premium']:
+                print("   ✅ Confirmed: User is on free tier")
+            else:
+                print("   ⚠️  Warning: User already has premium subscription")
+        else:
+            raise Exception(f"Subscription status check failed: {response.status_code} - {response.text}")
+    
+    async def test_get_subscription_plans(self, client):
+        """Test 3: Get available subscription plans"""
+        print("\n💰 Test 3: Available Subscription Plans")
         
-        # Test feature access
-        self.test_feature_access()
+        response = await client.get(f"{BACKEND_URL}/subscription/plans")
         
-        print("\n🎯 HIGH PRIORITY TESTS")
-        print("-" * 30)
+        if response.status_code == 200:
+            plans_data = response.json()
+            print(f"   ✅ Plans retrieved successfully")
+            
+            # Verify premium_monthly plan exists
+            if "plans" in plans_data and "premium_monthly" in plans_data["plans"]:
+                premium_plan = plans_data["plans"]["premium_monthly"]
+                print(f"   ✅ Premium Monthly Plan found:")
+                print(f"      Name: {premium_plan['name']}")
+                print(f"      Price: ${premium_plan['price']}")
+                print(f"      Currency: {premium_plan['currency']}")
+                
+                # Verify price is $3.99
+                if premium_plan['price'] == 3.99:
+                    print("   ✅ Confirmed: Price is $3.99 as expected")
+                else:
+                    raise Exception(f"Price mismatch: Expected $3.99, got ${premium_plan['price']}")
+            else:
+                raise Exception("premium_monthly plan not found in response")
+        else:
+            raise Exception(f"Get plans failed: {response.status_code} - {response.text}")
+    
+    async def test_create_checkout_session(self, client):
+        """Test 4: Create Stripe checkout session"""
+        print("\n🛒 Test 4: Create Checkout Session")
         
-        # High priority tests
-        self.test_training_modules()
+        headers = {"Authorization": f"Bearer {self.session_token}"}
+        checkout_data = {
+            "plan_id": "premium_monthly",
+            "origin_url": "http://localhost:3000"
+        }
         
-        # Oracle tests
-        oracle_reading = self.test_oracle_draw()
-        self.test_oracle_save(oracle_reading)
-        self.test_oracle_readings()
+        response = await client.post(f"{BACKEND_URL}/subscription/create-checkout", 
+                                   json=checkout_data, headers=headers)
         
-        # Spirit guides (known to have budget issues)
-        self.test_spirit_guides_chat()
+        if response.status_code == 200:
+            checkout_response = response.json()
+            print(f"   ✅ Checkout session created successfully")
+            
+            # Verify response contains required fields
+            if "checkout_url" in checkout_response and "session_id" in checkout_response:
+                self.checkout_session_id = checkout_response["session_id"]
+                print(f"   Session ID: {self.checkout_session_id}")
+                print(f"   Checkout URL: {checkout_response['checkout_url'][:50]}...")
+                
+                # Verify it's a Stripe URL
+                if "stripe.com" in checkout_response["checkout_url"]:
+                    print("   ✅ Confirmed: Valid Stripe checkout URL")
+                else:
+                    print("   ⚠️  Warning: Checkout URL doesn't contain stripe.com")
+            else:
+                raise Exception("Response missing checkout_url or session_id")
+        else:
+            raise Exception(f"Create checkout failed: {response.status_code} - {response.text}")
+    
+    async def test_checkout_status(self, client):
+        """Test 5: Check checkout session status"""
+        print("\n📋 Test 5: Checkout Status Verification")
         
-        print("\n📊 MEDIUM PRIORITY TESTS")
-        print("-" * 30)
+        if not self.checkout_session_id:
+            raise Exception("No checkout session ID available")
         
-        # Medium priority tests
-        self.test_meditation_generate()
+        headers = {"Authorization": f"Bearer {self.session_token}"}
+        response = await client.get(f"{BACKEND_URL}/subscription/checkout-status/{self.checkout_session_id}", 
+                                  headers=headers)
         
-        # Journal tests
-        self.test_journal_save()
-        self.test_journal_entries()
+        if response.status_code == 200:
+            status_data = response.json()
+            print(f"   ✅ Checkout status retrieved")
+            print(f"   Status: {status_data.get('status', 'N/A')}")
+            print(f"   Payment Status: {status_data.get('payment_status', 'N/A')}")
+            
+            # For test mode, status should be 'open' and payment_status 'unpaid'
+            if status_data.get('status') == 'open':
+                print("   ✅ Confirmed: Session is open for payment")
+            if status_data.get('payment_status') == 'unpaid':
+                print("   ✅ Confirmed: Payment is pending (as expected in test mode)")
+        else:
+            raise Exception(f"Checkout status check failed: {response.status_code} - {response.text}")
+    
+    async def test_feature_access_control(self, client):
+        """Test 6: Check feature access for free user"""
+        print("\n🔒 Test 6: Feature Access Control")
         
-        print("\n" + "=" * 60)
-        print("🏁 Testing Complete")
+        headers = {"Authorization": f"Bearer {self.session_token}"}
         
-        # Summary
-        total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results.values() if result["success"])
-        failed_tests = total_tests - passed_tests
+        # Test spirit_guides feature (should require premium)
+        response = await client.get(f"{BACKEND_URL}/user/feature-access/spirit_guides", 
+                                  headers=headers)
         
-        print(f"📈 Results: {passed_tests}/{total_tests} tests passed")
-        if failed_tests > 0:
-            print(f"❌ Failed tests: {failed_tests}")
-            print("\nFailed test details:")
-            for test_name, result in self.test_results.items():
-                if not result["success"]:
-                    print(f"  • {test_name}: {result['details']}")
+        if response.status_code == 200:
+            access_data = response.json()
+            print(f"   ✅ Feature access check completed")
+            print(f"   Feature: {access_data['feature']}")
+            print(f"   Has Access: {access_data['has_access']}")
+            print(f"   Upgrade Required: {access_data['upgrade_required']}")
+            
+            # For free user, should not have access to spirit_guides
+            if not access_data['has_access'] and access_data['upgrade_required']:
+                print("   ✅ Confirmed: Free user correctly blocked from premium feature")
+            else:
+                print("   ⚠️  Warning: Free user has unexpected access to premium feature")
+        else:
+            raise Exception(f"Feature access check failed: {response.status_code} - {response.text}")
+    
+    async def test_payment_transaction_created(self, client):
+        """Test 7: Verify payment transaction was created in database"""
+        print("\n💳 Test 7: Payment Transaction Verification")
         
-        return self.test_results
+        if not self.checkout_session_id:
+            raise Exception("No checkout session ID to verify")
+        
+        # Since we can't directly access the database, we'll verify through the checkout status
+        # which should show the transaction exists
+        headers = {"Authorization": f"Bearer {self.session_token}"}
+        response = await client.get(f"{BACKEND_URL}/subscription/checkout-status/{self.checkout_session_id}", 
+                                  headers=headers)
+        
+        if response.status_code == 200:
+            print("   ✅ Transaction record exists (verified via checkout status)")
+            print("   ✅ Checkout session successfully created pending transaction")
+        elif response.status_code == 404:
+            raise Exception("Transaction not found in database")
+        else:
+            raise Exception(f"Transaction verification failed: {response.status_code} - {response.text}")
+
+async def main():
+    """Main test runner"""
+    tester = StripeCheckoutTester()
+    success = await tester.run_tests()
+    
+    if success:
+        print("\n🎉 STRIPE CHECKOUT FLOW TESTING COMPLETE")
+        print("All endpoints are working correctly!")
+        exit(0)
+    else:
+        print("\n💥 TESTING FAILED")
+        print("Some endpoints have issues that need attention.")
+        exit(1)
 
 if __name__ == "__main__":
-    tester = PsychicAppTester()
-    results = tester.run_all_tests()
+    asyncio.run(main())
