@@ -226,63 +226,72 @@ TRAINING_MODULES = [
         "title": "Opening Your Third Eye",
         "description": "Learn foundational techniques to awaken your inner vision and psychic perception",
         "lessons": 5,
-        "category": "beginner"
+        "category": "beginner",
+        "free": True
     },
     {
         "id": "beginner-2",
         "title": "Meditation Basics",
         "description": "Master the fundamentals of meditation for psychic development",
         "lessons": 7,
-        "category": "beginner"
+        "category": "beginner",
+        "free": True
     },
     {
         "id": "beginner-3",
         "title": "Energy Awareness",
         "description": "Develop sensitivity to subtle energies and auras",
         "lessons": 6,
-        "category": "beginner"
+        "category": "beginner",
+        "free": False
     },
     {
         "id": "intermediate-1",
         "title": "Clairvoyance Development",
         "description": "Enhance your ability to see beyond the physical realm",
         "lessons": 8,
-        "category": "intermediate"
+        "category": "intermediate",
+        "free": False
     },
     {
         "id": "intermediate-2",
         "title": "Telepathy & Mind Reading",
         "description": "Practice connecting with others' thoughts and emotions",
         "lessons": 6,
-        "category": "intermediate"
+        "category": "intermediate",
+        "free": False
     },
     {
         "id": "intermediate-3",
         "title": "Dream Work & Lucid Dreaming",
         "description": "Harness the power of your dream state for psychic insight",
         "lessons": 7,
-        "category": "intermediate"
+        "category": "intermediate",
+        "free": False
     },
     {
         "id": "advanced-1",
         "title": "Astral Projection Mastery",
         "description": "Travel beyond your physical body with controlled practice",
         "lessons": 10,
-        "category": "advanced"
+        "category": "advanced",
+        "free": False
     },
     {
         "id": "advanced-2",
         "title": "Remote Viewing",
         "description": "See distant locations and events with your mind's eye",
         "lessons": 9,
-        "category": "advanced"
+        "category": "advanced",
+        "free": False
     },
     {
         "id": "advanced-3",
         "title": "Psychic Protection",
         "description": "Shield yourself from negative energies and entities",
         "lessons": 5,
-        "category": "advanced"
+        "category": "advanced",
+        "free": False
     }
 ]
 
