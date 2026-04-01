@@ -403,6 +403,8 @@ class MultiCardDrawRequest(BaseModel):
 @api_router.post("/oracle/draw")
 async def draw_oracle_card(request: MultiCardDrawRequest = None):
     """Draw oracle cards and get AI interpretation"""
+    import asyncio
+    
     # Handle both old single-card and new multi-card requests
     if request is None or request.card_count == 1:
         # Single card draw (original behavior)
@@ -412,10 +414,10 @@ async def draw_oracle_card(request: MultiCardDrawRequest = None):
             chat = LlmChat(
                 api_key=EMERGENT_LLM_KEY,
                 session_id=f"oracle-{uuid.uuid4()}",
-                system_message="You are a wise spiritual guide providing oracle card interpretations. Give meaningful, insightful readings that help people on their spiritual journey. Keep responses under 200 words."
-            ).with_model("gemini", "gemini-2.5-pro")
+                system_message="You are a wise spiritual guide providing oracle card interpretations. Give meaningful, insightful readings that help people on their spiritual journey. Keep responses under 100 words."
+            ).with_model("gemini", "gemini-2.0-flash")
             
-            prompt = f"The seeker has drawn the card '{card['name']}' from the {card['element']} element. Card description: {card['description']}. Keywords: {', '.join(card['keywords'])}. Provide a spiritual interpretation and guidance for this card."
+            prompt = f"The seeker has drawn '{card['name']}' ({card['element']}). Description: {card['description']}. Give a brief spiritual interpretation."
             
             user_message = UserMessage(text=prompt)
             interpretation = await chat.send_message(user_message)
@@ -441,42 +443,45 @@ async def draw_oracle_card(request: MultiCardDrawRequest = None):
                 "timestamp": datetime.utcnow().isoformat()
             }
     
-    # Multi-card spread
-    card_count = min(request.card_count, 10)  # Limit to 10 cards max
+    # Multi-card spread - generate interpretations in parallel for speed
+    card_count = min(request.card_count, 10)
     positions = request.positions[:card_count]
     
     # Draw unique cards
     drawn_cards = random.sample(ORACLE_CARDS, min(card_count, len(ORACLE_CARDS)))
     
-    cards_result = []
-    
-    for i, card in enumerate(drawn_cards):
-        position = positions[i] if i < len(positions) else f"Card {i+1}"
-        
+    async def get_interpretation(card, position, spread_type):
         try:
             chat = LlmChat(
                 api_key=EMERGENT_LLM_KEY,
                 session_id=f"oracle-{uuid.uuid4()}",
-                system_message=f"You are a wise spiritual guide providing oracle card interpretations for a {request.spread_type} spread. Give meaningful, insightful readings. Keep responses under 150 words."
-            ).with_model("gemini", "gemini-2.5-pro")
+                system_message=f"You are a wise spiritual guide. Give a brief oracle interpretation for the {position} position. Keep it under 80 words."
+            ).with_model("gemini", "gemini-2.0-flash")
             
-            prompt = f"In a {request.spread_type} spread, the seeker has drawn '{card['name']}' ({card['element']} element) in the '{position}' position. Card description: {card['description']}. Keywords: {', '.join(card['keywords'])}. Interpret this card specifically for the {position} position in this spread."
+            prompt = f"Card '{card['name']}' ({card['element']}) in the '{position}' position. Description: {card['description']}. Interpret briefly for {position}."
             
             user_message = UserMessage(text=prompt)
-            interpretation = await chat.send_message(user_message)
-            
-            cards_result.append({
-                "card": card,
-                "position": position,
-                "interpretation": interpretation
-            })
+            return await chat.send_message(user_message)
         except Exception as e:
-            logging.error(f"Error generating interpretation for card {i}: {e}")
-            cards_result.append({
-                "card": card,
-                "position": position,
-                "interpretation": f"The {card['name']} in the {position} position speaks of {card['description'].lower()}. This {card['element']} energy influences this aspect of your reading."
-            })
+            logging.error(f"Error generating interpretation: {e}")
+            return f"The {card['name']} in the {position} position speaks of {card['description'].lower()}. This {card['element']} energy guides this aspect of your journey."
+    
+    # Run all interpretations in parallel
+    tasks = []
+    for i, card in enumerate(drawn_cards):
+        position = positions[i] if i < len(positions) else f"Card {i+1}"
+        tasks.append(get_interpretation(card, position, request.spread_type))
+    
+    interpretations = await asyncio.gather(*tasks)
+    
+    cards_result = []
+    for i, (card, interpretation) in enumerate(zip(drawn_cards, interpretations)):
+        position = positions[i] if i < len(positions) else f"Card {i+1}"
+        cards_result.append({
+            "card": card,
+            "position": position,
+            "interpretation": interpretation
+        })
     
     return {
         "spread_type": request.spread_type,

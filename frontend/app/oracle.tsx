@@ -9,6 +9,7 @@ import {
   Modal,
   Animated,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -164,7 +165,24 @@ export default function Oracle() {
           positions: selectedSpread.positions,
         }),
       });
-      const data = await response.json();
+      
+      // Check if response is ok
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error:', errorText);
+        Alert.alert('Error', 'Failed to draw cards. Please try again.');
+        return;
+      }
+      
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON parse error:', text);
+        Alert.alert('Error', 'Failed to process reading. Please try again.');
+        return;
+      }
       
       // Transform single card response to new format if needed
       const reading: Reading = data.cards ? data : {
@@ -189,6 +207,7 @@ export default function Oracle() {
       }).start();
     } catch (error) {
       console.error('Error drawing cards:', error);
+      Alert.alert('Connection Error', 'Unable to connect to the server. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
