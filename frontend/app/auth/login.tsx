@@ -207,37 +207,49 @@ export default function Login() {
     setLoading(true);
     try {
       const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+      console.log('Processing OAuth callback with session:', sessionId);
+      
       const response = await fetch(`${BACKEND_URL}/api/auth/google-callback?session_id=${sessionId}`, {
         method: 'POST',
         credentials: 'include',
       });
 
+      console.log('OAuth callback response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('OAuth callback error:', errorData);
         throw new Error(errorData.detail || 'Authentication failed');
       }
 
       const userData = await response.json();
+      console.log('OAuth callback user data:', JSON.stringify(userData));
 
-      // Extract session token
+      // Get session token from response body (for mobile)
+      if (userData.session_token) {
+        console.log('Saving session token from response');
+        await AsyncStorage.setItem('session_token', userData.session_token);
+      }
+
+      // Also check cookies as fallback
       const setCookie = response.headers.get('set-cookie');
-      if (setCookie) {
+      if (setCookie && !userData.session_token) {
         const tokenMatch = setCookie.match(/session_token=([^;]+)/);
         if (tokenMatch) {
+          console.log('Saving session token from cookie');
           await AsyncStorage.setItem('session_token', tokenMatch[1]);
         }
       }
 
-      if (userData.session_token) {
-        await AsyncStorage.setItem('session_token', userData.session_token);
-      }
-
       // Store user data
       await AsyncStorage.setItem('user_data', JSON.stringify(userData));
-
-      // Redirect to home
+      
+      console.log('Google login successful, redirecting...');
+      
+      // Navigate to home
       router.replace('/');
     } catch (error: any) {
+      console.error('processOAuthCallback error:', error);
       Alert.alert('Login Failed', error.message || 'Authentication failed');
     } finally {
       setLoading(false);

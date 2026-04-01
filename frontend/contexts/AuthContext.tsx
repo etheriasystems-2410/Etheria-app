@@ -37,6 +37,7 @@ interface AuthContextType {
   subscription: SubscriptionStatus | null;
   refreshSubscription: () => Promise<void>;
   checkFeatureAccess: (feature: string) => boolean;
+  refreshAuth: () => Promise<void>;
 }
 
 const defaultFeatures = {
@@ -229,6 +230,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Method to refresh auth state (called after OAuth callback)
+  const refreshAuth = async () => {
+    setLoading(true);
+    await checkAuth();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -241,7 +248,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isPremium: subscription?.is_premium || false,
         subscription,
         refreshSubscription,
-        checkFeatureAccess
+        checkFeatureAccess,
+        refreshAuth
       }}
     >
       {children}

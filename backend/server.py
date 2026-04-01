@@ -1230,7 +1230,8 @@ async def google_auth_callback(session_id: str):
                 "user_id": user_doc["user_id"],
                 "email": user_doc["email"],
                 "name": user_doc["name"],
-                "picture": user_doc.get("picture")
+                "picture": user_doc.get("picture"),
+                "session_token": session_token  # Include token in response for mobile
             })
             
             response_obj.set_cookie(
