@@ -990,9 +990,24 @@ async def generate_tts(request: TTSRequest):
                 success=False
             )
         
+        # Validate and truncate text if too long (OpenAI TTS limit is 4096 chars)
+        text_to_speak = request.text
+        if len(text_to_speak) > 4000:
+            # Truncate at sentence boundary to stay under limit
+            truncated = text_to_speak[:4000]
+            last_period = truncated.rfind('.')
+            last_exclaim = truncated.rfind('!')
+            last_question = truncated.rfind('?')
+            cut_point = max(last_period, last_exclaim, last_question)
+            if cut_point > 3000:  # Only truncate at sentence if reasonable
+                text_to_speak = truncated[:cut_point + 1]
+            else:
+                text_to_speak = truncated
+            logging.info(f"TTS text truncated from {len(request.text)} to {len(text_to_speak)} characters")
+        
         # Generate audio using OpenAI TTS
         audio_base64 = await openai_tts.generate_speech_base64(
-            text=request.text,
+            text=text_to_speak,
             voice=voice,
             model="tts-1",  # Use standard model for faster response
             response_format="mp3"
@@ -1000,7 +1015,7 @@ async def generate_tts(request: TTSRequest):
         
         return TTSResponse(
             audio_base64=audio_base64,
-            text=request.text,
+            text=text_to_speak,
             guide_name=guide_name,
             success=True
         )
