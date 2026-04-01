@@ -49,17 +49,35 @@ export default function TimedMeditation() {
   const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Stop all audio immediately
+  const stopAllAudio = async () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (audioPlayerRef.current) {
+      try {
+        await audioPlayerRef.current.unload();
+      } catch (e) {
+        console.log('Audio cleanup error:', e);
+      }
+      audioPlayerRef.current = null;
+    }
+  };
+
   // Cleanup audio on unmount
   useEffect(() => {
     return () => {
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.unload();
-      }
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      stopAllAudio();
     };
   }, []);
+
+  // Handle back button - stop audio before navigating
+  const handleBack = async () => {
+    await stopAllAudio();
+    setIsActive(false);
+    router.back();
+  };
 
   useEffect(() => {
     if (isActive && timeRemaining > 0) {
@@ -130,10 +148,7 @@ export default function TimedMeditation() {
   };
 
   const stopSound = async () => {
-    if (audioPlayerRef.current) {
-      await audioPlayerRef.current.unload();
-      audioPlayerRef.current = null;
-    }
+    await stopAllAudio();
   };
 
   const startMeditation = async () => {
@@ -159,7 +174,7 @@ export default function TimedMeditation() {
   const resetMeditation = async () => {
     setIsActive(false);
     setTimeRemaining(selectedMinutes * 60);
-    await stopSound();
+    await stopAllAudio();
   };
 
   const getProgress = () => {
@@ -170,7 +185,7 @@ export default function TimedMeditation() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Timed Meditation</Text>
