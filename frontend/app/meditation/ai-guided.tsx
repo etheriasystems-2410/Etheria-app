@@ -157,11 +157,34 @@ export default function AIGuidedMeditation() {
         }),
       });
       
-      const introData = await introResponse.json();
+      // Check response status
+      if (!introResponse.ok) {
+        const errorText = await introResponse.text();
+        console.error('TTS intro error:', introResponse.status, errorText);
+        setAudioError('Voice service temporarily unavailable');
+        setGeneratingAudio(false);
+        setLoadingStage('idle');
+        setLoadingProgress(0);
+        return;
+      }
+      
+      const introText2 = await introResponse.text();
+      let introData;
+      try {
+        introData = JSON.parse(introText2);
+      } catch (e) {
+        console.error('Failed to parse intro TTS response:', introText2.substring(0, 100));
+        setAudioError('Invalid response from voice service');
+        setGeneratingAudio(false);
+        setLoadingStage('idle');
+        setLoadingProgress(0);
+        return;
+      }
+      
       setLoadingProgress(70);
       
       if (!introData.audio_base64) {
-        setAudioError('Voice generation unavailable');
+        setAudioError(introData.error || 'Voice generation unavailable');
         setGeneratingAudio(false);
         setLoadingStage('idle');
         setLoadingProgress(0);
@@ -227,7 +250,29 @@ export default function AIGuidedMeditation() {
         }),
       });
       
-      const data = await response.json();
+      // Check response status
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('TTS continuation error:', response.status, errorText);
+        setIsPlaying(false);
+        setLoadingStage('idle');
+        setLoadingProgress(0);
+        setAudioError('Voice continuation unavailable');
+        return;
+      }
+      
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse continuation TTS response:', responseText.substring(0, 100));
+        setIsPlaying(false);
+        setLoadingStage('idle');
+        setLoadingProgress(0);
+        return;
+      }
+      
       setLoadingProgress(95);
       
       if (!data.audio_base64 || isMutedRef.current) {
@@ -281,7 +326,23 @@ export default function AIGuidedMeditation() {
         }),
       });
       
-      const data = await response.json();
+      // Check if response is ok before parsing
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('TTS API error:', response.status, errorText);
+        setAudioError('Voice generation service unavailable');
+        return;
+      }
+      
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse TTS response:', responseText.substring(0, 100));
+        setAudioError('Invalid response from voice service');
+        return;
+      }
       
       if (!data.audio_base64) {
         setAudioError(data.error || 'Voice generation unavailable');
