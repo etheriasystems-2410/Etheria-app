@@ -3,7 +3,7 @@
  * Provides a simple interface for playing audio from base64 or URLs
  */
 
-import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { setAudioModeAsync } from 'expo-audio';
 
 // Global audio mode setup
 export const setupAudioMode = async () => {
