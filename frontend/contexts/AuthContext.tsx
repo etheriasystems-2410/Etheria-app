@@ -58,17 +58,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
 
   useEffect(() => {
+    // CRITICAL: If returning from OAuth callback, skip the /me check.
+    // AuthCallback will exchange the session_id and establish the session first.
+    if (typeof window !== 'undefined' && window.location?.hash?.includes('session_id=')) {
+      setLoading(false);
+      return;
+    }
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
     try {
+      // First check if we have stored user data from OAuth
+      const storedUserData = await AsyncStorage.getItem('user_data');
+      if (storedUserData) {
+        const userData = JSON.parse(storedUserData);
+        setUser(userData);
+        await AsyncStorage.removeItem('user_data'); // Clear after use
+      }
+
       const sessionToken = await AsyncStorage.getItem('session_token');
       if (sessionToken) {
         const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
           headers: {
             'Authorization': `Bearer ${sessionToken}`
-          }
+          },
+          credentials: 'include'
         });
         
         if (response.ok) {

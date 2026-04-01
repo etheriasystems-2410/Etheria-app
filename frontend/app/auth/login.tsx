@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -114,9 +115,16 @@ export default function Login() {
   };
 
   const handleGoogleLogin = () => {
-    // Google OAuth doesn't need captcha
-    // TODO: Implement Emergent Google OAuth
-    Alert.alert('Coming Soon', 'Google login will be available soon');
+    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+    // Using Emergent Google OAuth - derive redirect URL dynamically
+    if (Platform.OS === 'web') {
+      const redirectUrl = window.location.origin + '/auth/callback';
+      window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    } else {
+      // For native apps, use Linking to open the OAuth URL
+      const redirectUrl = 'exp://'; // For Expo Go
+      Linking.openURL(`https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`);
+    }
   };
 
   return (
