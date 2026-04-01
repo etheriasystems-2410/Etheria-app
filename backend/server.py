@@ -1544,8 +1544,8 @@ async def generate_weekly_code():
     try:
         chat = LlmChat(
             api_key=EMERGENT_LLM_KEY,
-            model="gemini/gemini-2.0-flash"
-        )
+            session_id=f"gift-code-{uuid.uuid4()}"
+        ).with_model("gemini", "gemini-2.0-flash")
         
         prompt = f"""Generate a single mystical promotional code for a psychic/spiritual app called Etheria. 
         The code should:
@@ -1618,18 +1618,23 @@ async def redeem_gift_code(redeem_request: RedeemCodeRequest, request: Request):
     
     # Check if code is still valid
     now = datetime.now(timezone.utc)
-    if now > code_doc["week_end"]:
+    week_end = code_doc["week_end"]
+    if isinstance(week_end, str):
+        week_end = datetime.fromisoformat(week_end.replace('Z', '+00:00'))
+    if week_end.tzinfo is None:
+        week_end = week_end.replace(tzinfo=timezone.utc)
+    if now > week_end:
         raise HTTPException(status_code=400, detail="This code has expired")
     
     # Check if user already redeemed this code
-    user_id = str(user.get("user_id") or user.get("_id"))
+    user_id = user.get("user_id")
     if user_id in [str(r.get("user_id")) for r in code_doc.get("redemptions", [])]:
         raise HTTPException(status_code=400, detail="You have already redeemed this code")
     
     # Check if user already has an active premium subscription
-    existing_user = await db.users.find_one({"_id": user.get("_id")})
+    existing_user = await db.users.find_one({"user_id": user_id})
     if existing_user:
-        current_expires = existing_user.get("subscription_expires")
+        current_expires = existing_user.get("subscription_expires_at")
         if current_expires:
             if isinstance(current_expires, str):
                 current_expires = datetime.fromisoformat(current_expires.replace("Z", "+00:00"))
@@ -1647,12 +1652,12 @@ async def redeem_gift_code(redeem_request: RedeemCodeRequest, request: Request):
     
     # Update user to premium
     await db.users.update_one(
-        {"_id": user.get("_id")},
+        {"user_id": user_id},
         {
             "$set": {
                 "is_premium": True,
                 "subscription_status": "gift_code",
-                "subscription_expires": new_expires.isoformat(),
+                "subscription_expires_at": new_expires.isoformat(),
                 "gift_code_redeemed_at": now.isoformat()
             }
         }
@@ -1689,7 +1694,7 @@ async def opt_in_prize_drawing(opt_in_request: PrizeDrawingOptIn, request: Reque
         raise HTTPException(status_code=401, detail="Please login to participate")
     
     await db.users.update_one(
-        {"_id": user.get("_id")},
+        {"user_id": user.get("user_id")},
         {
             "$set": {
                 "prize_drawing_opted_in": opt_in_request.opt_in,
@@ -1717,7 +1722,7 @@ async def get_prize_drawing_status(request: Request):
             "required_minutes": 30
         }
     
-    user_doc = await db.users.find_one({"_id": user.get("_id")})
+    user_doc = await db.users.find_one({"user_id": user.get("user_id")})
     opted_in = user_doc.get("prize_drawing_opted_in", False) if user_doc else False
     
     # Calculate weekly usage
@@ -1726,7 +1731,7 @@ async def get_prize_drawing_status(request: Request):
     week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
     
     # Get all sessions from this week
-    user_id = str(user.get("user_id") or user.get("_id"))
+    user_id = user.get("user_id")
     sessions = await db.usage_tracking.find({
         "user_id": user_id,
         "timestamp": {"$gte": week_start.isoformat()}
