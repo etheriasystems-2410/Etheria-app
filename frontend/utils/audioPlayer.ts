@@ -1,9 +1,10 @@
 /**
  * Audio Player Utility for expo-audio SDK 55
- * Provides a simple interface for playing audio from base64 or URLs
+ * Works on both web and native platforms
  */
 
-import { setAudioModeAsync } from 'expo-audio';
+import { Platform } from 'react-native';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 
 // Global audio mode setup
 export const setupAudioMode = async () => {
@@ -15,15 +16,17 @@ export const setupAudioMode = async () => {
     });
   } catch (error) {
     console.log('Audio mode setup skipped:', error);
-    // Non-fatal - continue without audio mode setup
   }
 };
 
-// Audio player manager class - simplified for SDK 55
+// Audio player manager class for SDK 55
 export class AudioPlayerManager {
-  private audioElement: HTMLAudioElement | null = null;
-  private isLoaded: boolean = false;
+  private nativePlayer: any = null;
+  private webAudioElement: HTMLAudioElement | null = null;
+  private isLoadedFlag: boolean = false;
   private statusCallback: ((status: { isPlaying: boolean; didJustFinish?: boolean }) => void) | null = null;
+  private isWeb: boolean = Platform.OS === 'web';
+  private statusSubscription: any = null;
 
   async loadAndPlay(source: string | { uri: string }, options?: {
     loop?: boolean;
@@ -41,31 +44,66 @@ export class AudioPlayerManager {
         uri = source.uri;
       }
 
-      // For React Native, we'll use a simpler approach
-      // Create audio element for web compatibility
-      if (typeof window !== 'undefined' && window.Audio) {
-        this.audioElement = new Audio(uri);
+      if (this.isWeb && typeof window !== 'undefined' && window.Audio) {
+        // Web platform - use HTMLAudioElement
+        this.webAudioElement = new window.Audio(uri);
         
         if (options?.volume !== undefined) {
-          this.audioElement.volume = options.volume;
+          this.webAudioElement.volume = options.volume;
         }
         
         if (options?.loop) {
-          this.audioElement.loop = true;
+          this.webAudioElement.loop = true;
         }
 
-        this.audioElement.onended = () => {
+        this.webAudioElement.onended = () => {
           if (this.statusCallback) {
             this.statusCallback({ isPlaying: false, didJustFinish: true });
           }
         };
 
-        await this.audioElement.play();
-        this.isLoaded = true;
+        this.webAudioElement.onerror = (e) => {
+          console.error('Web audio error:', e);
+        };
+
+        await this.webAudioElement.play();
+        this.isLoadedFlag = true;
+        console.log('Web audio started playing');
       } else {
-        // For native, just mark as loaded - actual playback handled by components
-        this.isLoaded = true;
-        console.log('Native audio playback - use expo-audio hooks in component');
+        // Native platform - use expo-audio createAudioPlayer
+        console.log('Creating native audio player for URI length:', uri.length);
+        
+        this.nativePlayer = createAudioPlayer({ uri }, {
+          updateInterval: 500,
+        });
+        
+        // Set volume if provided
+        if (options?.volume !== undefined && this.nativePlayer.volume !== undefined) {
+          this.nativePlayer.volume = options.volume;
+        }
+        
+        // Set loop if provided
+        if (options?.loop && this.nativePlayer.loop !== undefined) {
+          this.nativePlayer.loop = true;
+        }
+        
+        // Subscribe to status updates
+        if (this.nativePlayer.addListener) {
+          this.statusSubscription = this.nativePlayer.addListener('playbackStatusUpdate', (status: any) => {
+            console.log('Playback status:', status);
+            if (status.didJustFinish && this.statusCallback) {
+              this.statusCallback({ isPlaying: false, didJustFinish: true });
+            }
+          });
+        }
+        
+        // Play
+        if (this.nativePlayer.play) {
+          this.nativePlayer.play();
+          console.log('Native audio player started');
+        }
+        
+        this.isLoadedFlag = true;
       }
     } catch (error) {
       console.error('Error loading audio:', error);
@@ -74,54 +112,90 @@ export class AudioPlayerManager {
   }
 
   async play(): Promise<void> {
-    if (this.audioElement) {
-      await this.audioElement.play();
+    if (this.isWeb && this.webAudioElement) {
+      await this.webAudioElement.play();
+    } else if (this.nativePlayer?.play) {
+      this.nativePlayer.play();
     }
   }
 
   async pause(): Promise<void> {
-    if (this.audioElement) {
-      this.audioElement.pause();
+    if (this.isWeb && this.webAudioElement) {
+      this.webAudioElement.pause();
+    } else if (this.nativePlayer?.pause) {
+      this.nativePlayer.pause();
     }
   }
 
   async stop(): Promise<void> {
-    if (this.audioElement) {
-      this.audioElement.pause();
-      this.audioElement.currentTime = 0;
+    if (this.isWeb && this.webAudioElement) {
+      this.webAudioElement.pause();
+      this.webAudioElement.currentTime = 0;
+    } else if (this.nativePlayer) {
+      if (this.nativePlayer.seekTo) {
+        this.nativePlayer.seekTo(0);
+      }
+      if (this.nativePlayer.pause) {
+        this.nativePlayer.pause();
+      }
     }
   }
 
   async unload(): Promise<void> {
-    if (this.audioElement) {
-      try {
-        this.audioElement.pause();
-        this.audioElement.src = '';
-      } catch (e) {
-        // Ignore cleanup errors
+    try {
+      if (this.statusSubscription?.remove) {
+        this.statusSubscription.remove();
+        this.statusSubscription = null;
       }
-      this.audioElement = null;
-      this.isLoaded = false;
+      
+      if (this.webAudioElement) {
+        this.webAudioElement.pause();
+        this.webAudioElement.src = '';
+        this.webAudioElement = null;
+      }
+      
+      if (this.nativePlayer) {
+        if (this.nativePlayer.remove) {
+          this.nativePlayer.remove();
+        } else if (this.nativePlayer.release) {
+          this.nativePlayer.release();
+        }
+        this.nativePlayer = null;
+      }
+      
+      this.isLoadedFlag = false;
+    } catch (e) {
+      console.log('Audio unload cleanup:', e);
     }
   }
 
   get isPlaying(): boolean {
-    return this.audioElement ? !this.audioElement.paused : false;
+    if (this.isWeb && this.webAudioElement) {
+      return !this.webAudioElement.paused;
+    }
+    if (this.nativePlayer?.playing !== undefined) {
+      return this.nativePlayer.playing;
+    }
+    return false;
   }
 
   get loaded(): boolean {
-    return this.isLoaded;
+    return this.isLoadedFlag;
   }
 
   setVolume(volume: number): void {
-    if (this.audioElement) {
-      this.audioElement.volume = volume;
+    if (this.isWeb && this.webAudioElement) {
+      this.webAudioElement.volume = volume;
+    } else if (this.nativePlayer && this.nativePlayer.volume !== undefined) {
+      this.nativePlayer.volume = volume;
     }
   }
 
   setLoop(loop: boolean): void {
-    if (this.audioElement) {
-      this.audioElement.loop = loop;
+    if (this.isWeb && this.webAudioElement) {
+      this.webAudioElement.loop = loop;
+    } else if (this.nativePlayer && this.nativePlayer.loop !== undefined) {
+      this.nativePlayer.loop = loop;
     }
   }
 
@@ -133,7 +207,7 @@ export class AudioPlayerManager {
   }
 }
 
-// Singleton instance for simple usage
+// Singleton instance
 let defaultPlayer: AudioPlayerManager | null = null;
 
 export const getDefaultAudioPlayer = (): AudioPlayerManager => {
