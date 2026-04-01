@@ -34,7 +34,12 @@ const ambientSounds = [
   { id: 'rain', name: 'White Noise', icon: 'rainy' },
   { id: 'forest', name: 'Forest Sounds', icon: 'leaf' },
   { id: 'singing-bowl', name: 'Harmonious Note', icon: 'musical-notes' },
-  { id: 'silence', name: 'Silence', icon: 'moon' },
+  { id: 'thunder', name: 'Thunderstorm', icon: 'thunderstorm' },
+  { id: 'wind', name: 'Wind', icon: 'cloud' },
+  { id: 'fire', name: 'Crackling Fire', icon: 'flame' },
+  { id: 'stream', name: 'Flowing Stream', icon: 'water-outline' },
+  { id: 'night', name: 'Night Sounds', icon: 'moon' },
+  { id: 'silence', name: 'Silence', icon: 'volume-mute' },
 ];
 
 export default function TimedMeditation() {

@@ -766,6 +766,16 @@ async def get_binaural_frequencies():
     """Get available binaural beat frequencies"""
     frequencies = [
         {
+            "id": "god-tone",
+            "name": "God Tone (963 Hz)",
+            "frequency_range": "963 Hz Solfeggio",
+            "base_frequency": 963,
+            "beat_frequency": 7.83,
+            "benefits": ["Spiritual awakening", "Divine connection", "Crown chakra activation", "Higher consciousness"],
+            "color": "#ffd700",
+            "description": "The frequency of divine connection and spiritual awakening - activates the crown chakra and connects to higher consciousness"
+        },
+        {
             "id": "schumann",
             "name": "Schumann Resonance",
             "frequency_range": "7.83 Hz",
@@ -824,6 +834,26 @@ async def get_binaural_frequencies():
             "benefits": ["Peak focus", "Cognitive enhancement", "Information processing", "Memory recall"],
             "color": "#e9d5ff",
             "description": "For peak mental performance and cognitive enhancement"
+        },
+        {
+            "id": "love",
+            "name": "Love Frequency (528 Hz)",
+            "frequency_range": "528 Hz Solfeggio",
+            "base_frequency": 528,
+            "beat_frequency": 6,
+            "benefits": ["Heart healing", "DNA repair", "Transformation", "Miracles"],
+            "color": "#ec4899",
+            "description": "The miracle tone - promotes love, healing, and positive transformation"
+        },
+        {
+            "id": "liberation",
+            "name": "Liberation (396 Hz)",
+            "frequency_range": "396 Hz Solfeggio",
+            "base_frequency": 396,
+            "beat_frequency": 6,
+            "benefits": ["Release fear", "Guilt liberation", "Root chakra", "Grounding"],
+            "color": "#ef4444",
+            "description": "Liberates from fear and guilt - grounds and balances the root chakra"
         }
     ]
     return frequencies
@@ -940,6 +970,11 @@ async def generate_ambient_sound(sound_id: str, duration: int = 60):
         "rain": {"type": "white_noise", "modulation": 0.5, "mod_freq": 2.0},
         "forest": {"type": "brown_noise", "modulation": 0.2, "mod_freq": 0.5},
         "singing-bowl": {"type": "sine_harmonic", "base_freq": 396, "harmonics": [1, 2, 3, 5]},
+        "thunder": {"type": "thunder", "modulation": 0.6},
+        "wind": {"type": "wind", "modulation": 0.4},
+        "fire": {"type": "fire", "crackle_rate": 8},
+        "stream": {"type": "stream", "flow_rate": 0.3},
+        "night": {"type": "night", "cricket_rate": 4},
         "silence": {"type": "silence"}
     }
     
@@ -956,21 +991,18 @@ async def generate_ambient_sound(sound_id: str, duration: int = 60):
         audio = np.zeros(num_samples, dtype=np.float32)
     
     elif config["type"] == "pink_noise":
-        # Pink noise (1/f noise) - sounds like ocean waves
+        # Pink noise (1/f noise) - sounds like heavy rain
         white = np.random.randn(num_samples).astype(np.float32)
-        # Apply 1/f filter (simple approximation)
         b = [0.049922035, -0.095993537, 0.050612699, -0.004408786]
         a = [1, -2.494956002, 2.017265875, -0.522189400]
         from scipy.signal import lfilter
         pink = lfilter(b, a, white)
-        # Add wave-like modulation
         mod = 0.5 + config["modulation"] * np.sin(2 * np.pi * config["mod_freq"] * np.arange(num_samples) / sample_rate)
         audio = (pink * mod * 0.3).astype(np.float32)
     
     elif config["type"] == "white_noise":
-        # White noise with rain-like modulation
+        # Pure white noise
         white = np.random.randn(num_samples).astype(np.float32)
-        # Random amplitude modulation for rain drops
         mod = 0.3 + config["modulation"] * np.abs(np.sin(2 * np.pi * config["mod_freq"] * np.arange(num_samples) / sample_rate + np.random.randn(num_samples) * 0.5))
         audio = (white * mod * 0.25).astype(np.float32)
     
@@ -978,26 +1010,100 @@ async def generate_ambient_sound(sound_id: str, duration: int = 60):
         # Brown noise (random walk) - deeper, forest-like
         white = np.random.randn(num_samples).astype(np.float32)
         brown = np.cumsum(white)
-        brown = brown / np.max(np.abs(brown))  # Normalize
-        # Add gentle modulation
+        brown = brown / np.max(np.abs(brown))
         mod = 0.7 + config["modulation"] * np.sin(2 * np.pi * config["mod_freq"] * np.arange(num_samples) / sample_rate)
         audio = (brown * mod * 0.3).astype(np.float32)
     
     elif config["type"] == "sine_harmonic":
-        # Singing bowl - harmonic sine waves with decay
+        # Harmonious note - harmonic sine waves with decay
         t = np.arange(num_samples) / sample_rate
         audio = np.zeros(num_samples, dtype=np.float32)
         for i, h in enumerate(config["harmonics"]):
             freq = config["base_freq"] * h
-            # Add decay envelope for each harmonic
             decay = np.exp(-t * (0.1 + i * 0.05))
             audio += np.sin(2 * np.pi * freq * t) * decay * (1.0 / (i + 1))
         audio = (audio / np.max(np.abs(audio)) * 0.5).astype(np.float32)
-        # Add periodic "strikes"
-        strike_interval = int(sample_rate * 8)  # Every 8 seconds
+        strike_interval = int(sample_rate * 8)
         for strike_pos in range(0, num_samples, strike_interval):
             strike_end = min(strike_pos + int(sample_rate * 0.1), num_samples)
             audio[strike_pos:strike_end] *= 1.5
+    
+    elif config["type"] == "thunder":
+        # Thunderstorm - rain with occasional thunder rumbles
+        from scipy.signal import lfilter
+        white = np.random.randn(num_samples).astype(np.float32)
+        b = [0.049922035, -0.095993537, 0.050612699, -0.004408786]
+        a = [1, -2.494956002, 2.017265875, -0.522189400]
+        rain = lfilter(b, a, white) * 0.2
+        # Add thunder rumbles
+        thunder_times = np.random.choice(num_samples, size=int(duration_seconds / 10), replace=False)
+        for t_pos in thunder_times:
+            thunder_len = int(sample_rate * np.random.uniform(1.5, 3.0))
+            if t_pos + thunder_len < num_samples:
+                t = np.arange(thunder_len) / sample_rate
+                thunder = np.random.randn(thunder_len) * np.exp(-t * 2) * 0.6
+                # Low pass filter for rumble
+                from scipy.signal import butter, filtfilt
+                b_lp, a_lp = butter(4, 100 / (sample_rate / 2), btype='low')
+                thunder = filtfilt(b_lp, a_lp, thunder)
+                rain[t_pos:t_pos + thunder_len] += thunder
+        audio = rain.astype(np.float32)
+    
+    elif config["type"] == "wind":
+        # Wind - modulated filtered noise
+        from scipy.signal import butter, filtfilt
+        white = np.random.randn(num_samples).astype(np.float32)
+        # Bandpass for wind sound
+        b_bp, a_bp = butter(2, [100 / (sample_rate / 2), 1000 / (sample_rate / 2)], btype='band')
+        wind = filtfilt(b_bp, a_bp, white)
+        # Slow modulation for gusts
+        t = np.arange(num_samples) / sample_rate
+        gust = 0.5 + 0.5 * np.sin(2 * np.pi * 0.1 * t + np.random.randn() * 2)
+        audio = (wind * gust * 0.3).astype(np.float32)
+    
+    elif config["type"] == "fire":
+        # Crackling fire
+        from scipy.signal import butter, filtfilt
+        # Base fire roar (low frequency noise)
+        white = np.random.randn(num_samples).astype(np.float32)
+        b_lp, a_lp = butter(2, 500 / (sample_rate / 2), btype='low')
+        fire_base = filtfilt(b_lp, a_lp, white) * 0.15
+        # Add crackles
+        crackle_times = np.random.choice(num_samples, size=int(duration_seconds * config["crackle_rate"]), replace=False)
+        for c_pos in crackle_times:
+            crackle_len = int(sample_rate * np.random.uniform(0.02, 0.08))
+            if c_pos + crackle_len < num_samples:
+                crackle = np.random.randn(crackle_len) * np.exp(-np.arange(crackle_len) / (crackle_len / 3)) * 0.4
+                fire_base[c_pos:c_pos + crackle_len] += crackle
+        audio = fire_base.astype(np.float32)
+    
+    elif config["type"] == "stream":
+        # Flowing stream - filtered noise with babbling
+        from scipy.signal import butter, filtfilt
+        white = np.random.randn(num_samples).astype(np.float32)
+        # Bandpass for water sound
+        b_bp, a_bp = butter(2, [200 / (sample_rate / 2), 2000 / (sample_rate / 2)], btype='band')
+        water = filtfilt(b_bp, a_bp, white)
+        # Add gentle modulation
+        t = np.arange(num_samples) / sample_rate
+        flow = 0.7 + 0.3 * np.sin(2 * np.pi * config["flow_rate"] * t)
+        audio = (water * flow * 0.25).astype(np.float32)
+    
+    elif config["type"] == "night":
+        # Night sounds - crickets and ambient
+        t = np.arange(num_samples) / sample_rate
+        # Base quiet ambient
+        ambient = np.random.randn(num_samples) * 0.02
+        # Cricket chirps (high frequency pulses)
+        cricket_freq = 4000
+        chirp_duration = 0.05
+        chirp_samples = int(sample_rate * chirp_duration)
+        chirp_times = np.random.choice(num_samples - chirp_samples, size=int(duration_seconds * config["cricket_rate"]), replace=False)
+        for c_pos in chirp_times:
+            chirp_t = np.arange(chirp_samples) / sample_rate
+            chirp = np.sin(2 * np.pi * cricket_freq * chirp_t) * np.exp(-chirp_t * 30) * 0.15
+            ambient[c_pos:c_pos + chirp_samples] += chirp
+        audio = ambient.astype(np.float32)
     
     else:
         audio = np.zeros(num_samples, dtype=np.float32)
