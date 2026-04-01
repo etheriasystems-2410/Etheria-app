@@ -95,12 +95,13 @@ export default function AIGuidedMeditation() {
     setupAudioMode();
   }, []);
 
-  // Auto-start TTS when script is generated
-  useEffect(() => {
-    if (script && !isMuted) {
-      beginSession();
-    }
-  }, [script]);
+  // NOTE: Auto-start is now handled directly in generateMeditation via startQuickTTS
+  // This useEffect is disabled to prevent double playback
+  // useEffect(() => {
+  //   if (script && !isMuted) {
+  //     beginSession();
+  //   }
+  // }, [script]);
 
   const generateMeditation = async () => {
     setLoading(true);
