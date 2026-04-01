@@ -383,15 +383,6 @@ export default function AIGuidedMeditation() {
       setLoadingProgress(0);
     }
   };
-      
-    } catch (error) {
-      console.error('Error in quick TTS:', error);
-      setGeneratingAudio(false);
-      setAudioError('Failed to generate voice');
-      setLoadingStage('idle');
-      setLoadingProgress(0);
-    }
-  };
 
   const playRestOfScript = async (restText: string) => {
     try {
