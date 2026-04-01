@@ -630,13 +630,24 @@ async def get_binaural_frequencies():
     """Get available binaural beat frequencies"""
     frequencies = [
         {
+            "id": "schumann",
+            "name": "Schumann Resonance",
+            "frequency_range": "7.83 Hz",
+            "base_frequency": 200,
+            "beat_frequency": 7.83,
+            "benefits": ["Earth connection", "Grounding", "Natural harmony", "Stress relief"],
+            "color": "#10b981",
+            "description": "The Earth's natural electromagnetic frequency - promotes deep connection with nature and grounding"
+        },
+        {
             "id": "delta",
             "name": "Delta (Deep Sleep)",
             "frequency_range": "0.5-4 Hz",
             "base_frequency": 200,
             "beat_frequency": 2,
             "benefits": ["Deep sleep", "Healing", "Pain relief", "Deep relaxation"],
-            "color": "#4c1d95"
+            "color": "#4c1d95",
+            "description": "Promotes deep, restorative sleep and physical healing"
         },
         {
             "id": "theta",
@@ -645,7 +656,8 @@ async def get_binaural_frequencies():
             "base_frequency": 200,
             "beat_frequency": 6,
             "benefits": ["Deep meditation", "Creativity", "Intuition", "Memory"],
-            "color": "#7c3aed"
+            "color": "#7c3aed",
+            "description": "Ideal for deep meditation, creativity, and accessing intuition"
         },
         {
             "id": "alpha",
@@ -654,7 +666,8 @@ async def get_binaural_frequencies():
             "base_frequency": 200,
             "beat_frequency": 10,
             "benefits": ["Relaxation", "Stress reduction", "Light meditation", "Learning"],
-            "color": "#a855f7"
+            "color": "#a855f7",
+            "description": "Perfect for relaxation, light meditation, and enhanced learning"
         },
         {
             "id": "beta",
@@ -663,7 +676,8 @@ async def get_binaural_frequencies():
             "base_frequency": 200,
             "beat_frequency": 20,
             "benefits": ["Focus", "Concentration", "Alertness", "Problem solving"],
-            "color": "#c084fc"
+            "color": "#c084fc",
+            "description": "Enhances focus, concentration, and mental alertness"
         },
         {
             "id": "gamma",
@@ -672,10 +686,84 @@ async def get_binaural_frequencies():
             "base_frequency": 200,
             "beat_frequency": 40,
             "benefits": ["Peak focus", "Cognitive enhancement", "Information processing", "Memory recall"],
-            "color": "#e9d5ff"
+            "color": "#e9d5ff",
+            "description": "For peak mental performance and cognitive enhancement"
         }
     ]
     return frequencies
+
+@api_router.get("/meditation/binaural/generate/{frequency_id}")
+async def generate_binaural_beat(frequency_id: str, duration: int = 60):
+    """Generate actual binaural beat audio"""
+    import numpy as np
+    from scipy.io import wavfile
+    
+    # Frequency configurations
+    freq_config = {
+        "schumann": {"base": 200, "beat": 7.83},
+        "delta": {"base": 200, "beat": 2},
+        "theta": {"base": 200, "beat": 6},
+        "alpha": {"base": 200, "beat": 10},
+        "beta": {"base": 200, "beat": 20},
+        "gamma": {"base": 200, "beat": 40}
+    }
+    
+    if frequency_id not in freq_config:
+        raise HTTPException(status_code=404, detail="Frequency not found")
+    
+    config = freq_config[frequency_id]
+    base_freq = config["base"]
+    beat_freq = config["beat"]
+    
+    # Audio parameters
+    sample_rate = 44100
+    duration_seconds = min(duration, 300)  # Max 5 minutes per request
+    
+    # Generate time array
+    t = np.linspace(0, duration_seconds, int(sample_rate * duration_seconds), dtype=np.float32)
+    
+    # Generate binaural beats (different frequency in each ear)
+    left_freq = base_freq
+    right_freq = base_freq + beat_freq
+    
+    # Create sine waves for left and right channels
+    left_channel = np.sin(2 * np.pi * left_freq * t).astype(np.float32)
+    right_channel = np.sin(2 * np.pi * right_freq * t).astype(np.float32)
+    
+    # Add gentle fade in/out (2 seconds each)
+    fade_samples = int(sample_rate * 2)
+    fade_in = np.linspace(0, 1, fade_samples, dtype=np.float32)
+    fade_out = np.linspace(1, 0, fade_samples, dtype=np.float32)
+    
+    left_channel[:fade_samples] *= fade_in
+    left_channel[-fade_samples:] *= fade_out
+    right_channel[:fade_samples] *= fade_in
+    right_channel[-fade_samples:] *= fade_out
+    
+    # Scale to 16-bit range
+    left_channel = (left_channel * 32767 * 0.7).astype(np.int16)
+    right_channel = (right_channel * 32767 * 0.7).astype(np.int16)
+    
+    # Combine into stereo
+    stereo = np.column_stack((left_channel, right_channel))
+    
+    # Write to bytes buffer
+    buffer = io.BytesIO()
+    wavfile.write(buffer, sample_rate, stereo)
+    buffer.seek(0)
+    
+    # Convert to base64
+    audio_base64 = base64.b64encode(buffer.read()).decode()
+    
+    return {
+        "frequency_id": frequency_id,
+        "base_frequency": base_freq,
+        "beat_frequency": beat_freq,
+        "duration_seconds": duration_seconds,
+        "sample_rate": sample_rate,
+        "audio_base64": audio_base64,
+        "format": "wav"
+    }
 
 @api_router.get("/meditation/binaural/audio/{frequency_id}")
 async def get_binaural_audio_info(frequency_id: str):

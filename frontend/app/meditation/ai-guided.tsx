@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
+import { Paywall } from '../../components/Paywall';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -48,10 +50,19 @@ const focuses: MeditationFocus[] = [
 
 export default function AIGuidedMeditation() {
   const router = useRouter();
+  const { isPremium } = useAuth();
   const [selectedFocus, setSelectedFocus] = useState<string>('stress-relief');
   const [duration, setDuration] = useState(10);
   const [script, setScript] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // Check premium access on mount
+  React.useEffect(() => {
+    if (!isPremium) {
+      setShowPaywall(true);
+    }
+  }, [isPremium]);
 
   const generateMeditation = async () => {
     setLoading(true);
@@ -186,6 +197,17 @@ export default function AIGuidedMeditation() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      <Paywall
+        visible={showPaywall}
+        onClose={() => {
+          setShowPaywall(false);
+          if (!isPremium) {
+            router.back();
+          }
+        }}
+        feature="AI Guided Meditation"
+      />
     </View>
   );
 }

@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
+import { Paywall } from '../../components/Paywall';
 
 interface AstralLevel {
   id: string;
@@ -50,8 +52,17 @@ const levels: AstralLevel[] = [
 
 export default function AstralTravel() {
   const router = useRouter();
+  const { isPremium } = useAuth();
   const [selectedLevel, setSelectedLevel] = useState<AstralLevel | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // Check premium access on mount
+  React.useEffect(() => {
+    if (!isPremium) {
+      setShowPaywall(true);
+    }
+  }, [isPremium]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -179,6 +190,17 @@ export default function AstralTravel() {
           <Text style={styles.tipText}>✨ Trust your intuition and inner guidance</Text>
         </View>
       </ScrollView>
+
+      <Paywall
+        visible={showPaywall}
+        onClose={() => {
+          setShowPaywall(false);
+          if (!isPremium) {
+            router.back();
+          }
+        }}
+        feature="Astral Travel Practice"
+      />
     </View>
   );
 }
