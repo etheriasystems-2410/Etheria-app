@@ -10,9 +10,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Audio } from 'expo-av';
 import { useAuth } from '../../contexts/AuthContext';
 import { Paywall } from '../../components/Paywall';
+import { AudioPlayerManager, setupAudioMode } from '../../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -63,7 +63,7 @@ export default function AIGuidedMeditation() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
 
   // Check premium access on mount
   React.useEffect(() => {
@@ -75,19 +75,15 @@ export default function AIGuidedMeditation() {
   // Cleanup audio on unmount
   useEffect(() => {
     return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.unload();
       }
     };
   }, []);
 
   // Setup audio mode
   useEffect(() => {
-    Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-      shouldDuckAndroid: true,
-    });
+    setupAudioMode();
   }, []);
 
   const generateMeditation = async () => {
@@ -133,22 +129,21 @@ export default function AIGuidedMeditation() {
       }
       
       // Stop any existing playback
-      if (soundRef.current) {
-        await soundRef.current.unloadAsync();
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.unload();
       }
       
-      // Create and play the audio
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: `data:audio/mp3;base64,${data.audio_base64}` },
-        { shouldPlay: true, volume: 1.0 }
-      );
+      // Create new audio player and play
+      const player = new AudioPlayerManager();
+      const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
+      await player.loadAndPlay(audioUri, { volume: 1.0 });
       
-      soundRef.current = sound;
+      audioPlayerRef.current = player;
       setIsPlaying(true);
       
       // Monitor playback status
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
+      player.onPlaybackStatusChange((status) => {
+        if (status.didJustFinish) {
           setIsPlaying(false);
           Alert.alert('Session Complete', 'Your meditation session has ended. Take a moment to return to awareness.');
         }
@@ -164,10 +159,10 @@ export default function AIGuidedMeditation() {
   };
 
   const stopSession = async () => {
-    if (soundRef.current) {
-      await soundRef.current.stopAsync();
-      await soundRef.current.unloadAsync();
-      soundRef.current = null;
+    if (audioPlayerRef.current) {
+      await audioPlayerRef.current.stop();
+      await audioPlayerRef.current.unload();
+      audioPlayerRef.current = null;
     }
     setIsPlaying(false);
   };

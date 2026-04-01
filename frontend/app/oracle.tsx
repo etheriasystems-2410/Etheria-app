@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Audio } from 'expo-av';
 import { useAuth } from '../contexts/AuthContext';
 import { Paywall } from '../components/Paywall';
+import { AudioPlayerManager, setupAudioMode } from '../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');
@@ -117,12 +117,13 @@ export default function Oracle() {
   
   const cardFlipAnim = useRef(new Animated.Value(0)).current;
   const cardScaleAnim = useRef(new Animated.Value(1)).current;
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
 
   useEffect(() => {
+    setupAudioMode();
     return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.unload();
       }
     };
   }, []);
@@ -244,8 +245,8 @@ export default function Oracle() {
   const playInterpretation = async (text: string, guideName: string) => {
     setAudioLoading(true);
     try {
-      if (soundRef.current) {
-        await soundRef.current.unloadAsync();
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.unload();
       }
 
       const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
@@ -264,16 +265,15 @@ export default function Oracle() {
         return;
       }
 
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: `data:audio/mpeg;base64,${data.audio_base64}` },
-        { shouldPlay: true }
-      );
+      const player = new AudioPlayerManager();
+      const audioUri = `data:audio/mpeg;base64,${data.audio_base64}`;
+      await player.loadAndPlay(audioUri);
 
-      soundRef.current = sound;
+      audioPlayerRef.current = player;
       setIsPlayingAudio(true);
 
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
+      player.onPlaybackStatusChange((status) => {
+        if (status.didJustFinish) {
           setIsPlayingAudio(false);
         }
       });
@@ -285,8 +285,8 @@ export default function Oracle() {
   };
 
   const stopAudio = async () => {
-    if (soundRef.current) {
-      await soundRef.current.stopAsync();
+    if (audioPlayerRef.current) {
+      await audioPlayerRef.current.stop();
       setIsPlayingAudio(false);
     }
   };

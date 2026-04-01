@@ -13,10 +13,10 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { Paywall } from '../components/Paywall';
+import { AudioPlayerManager, setupAudioMode } from '../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -96,7 +96,7 @@ export default function SpiritGuides() {
   const [isMuted, setIsMuted] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [generatingAudio, setGeneratingAudio] = useState(false);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Check if user has access to Spirit Guides feature
@@ -106,13 +106,14 @@ export default function SpiritGuides() {
     if (hasAccess) {
       checkBirthdayStored();
       loadMutePreference();
+      setupAudioMode();
     }
   }, [hasAccess]);
 
   useEffect(() => {
     return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.unload();
       }
     };
   }, []);
@@ -134,8 +135,8 @@ export default function SpiritGuides() {
     await AsyncStorage.setItem('spirit_guides_muted', newMuted ? 'true' : 'false');
     
     // Stop current audio if muting
-    if (newMuted && soundRef.current) {
-      await soundRef.current.stopAsync();
+    if (newMuted && audioPlayerRef.current) {
+      await audioPlayerRef.current.stop();
       setPlayingAudioIndex(null);
     }
   };
@@ -256,20 +257,19 @@ export default function SpiritGuides() {
         return;
       }
       
-      if (soundRef.current) {
-        await soundRef.current.unloadAsync();
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.unload();
       }
 
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: `data:audio/mpeg;base64,${audioBase64}` },
-        { shouldPlay: true }
-      );
+      const player = new AudioPlayerManager();
+      const audioUri = `data:audio/mpeg;base64,${audioBase64}`;
+      await player.loadAndPlay(audioUri);
 
-      soundRef.current = sound;
+      audioPlayerRef.current = player;
       setPlayingAudioIndex(messageIndex);
 
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
+      player.onPlaybackStatusChange((status) => {
+        if (status.didJustFinish) {
           setPlayingAudioIndex(null);
         }
       });

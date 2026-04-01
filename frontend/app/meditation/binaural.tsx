@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { Paywall } from '../../components/Paywall';
+import { AudioPlayerManager, setupAudioMode } from '../../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -41,16 +41,16 @@ export default function BinauralMeditation() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     loadPrograms();
-    setupAudio();
+    setupAudioMode();
     
     return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.unload();
       }
     };
   }, []);
@@ -86,18 +86,6 @@ export default function BinauralMeditation() {
       return () => clearInterval(interval);
     }
   }, [isPlaying, sessionStartTime]);
-
-  const setupAudio = async () => {
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-      });
-    } catch (error) {
-      console.error('Error setting up audio:', error);
-    }
-  };
 
   const loadPrograms = async () => {
     try {
@@ -138,32 +126,23 @@ export default function BinauralMeditation() {
       
       const data = await response.json();
       
-      // Unload previous sound
-      if (soundRef.current) {
-        await soundRef.current.unloadAsync();
+      // Unload previous player
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.unload();
       }
       
-      // Load the generated audio
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: `data:audio/wav;base64,${data.audio_base64}` },
-        { 
-          shouldPlay: true,
-          isLooping: true,
-          volume: 0.8,
-        }
-      );
+      // Create new audio player and play
+      const player = new AudioPlayerManager();
+      const audioUri = `data:audio/wav;base64,${data.audio_base64}`;
+      await player.loadAndPlay(audioUri, {
+        loop: true,
+        volume: 0.8,
+      });
       
-      soundRef.current = sound;
+      audioPlayerRef.current = player;
       setIsPlaying(true);
       setSessionStartTime(Date.now());
       setSessionDuration(0);
-      
-      // Monitor playback status
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && !status.isPlaying && isPlaying) {
-          // Audio stopped unexpectedly
-        }
-      });
       
     } catch (error) {
       console.error('Error starting session:', error);
@@ -175,10 +154,10 @@ export default function BinauralMeditation() {
 
   const stopSession = async () => {
     try {
-      if (soundRef.current) {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.stop();
+        await audioPlayerRef.current.unload();
+        audioPlayerRef.current = null;
       }
       
       // Save session if it was at least 30 seconds
