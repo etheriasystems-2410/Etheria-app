@@ -776,6 +776,26 @@ async def get_binaural_frequencies():
             "description": "The frequency of divine connection and spiritual awakening - activates the crown chakra and connects to higher consciousness"
         },
         {
+            "id": "love",
+            "name": "Love Frequency (528 Hz)",
+            "frequency_range": "528 Hz Solfeggio",
+            "base_frequency": 528,
+            "beat_frequency": 6,
+            "benefits": ["Heart healing", "DNA repair", "Transformation", "Miracles"],
+            "color": "#ec4899",
+            "description": "The miracle tone - promotes love, healing, and positive transformation"
+        },
+        {
+            "id": "liberation",
+            "name": "Liberation (396 Hz)",
+            "frequency_range": "396 Hz Solfeggio",
+            "base_frequency": 396,
+            "beat_frequency": 6,
+            "benefits": ["Release fear", "Guilt liberation", "Root chakra", "Grounding"],
+            "color": "#ef4444",
+            "description": "Liberates from fear and guilt - grounds and balances the root chakra"
+        },
+        {
             "id": "schumann",
             "name": "Schumann Resonance",
             "frequency_range": "7.83 Hz",
@@ -834,26 +854,6 @@ async def get_binaural_frequencies():
             "benefits": ["Peak focus", "Cognitive enhancement", "Information processing", "Memory recall"],
             "color": "#e9d5ff",
             "description": "For peak mental performance and cognitive enhancement"
-        },
-        {
-            "id": "love",
-            "name": "Love Frequency (528 Hz)",
-            "frequency_range": "528 Hz Solfeggio",
-            "base_frequency": 528,
-            "beat_frequency": 6,
-            "benefits": ["Heart healing", "DNA repair", "Transformation", "Miracles"],
-            "color": "#ec4899",
-            "description": "The miracle tone - promotes love, healing, and positive transformation"
-        },
-        {
-            "id": "liberation",
-            "name": "Liberation (396 Hz)",
-            "frequency_range": "396 Hz Solfeggio",
-            "base_frequency": 396,
-            "beat_frequency": 6,
-            "benefits": ["Release fear", "Guilt liberation", "Root chakra", "Grounding"],
-            "color": "#ef4444",
-            "description": "Liberates from fear and guilt - grounds and balances the root chakra"
         }
     ]
     return frequencies
@@ -864,8 +864,11 @@ async def generate_binaural_beat(frequency_id: str, duration: int = 60):
     import numpy as np
     from scipy.io import wavfile
     
-    # Frequency configurations
+    # Frequency configurations - all frequencies including Solfeggio tones
     freq_config = {
+        "god-tone": {"base": 963, "beat": 7.83},
+        "love": {"base": 528, "beat": 6},
+        "liberation": {"base": 396, "beat": 6},
         "schumann": {"base": 200, "beat": 7.83},
         "delta": {"base": 200, "beat": 2},
         "theta": {"base": 200, "beat": 6},
