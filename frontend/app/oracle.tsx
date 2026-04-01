@@ -592,24 +592,49 @@ export default function Oracle() {
 
                       {/* Card Navigation Arrows */}
                       {currentReading.cards.length > 1 && (
-                        <View style={styles.cardArrows}>
-                          <TouchableOpacity
-                            style={[styles.arrowButton, currentCardIndex === 0 && styles.arrowButtonDisabled]}
-                            onPress={() => setCurrentCardIndex(Math.max(0, currentCardIndex - 1))}
-                            disabled={currentCardIndex === 0}
-                          >
-                            <Ionicons name="chevron-back" size={24} color={currentCardIndex === 0 ? '#4a3b6e' : '#b794f6'} />
-                          </TouchableOpacity>
-                          <Text style={styles.cardCounter}>
-                            Card {currentCardIndex + 1} of {currentReading.cards.length}
-                          </Text>
-                          <TouchableOpacity
-                            style={[styles.arrowButton, currentCardIndex === currentReading.cards.length - 1 && styles.arrowButtonDisabled]}
-                            onPress={() => setCurrentCardIndex(Math.min(currentReading.cards.length - 1, currentCardIndex + 1))}
-                            disabled={currentCardIndex === currentReading.cards.length - 1}
-                          >
-                            <Ionicons name="chevron-forward" size={24} color={currentCardIndex === currentReading.cards.length - 1 ? '#4a3b6e' : '#b794f6'} />
-                          </TouchableOpacity>
+                        <View style={styles.cardNavigationSection}>
+                          <View style={styles.cardArrows}>
+                            <TouchableOpacity
+                              style={[styles.arrowButton, currentCardIndex === 0 && styles.arrowButtonDisabled]}
+                              onPress={() => setCurrentCardIndex(Math.max(0, currentCardIndex - 1))}
+                              disabled={currentCardIndex === 0}
+                            >
+                              <Ionicons name="chevron-back" size={24} color={currentCardIndex === 0 ? '#4a3b6e' : '#b794f6'} />
+                              <Text style={[styles.arrowText, currentCardIndex === 0 && styles.arrowTextDisabled]}>Previous</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.cardCounter}>
+                              Card {currentCardIndex + 1} of {currentReading.cards.length}
+                            </Text>
+                            <TouchableOpacity
+                              style={[styles.arrowButton, currentCardIndex === currentReading.cards.length - 1 && styles.arrowButtonDisabled]}
+                              onPress={() => setCurrentCardIndex(Math.min(currentReading.cards.length - 1, currentCardIndex + 1))}
+                              disabled={currentCardIndex === currentReading.cards.length - 1}
+                            >
+                              <Text style={[styles.arrowText, currentCardIndex === currentReading.cards.length - 1 && styles.arrowTextDisabled]}>Next</Text>
+                              <Ionicons name="chevron-forward" size={24} color={currentCardIndex === currentReading.cards.length - 1 ? '#4a3b6e' : '#b794f6'} />
+                            </TouchableOpacity>
+                          </View>
+                          
+                          {/* Prominent Next Card Button */}
+                          {currentCardIndex < currentReading.cards.length - 1 && (
+                            <TouchableOpacity
+                              style={styles.nextCardButton}
+                              onPress={() => setCurrentCardIndex(currentCardIndex + 1)}
+                            >
+                              <Text style={styles.nextCardButtonText}>
+                                Next: {currentReading.cards[currentCardIndex + 1].position}
+                              </Text>
+                              <Ionicons name="arrow-forward" size={20} color="#1a0033" />
+                            </TouchableOpacity>
+                          )}
+                          
+                          {/* Show "Complete Reading" when on last card */}
+                          {currentCardIndex === currentReading.cards.length - 1 && (
+                            <View style={styles.readingCompleteBox}>
+                              <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+                              <Text style={styles.readingCompleteText}>Reading Complete</Text>
+                            </View>
+                          )}
                         </View>
                       )}
                     </>
@@ -1023,24 +1048,71 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
     lineHeight: 24,
   },
+  cardNavigationSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#2d1b4e',
+  },
   cardArrows: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#2d1b4e',
   },
   arrowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 8,
+    gap: 4,
   },
   arrowButtonDisabled: {
     opacity: 0.3,
   },
+  arrowText: {
+    color: '#b794f6',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  arrowTextDisabled: {
+    color: '#4a3b6e',
+  },
   cardCounter: {
     color: '#c4b5fd',
     fontSize: 14,
+  },
+  nextCardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#b794f6',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    marginTop: 16,
+    gap: 10,
+  },
+  nextCardButtonText: {
+    color: '#1a0033',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  readingCompleteBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginTop: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  readingCompleteText: {
+    color: '#10b981',
+    fontSize: 16,
+    fontWeight: '600',
   },
   modalButtons: {
     flexDirection: 'row',
