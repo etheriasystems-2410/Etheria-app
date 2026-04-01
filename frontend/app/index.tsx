@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { useAuth } from '../contexts/AuthContext';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/bfuvm2xh_4327b8ef020d7d471270d8452f31001dbd0d1e664d07a7235c64a236b0e6f6e6.jpg';
 
 export default function Home() {
   const router = useRouter();
+  const { isAuthenticated, user, isPremium } = useAuth();
 
   const features = [
     {
@@ -44,6 +46,40 @@ export default function Home() {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Auth Buttons - Show login/signup if not authenticated */}
+      {!isAuthenticated ? (
+        <View style={styles.authSection}>
+          <View style={styles.authButtons}>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => router.push('/auth/login')}
+            >
+              <Ionicons name="log-in" size={20} color="#1a0033" />
+              <Text style={styles.loginButtonText}>Log In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.signupButton}
+              onPress={() => router.push('/auth/signup')}
+            >
+              <Ionicons name="person-add" size={20} color="#b794f6" />
+              <Text style={styles.signupButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.userWelcome}>
+          <View style={styles.userInfo}>
+            <Ionicons name="person-circle" size={24} color="#b794f6" />
+            <Text style={styles.userGreeting}>Welcome, {user?.name || 'Seeker'}</Text>
+            {isPremium && (
+              <View style={styles.premiumBadgeSmall}>
+                <Ionicons name="star" size={12} color="#ffd700" />
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+
       {/* Hero Section with Image */}
       <View style={styles.heroSection}>
         <Image
@@ -122,6 +158,67 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f0321',
+  },
+  authSection: {
+    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  authButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  loginButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#b794f6',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  loginButtonText: {
+    color: '#1a0033',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  signupButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#b794f6',
+    gap: 8,
+  },
+  signupButtonText: {
+    color: '#b794f6',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  userWelcome: {
+    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  userGreeting: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  premiumBadgeSmall: {
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    padding: 4,
+    borderRadius: 10,
   },
   heroSection: {
     height: 280,
