@@ -430,6 +430,18 @@ frontend:
         agent: "testing"
         comment: "✅ TESTED: Complete Prize Drawing and Gift Code system tested successfully. All 9 test scenarios passed: 1) Get Current Gift Code (AI-generated mystical codes), 2) Prize Drawing Status (unauthenticated), 3) Admin Dashboard (current_code, prize_drawing stats), 4) Admin Generate New Code (AI-generated), 5) Get Participants List, 6) User Authentication, 7) Code Redemption (1 month premium access), 8) Prize Drawing Opt-In, 9) Prize Drawing Status (authenticated). Fixed datetime comparison and user field access issues during testing. All endpoints working correctly with proper validation and error handling."
 
+  - task: "Prize Drawing and Gift Code UI"
+    implemented: true
+    working: false
+    file: "/app/frontend/app/index.tsx, /app/frontend/app/settings.tsx, /app/frontend/components/Paywall.tsx"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ TESTED: Prize Drawing and Gift Code UI has mixed results. ✅ WORKING: Paywall code entry works perfectly - 'Have a code?' option expands correctly, accepts test codes like 'TEST123'. ❌ NOT WORKING: 1) Monthly Prize Drawing section not visible on homepage after login with test user (stripetest@etheria.com), 2) 'Have a promotional code?' option not found in settings page. Backend APIs work but frontend UI components may have visibility conditions or authentication issues preventing display."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
@@ -453,3 +465,5 @@ agent_communication:
     message: "✅ STRIPE CHECKOUT FLOW RE-TESTED: Complete end-to-end Stripe checkout flow tested successfully with test user stripetest@etheria.com. All 7 test scenarios passed: 1) User authentication (signup/login), 2) Initial subscription status (free tier confirmed), 3) Subscription plans retrieval ($3.99 premium_monthly), 4) Checkout session creation (valid Stripe URL), 5) Checkout status verification (open/unpaid), 6) Feature access control (spirit_guides blocked for free users), 7) Payment transaction creation verified. Stripe test mode integration fully functional."
   - agent: "testing"
     message: "✅ PRIZE DRAWING AND GIFT CODE SYSTEM TESTING COMPLETE: All 9 endpoints tested and working perfectly. Gift code generation (AI-powered mystical codes), admin dashboard, code redemption (1 month premium access), prize drawing opt-in/status, and admin management all functioning correctly. Fixed critical backend issues during testing: datetime comparison errors and user field access inconsistencies. System ready for production use with proper validation, error handling, and admin controls."
+  - agent: "testing"
+    message: "🎯 PRIZE DRAWING AND GIFT CODE UI TESTING COMPLETE: Mixed results found. ✅ WORKING: Paywall gift code entry works perfectly - 'Have a code?' option below 'Subscribe Now' expands correctly and accepts test codes. Login system functional with test credentials. ❌ ISSUES FOUND: 1) Monthly Prize Drawing section not visible on homepage after login (may require specific user conditions or authentication state), 2) 'Have a promotional code?' option missing from settings page (may be conditionally displayed based on user status). Backend APIs work but frontend UI visibility needs investigation."

@@ -1875,6 +1875,7 @@ async def run_prize_drawing(request: Request):
     """Run the monthly prize drawing (admin only)"""
     body = await request.json()
     admin_secret = body.get("admin_secret")
+    test_mode = body.get("test_mode", False)  # Skip eligibility for testing
     
     if admin_secret != ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -1891,7 +1892,12 @@ async def run_prize_drawing(request: Request):
     eligible_users = []
     
     for user in opted_in_users:
-        user_id = str(user.get("_id"))
+        user_id = str(user.get("user_id") or user.get("_id"))
+        
+        # In test mode, skip eligibility check
+        if test_mode:
+            eligible_users.append(user)
+            continue
         
         # Check weekly usage for the past month (average 30 min/week)
         # Get all weeks in the month
