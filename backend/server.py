@@ -2172,6 +2172,182 @@ async def admin_generate_new_code(request: Request):
         "expires_at": code_doc["week_end"].isoformat()
     }
 
+# ==================== FEEDBACK SYSTEM ====================
+
+class FeedbackRequest(BaseModel):
+    type: str  # bug, suggestion, question, other
+    subject: str
+    message: str
+    user_email: str
+    user_name: Optional[str] = "Anonymous"
+
+async def send_feedback_email(feedback: FeedbackRequest):
+    """Send feedback email to etheriasystems@gmail.com via Gmail SMTP"""
+    if not GMAIL_EMAIL or not GMAIL_APP_PASSWORD:
+        logging.error("Gmail credentials not configured for feedback")
+        return False
+    
+    try:
+        # Map feedback type to emoji
+        type_emoji = {
+            "bug": "🐛",
+            "suggestion": "💡",
+            "question": "❓",
+            "other": "💬"
+        }
+        emoji = type_emoji.get(feedback.type, "📧")
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f'{emoji} Etheria Feedback: [{feedback.type.upper()}] {feedback.subject}'
+        msg['From'] = GMAIL_EMAIL
+        msg['To'] = 'etheriasystems@gmail.com'
+        msg['Reply-To'] = feedback.user_email
+        
+        # Plain text version
+        text = f"""
+New Feedback Received from Etheria App
+=====================================
+
+Type: {feedback.type.upper()}
+From: {feedback.user_name}
+Email: {feedback.user_email}
+Subject: {feedback.subject}
+
+Message:
+{feedback.message}
+
+---
+Submitted: {datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")}
+        """
+        
+        # HTML version
+        type_colors = {
+            "bug": "#ef4444",
+            "suggestion": "#f59e0b",
+            "question": "#3b82f6",
+            "other": "#8b5cf6"
+        }
+        color = type_colors.get(feedback.type, "#8b5cf6")
+        
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background: #f3f4f6; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #1a0033, #2d1b4e); padding: 24px; text-align: center;">
+                    <h1 style="color: #e9d5ff; margin: 0;">✨ Etheria Feedback ✨</h1>
+                </div>
+                
+                <div style="padding: 24px;">
+                    <div style="background: {color}20; border-left: 4px solid {color}; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">
+                        <span style="color: {color}; font-weight: bold; text-transform: uppercase;">{emoji} {feedback.type}</span>
+                    </div>
+                    
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #6b7280; width: 100px;">From:</td>
+                            <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">{feedback.user_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6b7280;">Email:</td>
+                            <td style="padding: 8px 0;"><a href="mailto:{feedback.user_email}" style="color: #7c3aed;">{feedback.user_email}</a></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6b7280;">Subject:</td>
+                            <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">{feedback.subject}</td>
+                        </tr>
+                    </table>
+                    
+                    <div style="margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+                        <h3 style="color: #374151; margin: 0 0 12px 0;">Message:</h3>
+                        <p style="color: #4b5563; line-height: 1.6; margin: 0; white-space: pre-wrap;">{feedback.message}</p>
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <a href="mailto:{feedback.user_email}?subject=Re: {feedback.subject}" 
+                           style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+                            Reply to User
+                        </a>
+                    </div>
+                </div>
+                
+                <div style="background: #f3f4f6; padding: 16px; text-align: center; color: #6b7280; font-size: 12px;">
+                    Submitted {datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")}
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        part1 = MIMEText(text, 'plain')
+        part2 = MIMEText(html, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        # Send via Gmail SMTP
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
+        server.sendmail(GMAIL_EMAIL, 'etheriasystems@gmail.com', msg.as_string())
+        server.quit()
+        
+        return True
+    except Exception as e:
+        logging.error(f"Failed to send feedback email: {e}")
+        return False
+
+@api_router.post("/feedback/submit")
+async def submit_feedback(feedback: FeedbackRequest, request: Request):
+    """Submit user feedback - sends email to etheriasystems@gmail.com"""
+    
+    # Validate input
+    if not feedback.subject or len(feedback.subject) < 3:
+        raise HTTPException(status_code=400, detail="Subject must be at least 3 characters")
+    if not feedback.message or len(feedback.message) < 10:
+        raise HTTPException(status_code=400, detail="Message must be at least 10 characters")
+    if not feedback.user_email or '@' not in feedback.user_email:
+        raise HTTPException(status_code=400, detail="Valid email is required")
+    
+    # Try to get user info from auth
+    user_id = None
+    try:
+        user = await get_current_user(request)
+        user_id = str(user.get("user_id") or user.get("_id"))
+    except:
+        pass
+    
+    # Store feedback in database
+    feedback_doc = {
+        "_id": str(uuid.uuid4()),
+        "type": feedback.type,
+        "subject": feedback.subject,
+        "message": feedback.message,
+        "user_email": feedback.user_email,
+        "user_name": feedback.user_name,
+        "user_id": user_id,
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "email_sent": False
+    }
+    
+    await db.feedback.insert_one(feedback_doc)
+    
+    # Send email
+    email_sent = await send_feedback_email(feedback)
+    
+    # Update record with email status
+    await db.feedback.update_one(
+        {"_id": feedback_doc["_id"]},
+        {"$set": {"email_sent": email_sent}}
+    )
+    
+    if not email_sent:
+        logging.warning(f"Feedback saved but email not sent for {feedback_doc['_id']}")
+    
+    return {
+        "success": True,
+        "message": "Thank you for your feedback!",
+        "feedback_id": feedback_doc["_id"],
+        "email_sent": email_sent
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 

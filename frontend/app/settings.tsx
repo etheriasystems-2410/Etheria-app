@@ -434,6 +434,15 @@ export default function Settings() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => router.push('/feedback')}
+        >
+          <Ionicons name="chatbubble-ellipses" size={24} color="#ec4899" />
+          <Text style={styles.settingText}>Feedback & Bug Reports</Text>
+          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.settingItem}>
           <Ionicons name="help-circle" size={24} color="#b794f6" />
           <Text style={styles.settingText}>Help & Support</Text>
