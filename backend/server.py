@@ -583,10 +583,26 @@ async def generate_guided_meditation(duration_minutes: int = 10, focus: str = "g
         chat = LlmChat(
             api_key=EMERGENT_LLM_KEY,
             session_id=f"meditation-{uuid.uuid4()}",
-            system_message=f"You are a meditation guide. Create a {duration_minutes}-minute guided meditation script focusing on {focus}. Include breathing exercises, visualization, and mindfulness techniques. Format with clear pauses marked as [PAUSE 5s] etc."
+            system_message=f"""You are a meditation guide. Create a {duration_minutes}-minute guided meditation script focusing on {focus}. 
+
+IMPORTANT FORMATTING RULES:
+1. Include pauses using EXACTLY this format: [pause for X seconds] where X is a number between 3 and 15
+2. Insert pauses after breathing instructions, between sections, and during reflection moments
+3. Example: "Take a deep breath in... [pause for 5 seconds] ...and slowly exhale."
+4. Use multiple pauses throughout to create a natural meditation rhythm
+5. Include at least one pause every 2-3 sentences during breathing and visualization sections"""
         ).with_model("gemini", "gemini-2.5-pro")
         
-        prompt = f"Create a complete {duration_minutes}-minute guided meditation script for {focus}. Include introduction, breathing, body scan, visualization, and closing."
+        prompt = f"""Create a complete {duration_minutes}-minute guided meditation script for {focus}. 
+
+Structure:
+1. Introduction and settling in (with pauses)
+2. Breathing exercises (with pauses between breaths)
+3. Body scan or visualization (with pauses for awareness)
+4. Main meditation practice (with reflective pauses)
+5. Gentle closing and return to awareness (with pauses)
+
+Remember to use [pause for X seconds] format for all pauses."""
         
         user_message = UserMessage(text=prompt)
         script = await chat.send_message(user_message)

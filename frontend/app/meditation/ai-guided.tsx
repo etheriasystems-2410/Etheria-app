@@ -138,12 +138,153 @@ export default function AIGuidedMeditation() {
     }
   };
 
-  // Quick TTS - splits script and plays intro first
+  // Parse script for pause markers and split into segments
+  const parseScriptWithPauses = (script: string): Array<{type: 'text' | 'pause', content: string, duration?: number}> => {
+    const segments: Array<{type: 'text' | 'pause', content: string, duration?: number}> = [];
+    
+    // Regex to match various pause patterns:
+    // [pause for X seconds], (pause X seconds), ...pause..., [X second pause], etc.
+    const pauseRegex = /\[pause(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?)?\]|\(pause(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?)?\)|\.{3,}\s*(?:pause|breathe|relax)(?:\s+for)?\s*(\d+)?\s*(?:seconds?|secs?)?\.{0,3}|\[(\d+)\s*(?:second|sec)s?\s+pause\]|\((\d+)\s*(?:second|sec)s?\s+pause\)|(?:pause|take a moment|breathe deeply|allow yourself)(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?)/gi;
+    
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = pauseRegex.exec(script)) !== null) {
+      // Add text before the pause
+      if (match.index > lastIndex) {
+        const textBefore = script.slice(lastIndex, match.index).trim();
+        if (textBefore) {
+          segments.push({ type: 'text', content: textBefore });
+        }
+      }
+      
+      // Extract pause duration (check all capture groups)
+      const duration = parseInt(match[1] || match[2] || match[3] || match[4] || match[5] || match[6] || '5', 10);
+      segments.push({ type: 'pause', content: match[0], duration: Math.min(duration, 30) }); // Cap at 30 seconds
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < script.length) {
+      const remainingText = script.slice(lastIndex).trim();
+      if (remainingText) {
+        segments.push({ type: 'text', content: remainingText });
+      }
+    }
+    
+    // If no pauses found, return the whole script as one segment
+    if (segments.length === 0) {
+      segments.push({ type: 'text', content: script });
+    }
+    
+    return segments;
+  };
+
+  // Play segments with pauses
+  const playSegmentsWithPauses = async (segments: Array<{type: 'text' | 'pause', content: string, duration?: number}>, startIndex: number = 0) => {
+    for (let i = startIndex; i < segments.length; i++) {
+      if (isMutedRef.current) {
+        setIsPlaying(false);
+        setLoadingStage('idle');
+        return;
+      }
+      
+      const segment = segments[i];
+      
+      if (segment.type === 'pause') {
+        // Actual pause - wait for the specified duration
+        console.log(`Pausing for ${segment.duration} seconds`);
+        setLoadingStage('playing-full'); // Keep showing as playing during pause
+        await new Promise(resolve => setTimeout(resolve, (segment.duration || 5) * 1000));
+      } else if (segment.type === 'text' && segment.content.trim()) {
+        // Generate and play TTS for this text segment
+        try {
+          setLoadingStage('loading-continuation');
+          
+          const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: segment.content,
+              voice: 'nova',
+            }),
+          });
+          
+          if (!response.ok) {
+            console.error('TTS segment error:', response.status);
+            continue; // Skip this segment on error
+          }
+          
+          const responseText = await response.text();
+          let data;
+          try {
+            data = JSON.parse(responseText);
+          } catch (e) {
+            console.error('Failed to parse segment TTS response');
+            continue;
+          }
+          
+          if (!data.audio_base64 || isMutedRef.current) {
+            continue;
+          }
+          
+          // Unload previous player
+          if (audioPlayerRef.current) {
+            await audioPlayerRef.current.unload();
+          }
+          
+          // Play this segment and wait for it to finish
+          await new Promise<void>((resolve) => {
+            const player = new AudioPlayerManager();
+            const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
+            
+            player.onPlaybackStatusChange((status) => {
+              if (status.didJustFinish) {
+                resolve();
+              }
+            });
+            
+            player.loadAndPlay(audioUri, { volume: 1.0 }).then(() => {
+              audioPlayerRef.current = player;
+              setLoadingStage('playing-full');
+            }).catch((err) => {
+              console.error('Error playing segment:', err);
+              resolve(); // Continue even on error
+            });
+          });
+          
+        } catch (error) {
+          console.error('Error in segment playback:', error);
+        }
+      }
+    }
+    
+    // All segments complete
+    setIsPlaying(false);
+    setLoadingStage('idle');
+    setLoadingProgress(100);
+    Alert.alert('Session Complete', 'Your meditation session has ended. Take a moment to return to awareness.');
+  };
+
+  // Quick TTS - splits script and plays intro first, then continues with pauses
   const startQuickTTS = async (fullScript: string) => {
     try {
-      // Split into intro (first 2 sentences) and rest
-      const sentences = fullScript.match(/[^.!?]+[.!?]+/g) || [fullScript];
-      const introText = sentences.slice(0, 2).join(' ').trim();
+      // Parse script into segments with pauses
+      const segments = parseScriptWithPauses(fullScript);
+      console.log('Parsed segments:', segments.length);
+      
+      // Get the first text segment for quick intro
+      const firstTextSegment = segments.find(s => s.type === 'text');
+      if (!firstTextSegment) {
+        setGeneratingAudio(false);
+        setLoadingStage('idle');
+        return;
+      }
+      
+      // Split first segment into intro (first 2 sentences) for quick start
+      const introSentences = firstTextSegment.content.match(/[^.!?]+[.!?]+/g) || [firstTextSegment.content];
+      const introText = introSentences.slice(0, 2).join(' ').trim();
       
       setLoadingProgress(50);
       setLoadingStage('generating-intro');
@@ -169,12 +310,12 @@ export default function AIGuidedMeditation() {
         return;
       }
       
-      const introText2 = await introResponse.text();
+      const introResponseText = await introResponse.text();
       let introData;
       try {
-        introData = JSON.parse(introText2);
+        introData = JSON.parse(introResponseText);
       } catch (e) {
-        console.error('Failed to parse intro TTS response:', introText2.substring(0, 100));
+        console.error('Failed to parse intro TTS response:', introResponseText.substring(0, 100));
         setAudioError('Invalid response from voice service');
         setGeneratingAudio(false);
         setLoadingStage('idle');
@@ -207,27 +348,41 @@ export default function AIGuidedMeditation() {
       setLoadingStage('playing-intro');
       setLoadingProgress(80);
       
-      // When intro finishes, generate and play the rest
+      // Update first text segment to remove the intro we already played
+      const remainingFirstText = introSentences.slice(2).join(' ').trim();
+      const updatedSegments = [...segments];
+      const firstTextIndex = updatedSegments.findIndex(s => s.type === 'text');
+      if (firstTextIndex !== -1) {
+        if (remainingFirstText) {
+          updatedSegments[firstTextIndex] = { type: 'text', content: remainingFirstText };
+        } else {
+          updatedSegments.splice(firstTextIndex, 1);
+        }
+      }
+      
+      // When intro finishes, continue with remaining segments (with pauses)
       player.onPlaybackStatusChange(async (status) => {
-        if (status.didJustFinish && sentences.length > 2) {
-          // Generate the rest of the script
-          const restText = sentences.slice(2).join(' ').trim();
-          if (restText && !isMutedRef.current) {
+        if (status.didJustFinish) {
+          if (updatedSegments.length > 0 && !isMutedRef.current) {
             setLoadingStage('loading-continuation');
-            await playRestOfScript(restText);
+            await playSegmentsWithPauses(updatedSegments, 0);
           } else {
             setIsPlaying(false);
             setLoadingStage('idle');
             setLoadingProgress(100);
             Alert.alert('Session Complete', 'Your meditation session has ended.');
           }
-        } else if (status.didJustFinish && sentences.length <= 2) {
-          setIsPlaying(false);
-          setLoadingStage('idle');
-          setLoadingProgress(100);
-          Alert.alert('Session Complete', 'Your meditation session has ended.');
         }
       });
+      
+    } catch (error) {
+      console.error('Error in quick TTS:', error);
+      setGeneratingAudio(false);
+      setAudioError('Failed to generate voice');
+      setLoadingStage('idle');
+      setLoadingProgress(0);
+    }
+  };
       
     } catch (error) {
       console.error('Error in quick TTS:', error);
