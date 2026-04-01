@@ -13,22 +13,97 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Audio } from 'expo-av';
+import { useAuth } from '../contexts/AuthContext';
+import { Paywall } from '../components/Paywall';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');
 
-interface Reading {
+interface CardReading {
   card: {
     name: string;
     element: string;
     description: string;
     image_url: string;
   };
+  position?: string;
   interpretation: string;
+}
+
+interface Reading {
+  spread_type: string;
+  cards: CardReading[];
+  overall_interpretation?: string;
   timestamp: string;
 }
 
+interface SpreadType {
+  id: string;
+  name: string;
+  description: string;
+  cardCount: number;
+  positions: string[];
+  free: boolean;
+  icon: string;
+  image: string;
+}
+
+const SPREAD_TYPES: SpreadType[] = [
+  {
+    id: 'single',
+    name: 'Single Card',
+    description: 'Quick guidance for a simple question',
+    cardCount: 1,
+    positions: ['Guidance'],
+    free: true,
+    icon: 'sparkles',
+    image: 'https://images.unsplash.com/photo-1601662528567-526cd06f6582?w=200&h=300&fit=crop',
+  },
+  {
+    id: 'three-card',
+    name: 'Three Card Spread',
+    description: 'Past, Present, and Future insights',
+    cardCount: 3,
+    positions: ['Past', 'Present', 'Future'],
+    free: false,
+    icon: 'time',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=300&fit=crop',
+  },
+  {
+    id: 'relationship',
+    name: 'Relationship Spread',
+    description: 'You, Partner, and Connection dynamics',
+    cardCount: 3,
+    positions: ['You', 'Partner', 'Connection'],
+    free: false,
+    icon: 'heart',
+    image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=200&h=300&fit=crop',
+  },
+  {
+    id: 'celtic-cross',
+    name: 'Celtic Cross',
+    description: 'Deep dive into your situation',
+    cardCount: 6,
+    positions: ['Present', 'Challenge', 'Past', 'Future', 'Above', 'Below'],
+    free: false,
+    icon: 'compass',
+    image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=200&h=300&fit=crop',
+  },
+  {
+    id: 'spiritual-path',
+    name: 'Spiritual Path',
+    description: 'Guidance for your spiritual journey',
+    cardCount: 5,
+    positions: ['Current State', 'Obstacle', 'Hidden Influence', 'Guidance', 'Outcome'],
+    free: false,
+    icon: 'planet',
+    image: 'https://images.unsplash.com/photo-1507413245164-6160d8298b31?w=200&h=300&fit=crop',
+  },
+];
+
 export default function Oracle() {
+  const { isPremium } = useAuth();
+  const [selectedSpread, setSelectedSpread] = useState<SpreadType | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentReading, setCurrentReading] = useState<Reading | null>(null);
   const [showReading, setShowReading] = useState(false);
@@ -36,6 +111,8 @@ export default function Oracle() {
   const [showHistory, setShowHistory] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
   
   const cardFlipAnim = useRef(new Animated.Value(0)).current;
   const cardScaleAnim = useRef(new Animated.Value(1)).current;
@@ -49,8 +126,19 @@ export default function Oracle() {
     };
   }, []);
 
-  const drawCard = async () => {
+  const handleSpreadSelect = (spread: SpreadType) => {
+    if (spread.free || isPremium) {
+      setSelectedSpread(spread);
+    } else {
+      setShowPaywall(true);
+    }
+  };
+
+  const drawCards = async () => {
+    if (!selectedSpread) return;
+    
     setLoading(true);
+    setCurrentCardIndex(0);
     
     // Card shuffle animation
     Animated.sequence([
@@ -69,9 +157,27 @@ export default function Oracle() {
     try {
       const response = await fetch(`${BACKEND_URL}/api/oracle/draw`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spread_type: selectedSpread.id,
+          card_count: selectedSpread.cardCount,
+          positions: selectedSpread.positions,
+        }),
       });
       const data = await response.json();
-      setCurrentReading(data);
+      
+      // Transform single card response to new format if needed
+      const reading: Reading = data.cards ? data : {
+        spread_type: selectedSpread.id,
+        cards: [{
+          card: data.card,
+          position: selectedSpread.positions[0],
+          interpretation: data.interpretation,
+        }],
+        timestamp: data.timestamp,
+      };
+      
+      setCurrentReading(reading);
       
       // Card flip animation
       cardFlipAnim.setValue(0);
@@ -82,7 +188,7 @@ export default function Oracle() {
         useNativeDriver: true,
       }).start();
     } catch (error) {
-      console.error('Error drawing card:', error);
+      console.error('Error drawing cards:', error);
     } finally {
       setLoading(false);
     }
@@ -99,6 +205,7 @@ export default function Oracle() {
       setSavedReadings([currentReading, ...savedReadings]);
       setShowReading(false);
       setCurrentReading(null);
+      setSelectedSpread(null);
     } catch (error) {
       console.error('Error saving reading:', error);
     }
@@ -115,12 +222,9 @@ export default function Oracle() {
     }
   };
 
-  const playInterpretation = async (guideName: string) => {
-    if (!currentReading) return;
-    
+  const playInterpretation = async (text: string, guideName: string) => {
     setAudioLoading(true);
     try {
-      // Stop any currently playing audio
       if (soundRef.current) {
         await soundRef.current.unloadAsync();
       }
@@ -129,14 +233,18 @@ export default function Oracle() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: currentReading.interpretation,
+          text: text,
           guide_name: guideName,
         }),
       });
 
       const data = await response.json();
+      
+      if (!data.success || !data.audio_base64) {
+        console.log('TTS unavailable');
+        return;
+      }
 
-      // Play the audio
       const { sound } = await Audio.Sound.createAsync(
         { uri: `data:audio/mpeg;base64,${data.audio_base64}` },
         { shouldPlay: true }
@@ -166,16 +274,11 @@ export default function Oracle() {
 
   const getElementColor = (element: string) => {
     switch (element.toLowerCase()) {
-      case 'fire':
-        return '#ef4444';
-      case 'water':
-        return '#3b82f6';
-      case 'earth':
-        return '#10b981';
-      case 'air':
-        return '#a855f7';
-      default:
-        return '#8b5cf6';
+      case 'fire': return '#ef4444';
+      case 'water': return '#3b82f6';
+      case 'earth': return '#10b981';
+      case 'air': return '#a855f7';
+      default: return '#8b5cf6';
     }
   };
 
@@ -184,29 +287,176 @@ export default function Oracle() {
     outputRange: ['0deg', '360deg'],
   });
 
+  // Spread Selection View
+  if (!selectedSpread) {
+    return (
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <Ionicons name="sparkles" size={60} color="#b794f6" />
+            <Text style={styles.title}>Oracle Divination</Text>
+            <Text style={styles.subtitle}>Choose your card spread</Text>
+          </View>
+
+          <View style={styles.spreadsContainer}>
+            {SPREAD_TYPES.map((spread) => {
+              const isLocked = !spread.free && !isPremium;
+              return (
+                <TouchableOpacity
+                  key={spread.id}
+                  style={[styles.spreadCard, isLocked && styles.lockedSpreadCard]}
+                  onPress={() => handleSpreadSelect(spread)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.spreadCardRow}>
+                    {/* Thumbnail Image */}
+                    <View style={styles.spreadThumbnailContainer}>
+                      <Image
+                        source={{ uri: spread.image }}
+                        style={[styles.spreadThumbnail, isLocked && styles.lockedThumbnail]}
+                        contentFit="cover"
+                      />
+                      {isLocked && (
+                        <View style={styles.thumbnailLockOverlay}>
+                          <Ionicons name="lock-closed" size={20} color="#ffd700" />
+                        </View>
+                      )}
+                      <View style={styles.cardCountOverlay}>
+                        <Text style={styles.cardCountOverlayText}>{spread.cardCount}</Text>
+                      </View>
+                    </View>
+
+                    {/* Content */}
+                    <View style={styles.spreadContent}>
+                      <View style={styles.spreadBadges}>
+                        {spread.free ? (
+                          <View style={styles.freeBadge}>
+                            <Text style={styles.freeBadgeText}>FREE</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.premiumBadge}>
+                            <Ionicons name="diamond" size={10} color="#ffd700" />
+                            <Text style={styles.premiumBadgeText}>Premium</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.spreadName, isLocked && styles.lockedText]}>{spread.name}</Text>
+                      <Text style={[styles.spreadDescription, isLocked && styles.lockedText]} numberOfLines={2}>{spread.description}</Text>
+                      <View style={styles.spreadMeta}>
+                        <Ionicons name={spread.icon as any} size={14} color={isLocked ? '#6b5b8a' : '#b794f6'} />
+                        <Text style={[styles.spreadMetaText, isLocked && styles.lockedText]}>
+                          {spread.cardCount} card{spread.cardCount > 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Arrow */}
+                    <View style={styles.spreadArrow}>
+                      {isLocked ? (
+                        <Ionicons name="lock-closed" size={18} color="#ffd700" />
+                      ) : (
+                        <Ionicons name="chevron-forward" size={22} color="#b794f6" />
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity style={styles.historyButton} onPress={loadHistory} activeOpacity={0.7}>
+            <Ionicons name="time" size={20} color="#c4b5fd" />
+            <Text style={styles.historyButtonText}>View Past Readings</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        {/* Paywall Modal */}
+        <Paywall
+          visible={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          feature="Premium Card Spreads"
+        />
+
+        {/* History Modal */}
+        <Modal visible={showHistory} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.historyModal}>
+              <View style={styles.historyHeader}>
+                <Text style={styles.historyTitle}>Past Readings</Text>
+                <TouchableOpacity onPress={() => setShowHistory(false)}>
+                  <Ionicons name="close" size={28} color="#e9d5ff" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView>
+                {savedReadings.length === 0 ? (
+                  <View style={styles.emptyHistory}>
+                    <Ionicons name="sparkles-outline" size={60} color="#9f7aea" />
+                    <Text style={styles.emptyText}>No saved readings yet</Text>
+                  </View>
+                ) : (
+                  savedReadings.map((reading, index) => (
+                    <View key={index} style={styles.historyCard}>
+                      <View style={styles.historyCardContent}>
+                        <Text style={styles.historySpreadType}>
+                          {SPREAD_TYPES.find(s => s.id === reading.spread_type)?.name || 'Reading'}
+                        </Text>
+                        <Text style={styles.historyCardCount}>
+                          {reading.cards?.length || 1} card{(reading.cards?.length || 1) > 1 ? 's' : ''}
+                        </Text>
+                        <Text style={styles.historyDate}>
+                          {new Date(reading.timestamp).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
+
+  // Card Drawing View
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setSelectedSpread(null)}>
+          <Ionicons name="arrow-back" size={24} color="#b794f6" />
+          <Text style={styles.backButtonText}>Back to Spreads</Text>
+        </TouchableOpacity>
+
         <View style={styles.header}>
-          <Ionicons name="sparkles" size={60} color="#b794f6" />
-          <Text style={styles.title}>Oracle Divination</Text>
-          <Text style={styles.subtitle}>Seek wisdom from the spirit guides</Text>
+          <Ionicons name={selectedSpread.icon as any} size={50} color="#b794f6" />
+          <Text style={styles.title}>{selectedSpread.name}</Text>
+          <Text style={styles.subtitle}>{selectedSpread.description}</Text>
+        </View>
+
+        <View style={styles.positionsPreview}>
+          {selectedSpread.positions.map((position, index) => (
+            <View key={index} style={styles.positionItem}>
+              <View style={styles.positionNumber}>
+                <Text style={styles.positionNumberText}>{index + 1}</Text>
+              </View>
+              <Text style={styles.positionName}>{position}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.cardContainer}>
           <Animated.View
             style={[
               styles.cardWrapper,
-              {
-                transform: [{ scale: cardScaleAnim }],
-              },
+              { transform: [{ scale: cardScaleAnim }] },
             ]}
           >
             <View style={styles.cardBack}>
               <View style={styles.cardBackPattern}>
                 <Ionicons name="moon" size={80} color="#b794f6" />
                 <Text style={styles.cardBackText}>Oracle Cards</Text>
-                <Text style={styles.cardBackSubtext}>Spirit Guide Wisdom</Text>
+                <Text style={styles.cardBackSubtext}>{selectedSpread.cardCount} Card{selectedSpread.cardCount > 1 ? 's' : ''}</Text>
               </View>
             </View>
           </Animated.View>
@@ -214,7 +464,7 @@ export default function Oracle() {
 
         <TouchableOpacity
           style={[styles.drawButton, loading && styles.drawButtonDisabled]}
-          onPress={drawCard}
+          onPress={drawCards}
           disabled={loading}
           activeOpacity={0.8}
         >
@@ -223,20 +473,15 @@ export default function Oracle() {
           ) : (
             <>
               <Ionicons name="hand-left" size={24} color="#fff" />
-              <Text style={styles.drawButtonText}>Draw a Card</Text>
+              <Text style={styles.drawButtonText}>Draw {selectedSpread.cardCount} Card{selectedSpread.cardCount > 1 ? 's' : ''}</Text>
             </>
           )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.historyButton} onPress={loadHistory} activeOpacity={0.7}>
-          <Ionicons name="time" size={20} color="#c4b5fd" />
-          <Text style={styles.historyButtonText}>View Past Readings</Text>
         </TouchableOpacity>
 
         <View style={styles.instructionCard}>
           <Text style={styles.instructionText}>
             🌙 Close your eyes and focus on your question{'\n'}
-            ✨ When ready, tap "Draw a Card"{'\n'}
+            ✨ When ready, tap to draw your cards{'\n'}
             🔮 Trust the guidance you receive
           </Text>
         </View>
@@ -247,78 +492,128 @@ export default function Oracle() {
         <View style={styles.modalOverlay}>
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={styles.modalContent}>
-              {currentReading && (
+              {currentReading && currentReading.cards && (
                 <>
-                  <Animated.View
-                    style={[
-                      styles.cardImageContainer,
-                      {
-                        transform: [{ rotateY: cardRotateY }],
-                      },
-                    ]}
-                  >
-                    <Image
-                      source={{ uri: currentReading.card.image_url }}
-                      style={styles.cardImage}
-                      contentFit="cover"
-                      transition={300}
-                    />
-                    <View style={styles.cardImageOverlay}>
-                      <View
+                  {/* Card Navigation for multi-card spreads */}
+                  {currentReading.cards.length > 1 && (
+                    <View style={styles.cardNavigation}>
+                      {currentReading.cards.map((_, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.cardNavDot,
+                            currentCardIndex === index && styles.cardNavDotActive,
+                          ]}
+                          onPress={() => setCurrentCardIndex(index)}
+                        >
+                          <Text style={styles.cardNavNumber}>{index + 1}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Current Card Display */}
+                  {currentReading.cards[currentCardIndex] && (
+                    <>
+                      <View style={styles.positionLabel}>
+                        <Text style={styles.positionLabelText}>
+                          {currentReading.cards[currentCardIndex].position}
+                        </Text>
+                      </View>
+
+                      <Animated.View
                         style={[
-                          styles.elementBadge,
-                          { backgroundColor: getElementColor(currentReading.card.element) },
+                          styles.cardImageContainer,
+                          { transform: [{ rotateY: cardRotateY }] },
                         ]}
                       >
-                        <Text style={styles.elementText}>{currentReading.card.element}</Text>
-                      </View>
-                    </View>
-                  </Animated.View>
-
-                  <Text style={styles.cardName}>{currentReading.card.name}</Text>
-                  <Text style={styles.cardDescription}>{currentReading.card.description}</Text>
-
-                  <View style={styles.divider} />
-
-                  <View style={styles.interpretationSection}>
-                    <View style={styles.interpretationHeader}>
-                      <Ionicons name="book" size={24} color="#b794f6" />
-                      <Text style={styles.interpretationTitle}>Interpretation</Text>
-                    </View>
-                    <Text style={styles.interpretation}>{currentReading.interpretation}</Text>
-                    
-                    <View style={styles.audioControlsSection}>
-                      <Text style={styles.audioLabel}>Listen to interpretation:</Text>
-                      <View style={styles.audioButtons}>
-                        {['Ignis', 'Aqua', 'Terra', 'Aether'].map((guideName) => (
-                          <TouchableOpacity
-                            key={guideName}
+                        <Image
+                          source={{ uri: currentReading.cards[currentCardIndex].card.image_url }}
+                          style={styles.cardImage}
+                          contentFit="cover"
+                          transition={300}
+                        />
+                        <View style={styles.cardImageOverlay}>
+                          <View
                             style={[
-                              styles.guideAudioButton,
-                              isPlayingAudio && styles.guideAudioButtonDisabled,
+                              styles.elementBadge,
+                              { backgroundColor: getElementColor(currentReading.cards[currentCardIndex].card.element) },
                             ]}
-                            onPress={() => playInterpretation(guideName)}
-                            disabled={isPlayingAudio || audioLoading}
                           >
-                            {audioLoading ? (
-                              <ActivityIndicator size="small" color="#fff" />
-                            ) : (
-                              <>
-                                <Ionicons name="volume-high" size={16} color="#fff" />
-                                <Text style={styles.guideAudioButtonText}>{guideName}</Text>
-                              </>
-                            )}
-                          </TouchableOpacity>
-                        ))}
+                            <Text style={styles.elementText}>{currentReading.cards[currentCardIndex].card.element}</Text>
+                          </View>
+                        </View>
+                      </Animated.View>
+
+                      <Text style={styles.cardName}>{currentReading.cards[currentCardIndex].card.name}</Text>
+                      <Text style={styles.cardDescription}>{currentReading.cards[currentCardIndex].card.description}</Text>
+
+                      <View style={styles.divider} />
+
+                      <View style={styles.interpretationSection}>
+                        <View style={styles.interpretationHeader}>
+                          <Ionicons name="book" size={24} color="#b794f6" />
+                          <Text style={styles.interpretationTitle}>Interpretation</Text>
+                        </View>
+                        <Text style={styles.interpretation}>{currentReading.cards[currentCardIndex].interpretation}</Text>
+                        
+                        <View style={styles.audioControlsSection}>
+                          <Text style={styles.audioLabel}>Listen to interpretation:</Text>
+                          <View style={styles.audioButtons}>
+                            {['Aether', 'Ignis'].map((guideName) => (
+                              <TouchableOpacity
+                                key={guideName}
+                                style={[
+                                  styles.guideAudioButton,
+                                  isPlayingAudio && styles.guideAudioButtonDisabled,
+                                ]}
+                                onPress={() => playInterpretation(currentReading.cards[currentCardIndex].interpretation, guideName)}
+                                disabled={isPlayingAudio || audioLoading}
+                              >
+                                {audioLoading ? (
+                                  <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                  <>
+                                    <Ionicons name="volume-high" size={16} color="#fff" />
+                                    <Text style={styles.guideAudioButtonText}>{guideName}</Text>
+                                  </>
+                                )}
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          {isPlayingAudio && (
+                            <TouchableOpacity style={styles.stopAudioButton} onPress={stopAudio}>
+                              <Ionicons name="stop-circle" size={20} color="#ef4444" />
+                              <Text style={styles.stopAudioText}>Stop</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
-                      {isPlayingAudio && (
-                        <TouchableOpacity style={styles.stopAudioButton} onPress={stopAudio}>
-                          <Ionicons name="stop-circle" size={20} color="#ef4444" />
-                          <Text style={styles.stopAudioText}>Stop</Text>
-                        </TouchableOpacity>
+
+                      {/* Card Navigation Arrows */}
+                      {currentReading.cards.length > 1 && (
+                        <View style={styles.cardArrows}>
+                          <TouchableOpacity
+                            style={[styles.arrowButton, currentCardIndex === 0 && styles.arrowButtonDisabled]}
+                            onPress={() => setCurrentCardIndex(Math.max(0, currentCardIndex - 1))}
+                            disabled={currentCardIndex === 0}
+                          >
+                            <Ionicons name="chevron-back" size={24} color={currentCardIndex === 0 ? '#4a3b6e' : '#b794f6'} />
+                          </TouchableOpacity>
+                          <Text style={styles.cardCounter}>
+                            Card {currentCardIndex + 1} of {currentReading.cards.length}
+                          </Text>
+                          <TouchableOpacity
+                            style={[styles.arrowButton, currentCardIndex === currentReading.cards.length - 1 && styles.arrowButtonDisabled]}
+                            onPress={() => setCurrentCardIndex(Math.min(currentReading.cards.length - 1, currentCardIndex + 1))}
+                            disabled={currentCardIndex === currentReading.cards.length - 1}
+                          >
+                            <Ionicons name="chevron-forward" size={24} color={currentCardIndex === currentReading.cards.length - 1 ? '#4a3b6e' : '#b794f6'} />
+                          </TouchableOpacity>
+                        </View>
                       )}
-                    </View>
-                  </View>
+                    </>
+                  )}
                 </>
               )}
 
@@ -335,6 +630,8 @@ export default function Oracle() {
                   onPress={() => {
                     setShowReading(false);
                     setCurrentReading(null);
+                    setSelectedSpread(null);
+                    setCurrentCardIndex(0);
                   }}
                 >
                   <Text style={styles.modalButtonText}>Close</Text>
@@ -342,56 +639,6 @@ export default function Oracle() {
               </View>
             </View>
           </ScrollView>
-        </View>
-      </Modal>
-
-      {/* History Modal */}
-      <Modal visible={showHistory} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.historyModal}>
-            <View style={styles.historyHeader}>
-              <Text style={styles.historyTitle}>Past Readings</Text>
-              <TouchableOpacity onPress={() => setShowHistory(false)}>
-                <Ionicons name="close" size={28} color="#e9d5ff" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView>
-              {savedReadings.length === 0 ? (
-                <View style={styles.emptyHistory}>
-                  <Ionicons name="sparkles-outline" size={60} color="#9f7aea" />
-                  <Text style={styles.emptyText}>No saved readings yet</Text>
-                </View>
-              ) : (
-                savedReadings.map((reading, index) => (
-                  <View key={index} style={styles.historyCard}>
-                    <Image
-                      source={{ uri: reading.card.image_url }}
-                      style={styles.historyCardImage}
-                      contentFit="cover"
-                    />
-                    <View style={styles.historyCardContent}>
-                      <View
-                        style={[
-                          styles.historyElementBadge,
-                          { backgroundColor: getElementColor(reading.card.element) },
-                        ]}
-                      >
-                        <Text style={styles.historyElementText}>{reading.card.element}</Text>
-                      </View>
-                      <Text style={styles.historyCardName}>{reading.card.name}</Text>
-                      <Text style={styles.historyCardDescription} numberOfLines={2}>
-                        {reading.card.description}
-                      </Text>
-                      <Text style={styles.historyDate}>
-                        {new Date(reading.timestamp).toLocaleDateString()}
-                      </Text>
-                    </View>
-                  </View>
-                ))
-              )}
-            </ScrollView>
-          </View>
         </View>
       </Modal>
     </View>
@@ -405,12 +652,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+  },
+  backButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  backButtonText: {
+    color: '#b794f6',
+    fontSize: 16,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
-    marginTop: 20,
+    marginBottom: 32,
+    marginTop: 10,
   },
   title: {
     fontSize: 28,
@@ -424,13 +680,164 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  spreadsContainer: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  spreadCard: {
+    backgroundColor: '#1a0033',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  lockedSpreadCard: {
+    opacity: 0.9,
+  },
+  spreadCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  spreadThumbnailContainer: {
+    position: 'relative',
+    width: 80,
+    height: 100,
+  },
+  spreadThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  lockedThumbnail: {
+    opacity: 0.6,
+  },
+  thumbnailLockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardCountOverlay: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(124, 58, 237, 0.9)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardCountOverlayText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  spreadContent: {
+    flex: 1,
+    padding: 12,
+    paddingLeft: 14,
+  },
+  spreadBadges: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 4,
+  },
+  freeBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  freeBadgeText: {
+    color: '#10b981',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 3,
+  },
+  premiumBadgeText: {
+    color: '#ffd700',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  spreadName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e9d5ff',
+    marginBottom: 2,
+  },
+  spreadDescription: {
+    fontSize: 12,
+    color: '#c4b5fd',
+    marginBottom: 6,
+  },
+  lockedText: {
+    color: '#8b7ba0',
+  },
+  spreadMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  spreadMetaText: {
+    fontSize: 11,
+    color: '#b794f6',
+  },
+  spreadArrow: {
+    paddingRight: 16,
+  },
+  positionsPreview: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  positionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a0033',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+  },
+  positionNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#7c3aed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  positionNumberText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  positionName: {
+    color: '#c4b5fd',
+    fontSize: 13,
+  },
   cardContainer: {
-    marginBottom: 40,
+    alignItems: 'center',
+    marginBottom: 32,
   },
   cardWrapper: {
-    width: width * 0.7,
+    width: width * 0.6,
     aspectRatio: 2 / 3,
-    maxWidth: 280,
+    maxWidth: 240,
   },
   cardBack: {
     flex: 1,
@@ -447,25 +854,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#2d1b4e',
   },
   cardBackText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#e9d5ff',
-    marginTop: 16,
+    marginTop: 12,
   },
   cardBackSubtext: {
     fontSize: 14,
     color: '#c4b5fd',
-    marginTop: 8,
+    marginTop: 4,
   },
   drawButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center',
     backgroundColor: '#7c3aed',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 25,
     gap: 8,
-    minWidth: 180,
+    minWidth: 200,
     justifyContent: 'center',
   },
   drawButtonDisabled: {
@@ -479,7 +887,8 @@ const styles = StyleSheet.create({
   historyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    justifyContent: 'center',
+    marginTop: 20,
     gap: 8,
   },
   historyButtonText: {
@@ -514,6 +923,41 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: '#2d1b4e',
+  },
+  cardNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  cardNavDot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2d1b4e',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardNavDotActive: {
+    backgroundColor: '#7c3aed',
+  },
+  cardNavNumber: {
+    color: '#e9d5ff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  positionLabel: {
+    alignSelf: 'center',
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  positionLabelText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   cardImageContainer: {
     width: '100%',
@@ -579,6 +1023,25 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
     lineHeight: 24,
   },
+  cardArrows: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#2d1b4e',
+  },
+  arrowButton: {
+    padding: 8,
+  },
+  arrowButtonDisabled: {
+    opacity: 0.3,
+  },
+  cardCounter: {
+    color: '#c4b5fd',
+    fontSize: 14,
+  },
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
@@ -636,47 +1099,27 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   historyCard: {
-    flexDirection: 'row',
     backgroundColor: '#2d1b4e',
     borderRadius: 16,
     margin: 12,
-    overflow: 'hidden',
-  },
-  historyCardImage: {
-    width: 100,
-    height: 150,
+    padding: 16,
   },
   historyCardContent: {
-    flex: 1,
-    padding: 12,
+    gap: 4,
   },
-  historyElementBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  historyElementText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  historyCardName: {
+  historySpreadType: {
     fontSize: 18,
     fontWeight: '600',
     color: '#e9d5ff',
-    marginBottom: 6,
   },
-  historyCardDescription: {
-    fontSize: 13,
-    color: '#c4b5fd',
-    marginBottom: 8,
+  historyCardCount: {
+    fontSize: 14,
+    color: '#b794f6',
   },
   historyDate: {
     fontSize: 12,
     color: '#9f7aea',
+    marginTop: 4,
   },
   audioControlsSection: {
     marginTop: 20,
