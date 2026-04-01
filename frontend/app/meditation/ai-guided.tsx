@@ -64,7 +64,15 @@ export default function AIGuidedMeditation() {
   const [isMuted, setIsMuted] = useState(false);
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [loadingStage, setLoadingStage] = useState<'idle' | 'generating-intro' | 'playing-intro' | 'loading-continuation' | 'playing-full'>('idle');
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
+  const isMutedRef = useRef(isMuted);
+  
+  // Keep mute ref synced
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   // Check premium access on mount
   React.useEffect(() => {
@@ -97,24 +105,33 @@ export default function AIGuidedMeditation() {
   const generateMeditation = async () => {
     setLoading(true);
     setAudioError(null);
-    setGeneratingAudio(true); // Show generating state immediately
+    setGeneratingAudio(true);
+    setLoadingStage('generating-intro');
+    setLoadingProgress(10);
     
     try {
+      setLoadingProgress(20);
       const response = await fetch(
         `${BACKEND_URL}/api/meditation/generate-guided?duration_minutes=${duration}&focus=${selectedFocus}`,
         { method: 'POST' }
       );
       const data = await response.json();
+      setLoadingProgress(40);
       setScript(data.script);
       
       // Don't wait for useEffect - start TTS immediately with intro
-      if (!isMuted && data.script) {
+      if (!isMutedRef.current && data.script) {
         startQuickTTS(data.script);
+      } else {
+        setGeneratingAudio(false);
+        setLoadingStage('idle');
       }
     } catch (error) {
       console.error('Error generating meditation:', error);
       Alert.alert('Error', 'Failed to generate meditation. Please try again.');
       setGeneratingAudio(false);
+      setLoadingStage('idle');
+      setLoadingProgress(0);
     } finally {
       setLoading(false);
     }
@@ -127,6 +144,9 @@ export default function AIGuidedMeditation() {
       const sentences = fullScript.match(/[^.!?]+[.!?]+/g) || [fullScript];
       const introText = sentences.slice(0, 2).join(' ').trim();
       
+      setLoadingProgress(50);
+      setLoadingStage('generating-intro');
+      
       // Generate just the intro first (faster)
       const introResponse = await fetch(`${BACKEND_URL}/api/tts/generate`, {
         method: 'POST',
@@ -138,10 +158,13 @@ export default function AIGuidedMeditation() {
       });
       
       const introData = await introResponse.json();
-      setGeneratingAudio(false);
+      setLoadingProgress(70);
       
       if (!introData.audio_base64) {
         setAudioError('Voice generation unavailable');
+        setGeneratingAudio(false);
+        setLoadingStage('idle');
+        setLoadingProgress(0);
         return;
       }
       
@@ -156,20 +179,28 @@ export default function AIGuidedMeditation() {
       
       audioPlayerRef.current = player;
       setIsPlaying(true);
+      setGeneratingAudio(false);
+      setLoadingStage('playing-intro');
+      setLoadingProgress(80);
       
       // When intro finishes, generate and play the rest
       player.onPlaybackStatusChange(async (status) => {
         if (status.didJustFinish && sentences.length > 2) {
           // Generate the rest of the script
           const restText = sentences.slice(2).join(' ').trim();
-          if (restText && !isMuted) {
+          if (restText && !isMutedRef.current) {
+            setLoadingStage('loading-continuation');
             await playRestOfScript(restText);
           } else {
             setIsPlaying(false);
+            setLoadingStage('idle');
+            setLoadingProgress(100);
             Alert.alert('Session Complete', 'Your meditation session has ended.');
           }
         } else if (status.didJustFinish && sentences.length <= 2) {
           setIsPlaying(false);
+          setLoadingStage('idle');
+          setLoadingProgress(100);
           Alert.alert('Session Complete', 'Your meditation session has ended.');
         }
       });
@@ -178,11 +209,15 @@ export default function AIGuidedMeditation() {
       console.error('Error in quick TTS:', error);
       setGeneratingAudio(false);
       setAudioError('Failed to generate voice');
+      setLoadingStage('idle');
+      setLoadingProgress(0);
     }
   };
 
   const playRestOfScript = async (restText: string) => {
     try {
+      setLoadingProgress(85);
+      
       const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,9 +228,12 @@ export default function AIGuidedMeditation() {
       });
       
       const data = await response.json();
+      setLoadingProgress(95);
       
-      if (!data.audio_base64 || isMuted) {
+      if (!data.audio_base64 || isMutedRef.current) {
         setIsPlaying(false);
+        setLoadingStage('idle');
+        setLoadingProgress(100);
         return;
       }
       
@@ -208,16 +246,21 @@ export default function AIGuidedMeditation() {
       await player.loadAndPlay(audioUri, { volume: 1.0 });
       
       audioPlayerRef.current = player;
+      setLoadingStage('playing-full');
+      setLoadingProgress(100);
       
       player.onPlaybackStatusChange((status) => {
         if (status.didJustFinish) {
           setIsPlaying(false);
+          setLoadingStage('idle');
           Alert.alert('Session Complete', 'Your meditation session has ended. Take a moment to return to awareness.');
         }
       });
     } catch (error) {
       console.error('Error playing rest of script:', error);
       setIsPlaying(false);
+      setLoadingStage('idle');
+      setLoadingProgress(0);
     }
   };
 
@@ -331,15 +374,37 @@ export default function AIGuidedMeditation() {
         </View>
 
         <ScrollView style={styles.scriptContainer} contentContainerStyle={styles.scriptContent}>
-          {/* Audio Status Banner */}
-          {generatingAudio && (
-            <View style={styles.audioBanner}>
-              <ActivityIndicator color="#a855f7" size="small" />
-              <Text style={styles.audioBannerText}>Generating voice guidance...</Text>
+          {/* Enhanced Loading Progress Indicator */}
+          {(generatingAudio || loadingStage === 'loading-continuation') && (
+            <View style={styles.loadingContainer}>
+              <View style={styles.loadingHeader}>
+                <ActivityIndicator color="#a855f7" size="small" />
+                <Text style={styles.loadingTitle}>
+                  {loadingStage === 'generating-intro' && 'Preparing voice guidance...'}
+                  {loadingStage === 'loading-continuation' && 'Loading next section...'}
+                </Text>
+              </View>
+              <View style={styles.progressBarContainer}>
+                <View style={[styles.progressBar, { width: `${loadingProgress}%` }]} />
+              </View>
+              <Text style={styles.loadingSubtext}>
+                {loadingStage === 'generating-intro' && 'Audio will begin shortly'}
+                {loadingStage === 'loading-continuation' && 'Buffering continuation...'}
+              </Text>
             </View>
           )}
           
-          {isPlaying && !isMuted && (
+          {/* Playing Status Indicators */}
+          {isPlaying && !isMuted && loadingStage === 'playing-intro' && (
+            <View style={[styles.audioBanner, styles.playingBanner]}>
+              <Ionicons name="volume-high" size={20} color="#10b981" />
+              <Text style={[styles.audioBannerText, { color: '#10b981' }]}>
+                Playing introduction... (continuation loading)
+              </Text>
+            </View>
+          )}
+          
+          {isPlaying && !isMuted && loadingStage === 'playing-full' && (
             <View style={[styles.audioBanner, styles.playingBanner]}>
               <Ionicons name="volume-high" size={20} color="#10b981" />
               <Text style={[styles.audioBannerText, { color: '#10b981' }]}>Voice guidance playing...</Text>
@@ -733,5 +798,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  loadingContainer: {
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(168, 85, 247, 0.3)',
+  },
+  loadingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  loadingTitle: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  progressBarContainer: {
+    height: 6,
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#a855f7',
+    borderRadius: 3,
+  },
+  loadingSubtext: {
+    color: '#9f7aea',
+    fontSize: 13,
+    textAlign: 'center',
   },
 });

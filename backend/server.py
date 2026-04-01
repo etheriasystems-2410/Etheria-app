@@ -1162,7 +1162,8 @@ async def login(request: LoginRequest):
         "user_id": user_doc["user_id"],
         "email": user_doc["email"],
         "name": user_doc["name"],
-        "picture": user_doc.get("picture")
+        "picture": user_doc.get("picture"),
+        "session_token": session_token  # Include token for mobile apps
     })
     
     response.set_cookie(

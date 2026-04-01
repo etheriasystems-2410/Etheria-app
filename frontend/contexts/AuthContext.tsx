@@ -169,13 +169,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
       
-      const sessionToken = response.headers.get('set-cookie')?.split('session_token=')[1]?.split(';')[0];
+      // Get session token from response body (for mobile) or cookie (for web)
+      const sessionToken = data.session_token || 
+        response.headers.get('set-cookie')?.split('session_token=')[1]?.split(';')[0];
+      
       if (sessionToken) {
         await AsyncStorage.setItem('session_token', sessionToken);
         await fetchSubscriptionStatus(sessionToken);
       }
       
-      setUser(data);
+      setUser({
+        user_id: data.user_id,
+        email: data.email,
+        name: data.name,
+        picture: data.picture
+      });
     } catch (error) {
       console.error('Login error:', error);
       throw error;
