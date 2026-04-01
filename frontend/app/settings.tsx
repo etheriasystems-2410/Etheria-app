@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,20 +8,98 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
+import { Paywall } from '../components/Paywall';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function Settings() {
-  const { user, logout } = useAuth();
+  const { user, logout, isPremium, subscription, refreshSubscription } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+
+  // Check for payment success on mount
+  useEffect(() => {
+    if (params.session_id && params.success === 'true') {
+      handlePaymentSuccess(params.session_id as string);
+    }
+  }, [params]);
+
+  const handlePaymentSuccess = async (sessionId: string) => {
+    setCheckingPayment(true);
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      
+      // Poll for payment status
+      let attempts = 0;
+      const maxAttempts = 5;
+      const pollInterval = 2000;
+
+      const pollStatus = async (): Promise<boolean> => {
+        const response = await fetch(
+          `${BACKEND_URL}/api/subscription/checkout-status/${sessionId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${sessionToken}`
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to check payment status');
+        }
+
+        const data = await response.json();
+
+        if (data.payment_status === 'paid') {
+          return true;
+        } else if (data.status === 'expired') {
+          throw new Error('Payment session expired');
+        }
+
+        return false;
+      };
+
+      while (attempts < maxAttempts) {
+        const success = await pollStatus();
+        if (success) {
+          await refreshSubscription();
+          Alert.alert(
+            'Welcome to Premium!',
+            'Your subscription is now active. Enjoy all premium features!'
+          );
+          // Clear URL params
+          router.replace('/settings');
+          break;
+        }
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+
+      if (attempts >= maxAttempts) {
+        Alert.alert(
+          'Payment Processing',
+          'Your payment is being processed. Please check back in a moment.'
+        );
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to verify payment');
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -49,9 +127,7 @@ export default function Settings() {
 
     setSaving(true);
     try {
-      const sessionToken = await import('@react-native-async-storage/async-storage').then(
-        (mod) => mod.default.getItem('session_token')
-      );
+      const sessionToken = await AsyncStorage.getItem('session_token');
 
       const response = await fetch(`${BACKEND_URL}/api/user/update-profile`, {
         method: 'PATCH',
@@ -75,8 +151,26 @@ export default function Settings() {
     }
   };
 
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
     <ScrollView style={styles.container}>
+      {/* Payment Processing Overlay */}
+      {checkingPayment && (
+        <View style={styles.processingOverlay}>
+          <ActivityIndicator size="large" color="#b794f6" />
+          <Text style={styles.processingText}>Verifying payment...</Text>
+        </View>
+      )}
+
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
           {user?.picture ? (
@@ -86,8 +180,89 @@ export default function Settings() {
               <Ionicons name="person" size={48} color="#e9d5ff" />
             </View>
           )}
+          {isPremium && (
+            <View style={styles.premiumBadge}>
+              <Ionicons name="star" size={16} color="#ffd700" />
+            </View>
+          )}
         </View>
         <Text style={styles.email}>{user?.email}</Text>
+        {isPremium && (
+          <View style={styles.premiumTag}>
+            <Ionicons name="diamond" size={14} color="#ffd700" />
+            <Text style={styles.premiumTagText}>Premium Member</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Subscription Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Subscription</Text>
+        
+        {isPremium ? (
+          <View style={styles.subscriptionCard}>
+            <View style={styles.subscriptionHeader}>
+              <View style={styles.subscriptionBadge}>
+                <Ionicons name="star" size={24} color="#ffd700" />
+              </View>
+              <View style={styles.subscriptionInfo}>
+                <Text style={styles.subscriptionTitle}>Etheria Premium</Text>
+                <Text style={styles.subscriptionStatus}>Active</Text>
+              </View>
+            </View>
+            
+            {subscription?.expires_at && (
+              <View style={styles.subscriptionDetail}>
+                <Ionicons name="calendar" size={16} color="#9f7aea" />
+                <Text style={styles.subscriptionDetailText}>
+                  Renews on {formatDate(subscription.expires_at)}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.featureGrid}>
+              <View style={styles.featureItem}>
+                <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
+                <Text style={styles.featureText}>Unlimited Oracle</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
+                <Text style={styles.featureText}>Spirit Guides</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
+                <Text style={styles.featureText}>AI Meditation</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
+                <Text style={styles.featureText}>Voice TTS</Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.upgradeCard}
+            onPress={() => setShowPaywall(true)}
+          >
+            <View style={styles.upgradeHeader}>
+              <View style={styles.upgradeIcon}>
+                <Ionicons name="diamond" size={32} color="#ffd700" />
+              </View>
+              <View style={styles.upgradeInfo}>
+                <Text style={styles.upgradeTitle}>Upgrade to Premium</Text>
+                <Text style={styles.upgradePrice}>$3.99/month</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#b794f6" />
+            </View>
+            
+            <View style={styles.upgradeFeatures}>
+              <Text style={styles.upgradeFeaturesTitle}>Unlock all features:</Text>
+              <Text style={styles.upgradeFeatureText}>
+                Unlimited AI Oracle, Spirit Guides, Binaural Meditation, and more!
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -199,13 +374,36 @@ export default function Settings() {
       </TouchableOpacity>
 
       <Text style={styles.version}>Version 1.0.0</Text>
+
+      {/* Paywall Modal */}
+      <Paywall
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+      />
     </ScrollView>
-  );}
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f0321',
+  },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 3, 33, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  processingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#e9d5ff',
   },
   header: {
     alignItems: 'center',
@@ -214,6 +412,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginBottom: 16,
+    position: 'relative',
   },
   avatar: {
     width: 100,
@@ -232,9 +431,34 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#7c3aed',
   },
+  premiumBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#2d1b4e',
+    borderRadius: 12,
+    padding: 6,
+    borderWidth: 2,
+    borderColor: '#ffd700',
+  },
   email: {
     fontSize: 16,
     color: '#c4b5fd',
+  },
+  premiumTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 8,
+    gap: 6,
+  },
+  premiumTagText: {
+    color: '#ffd700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   section: {
     paddingHorizontal: 20,
@@ -245,6 +469,115 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#e9d5ff',
     marginBottom: 12,
+  },
+  subscriptionCard: {
+    backgroundColor: '#1a0033',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#ffd700',
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  subscriptionBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  subscriptionInfo: {
+    flex: 1,
+  },
+  subscriptionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffd700',
+  },
+  subscriptionStatus: {
+    fontSize: 14,
+    color: '#22c55e',
+  },
+  subscriptionDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  subscriptionDetailText: {
+    color: '#9f7aea',
+    fontSize: 14,
+  },
+  featureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  featureText: {
+    color: '#e9d5ff',
+    fontSize: 12,
+  },
+  upgradeCard: {
+    backgroundColor: '#1a0033',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+  },
+  upgradeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  upgradeIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  upgradeInfo: {
+    flex: 1,
+  },
+  upgradeTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+  },
+  upgradePrice: {
+    fontSize: 16,
+    color: '#ffd700',
+    fontWeight: '600',
+  },
+  upgradeFeatures: {
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  upgradeFeaturesTitle: {
+    color: '#b794f6',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  upgradeFeatureText: {
+    color: '#e9d5ff',
+    fontSize: 14,
   },
   infoCard: {
     backgroundColor: '#1a0033',

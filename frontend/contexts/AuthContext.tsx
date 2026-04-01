@@ -10,6 +10,22 @@ interface User {
   picture?: string;
 }
 
+interface SubscriptionStatus {
+  is_premium: boolean;
+  subscription_status: string;
+  expires_at: string | null;
+  features: {
+    oracle_readings_unlimited: boolean;
+    journal_entries_unlimited: boolean;
+    all_training_modules: boolean;
+    spirit_guides: boolean;
+    binaural_meditation: boolean;
+    astral_meditation: boolean;
+    ai_guided_meditation: boolean;
+    tts_enabled: boolean;
+  };
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -17,13 +33,29 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  isPremium: boolean;
+  subscription: SubscriptionStatus | null;
+  refreshSubscription: () => Promise<void>;
+  checkFeatureAccess: (feature: string) => boolean;
 }
+
+const defaultFeatures = {
+  oracle_readings_unlimited: false,
+  journal_entries_unlimited: false,
+  all_training_modules: false,
+  spirit_guides: false,
+  binaural_meditation: false,
+  astral_meditation: false,
+  ai_guided_meditation: false,
+  tts_enabled: false
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -42,6 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const data = await response.json();
           setUser(data);
+          // Fetch subscription status
+          await fetchSubscriptionStatus(sessionToken);
         } else {
           await AsyncStorage.removeItem('session_token');
         }
@@ -51,6 +85,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchSubscriptionStatus = async (token?: string) => {
+    try {
+      const sessionToken = token || await AsyncStorage.getItem('session_token');
+      if (!sessionToken) {
+        setSubscription({
+          is_premium: false,
+          subscription_status: 'free',
+          expires_at: null,
+          features: defaultFeatures
+        });
+        return;
+      }
+
+      const response = await fetch(`${BACKEND_URL}/api/subscription/status`, {
+        headers: {
+          'Authorization': `Bearer ${sessionToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSubscription(data);
+      } else {
+        setSubscription({
+          is_premium: false,
+          subscription_status: 'free',
+          expires_at: null,
+          features: defaultFeatures
+        });
+      }
+    } catch (error) {
+      console.error('Subscription check error:', error);
+      setSubscription({
+        is_premium: false,
+        subscription_status: 'free',
+        expires_at: null,
+        features: defaultFeatures
+      });
+    }
+  };
+
+  const refreshSubscription = async () => {
+    await fetchSubscriptionStatus();
+  };
+
+  const checkFeatureAccess = (feature: string): boolean => {
+    if (!subscription) return false;
+    if (subscription.is_premium) return true;
+    return subscription.features[feature as keyof typeof subscription.features] || false;
   };
 
   const login = async (email: string, password: string) => {
@@ -68,11 +153,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
       
-      // Extract session token from Set-Cookie header if available
-      // For mobile, we'll store it from the response
       const sessionToken = response.headers.get('set-cookie')?.split('session_token=')[1]?.split(';')[0];
       if (sessionToken) {
         await AsyncStorage.setItem('session_token', sessionToken);
+        await fetchSubscriptionStatus(sessionToken);
       }
       
       setUser(data);
@@ -97,10 +181,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
       
-      // Extract session token
       const sessionToken = response.headers.get('set-cookie')?.split('session_token=')[1]?.split(';')[0];
       if (sessionToken) {
         await AsyncStorage.setItem('session_token', sessionToken);
+        await fetchSubscriptionStatus(sessionToken);
       }
       
       setUser(data);
@@ -124,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       await AsyncStorage.removeItem('session_token');
       setUser(null);
+      setSubscription(null);
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -137,7 +222,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         signup,
         logout,
-        isAuthenticated: !!user
+        isAuthenticated: !!user,
+        isPremium: subscription?.is_premium || false,
+        subscription,
+        refreshSubscription,
+        checkFeatureAccess
       }}
     >
       {children}

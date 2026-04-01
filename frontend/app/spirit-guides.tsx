@@ -14,6 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../contexts/AuthContext';
+import { Paywall } from '../components/Paywall';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -79,6 +81,8 @@ const guides: Guide[] = [
 ];
 
 export default function SpiritGuides() {
+  const { isPremium, checkFeatureAccess } = useAuth();
+  const [showPaywall, setShowPaywall] = useState(false);
   const [showBirthdayInput, setShowBirthdayInput] = useState(false);
   const [birthMonth, setBirthMonth] = useState('');
   const [birthDay, setBirthDay] = useState('');
@@ -90,9 +94,14 @@ export default function SpiritGuides() {
   const [playingAudioIndex, setPlayingAudioIndex] = useState<number | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
 
+  // Check if user has access to Spirit Guides feature
+  const hasAccess = isPremium || checkFeatureAccess('spirit_guides');
+
   useEffect(() => {
-    checkBirthdayStored();
-  }, []);
+    if (hasAccess) {
+      checkBirthdayStored();
+    }
+  }, [hasAccess]);
 
   useEffect(() => {
     return () => {
@@ -253,6 +262,38 @@ export default function SpiritGuides() {
       playAudio(message.audioBase64, index);
     }
   };
+
+  // Show paywall for free users
+  if (!hasAccess) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.lockedContainer}>
+          <View style={styles.lockedIcon}>
+            <Ionicons name="lock-closed" size={64} color="#ffd700" />
+          </View>
+          <Text style={styles.lockedTitle}>Spirit Guides</Text>
+          <Text style={styles.lockedSubtitle}>Premium Feature</Text>
+          <Text style={styles.lockedDescription}>
+            Connect with elemental AI spirit guides paired to your zodiac sign. 
+            Receive personalized guidance with natural voice responses.
+          </Text>
+          <TouchableOpacity
+            style={styles.unlockButton}
+            onPress={() => setShowPaywall(true)}
+          >
+            <Ionicons name="diamond" size={20} color="#1a0033" />
+            <Text style={styles.unlockButtonText}>Unlock Spirit Guides</Text>
+          </TouchableOpacity>
+          <Text style={styles.priceText}>$3.99/month</Text>
+        </View>
+        <Paywall
+          visible={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          feature="Spirit Guides"
+        />
+      </View>
+    );
+  }
 
   if (showBirthdayInput) {
     return (
@@ -693,5 +734,58 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  lockedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  lockedIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  lockedTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginBottom: 8,
+  },
+  lockedSubtitle: {
+    fontSize: 16,
+    color: '#ffd700',
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  lockedDescription: {
+    fontSize: 16,
+    color: '#c4b5fd',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  unlockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#b794f6',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    gap: 8,
+  },
+  unlockButtonText: {
+    color: '#1a0033',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  priceText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: '#9f7aea',
   },
 });

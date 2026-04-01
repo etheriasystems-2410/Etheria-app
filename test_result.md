@@ -225,6 +225,78 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: GET /api/journal/entries working correctly. Retrieves journal entries from MongoDB, sorted by most recent first. Returns array of entry objects with all saved data including metadata."
 
+  - task: "User authentication with signup/login"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: POST /api/auth/signup and POST /api/auth/login working correctly. User creation with email/password, session token generation, and authentication flow all functioning properly."
+
+  - task: "Subscription plans endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/subscription/plans working correctly. Returns premium_monthly plan at $3.99 USD and free tier limits. All required fields present and properly structured."
+
+  - task: "Subscription status endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/subscription/status working correctly. Returns proper subscription status for authenticated users, correctly identifies free vs premium users, includes feature access flags."
+
+  - task: "Stripe checkout creation"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: POST /api/subscription/create-checkout working correctly. Creates valid Stripe checkout sessions, returns proper checkout_url and session_id. Stripe integration functioning in test mode."
+
+  - task: "Checkout status verification"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/subscription/checkout-status/{session_id} working correctly. Returns proper status and payment information for valid sessions, correctly handles 404 for invalid session IDs."
+
+  - task: "Feature access control"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/user/feature-access/{feature} working correctly. Properly enforces free tier limitations, correctly identifies features requiring premium upgrade (e.g., spirit_guides)."
+
 frontend:
   - task: "Home screen with navigation"
     implemented: true
@@ -363,3 +435,5 @@ agent_communication:
     message: "Initial implementation complete. All backend endpoints created with Gemini AI integration. Note: Spirit guide chat currently failing due to Emergent LLM key budget limit being exceeded. Oracle card interpretation tested successfully. Frontend has full UI implementation with drawer navigation. Ready for comprehensive backend testing."
   - agent: "testing"
     message: "✅ COMPREHENSIVE BACKEND TESTING COMPLETE: All 8 backend API endpoints tested and working perfectly. Training modules (9 modules), Oracle system (draw/save/retrieve), Spirit guides (all 4 elemental guides), AI meditation generation, and Journal system all functioning correctly. Previous budget issues with AI calls have been resolved. MongoDB integration working properly. All CRUD operations validated. Backend is production-ready."
+  - agent: "testing"
+    message: "✅ STRIPE MONETIZATION TESTING COMPLETE: All 6 Stripe monetization endpoints tested and working perfectly. Authentication (signup/login), subscription plans ($3.99 premium_monthly), subscription status, Stripe checkout creation, checkout status verification, and feature access control all functioning correctly. Stripe integration working in test mode with proper session management and payment flow validation."
