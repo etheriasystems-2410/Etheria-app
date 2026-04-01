@@ -31,9 +31,9 @@ const presets: TimerPreset[] = [
 
 const ambientSounds = [
   { id: 'ocean', name: 'Ocean Waves', icon: 'water' },
-  { id: 'rain', name: 'Rainfall', icon: 'rainy' },
+  { id: 'rain', name: 'White Noise', icon: 'rainy' },
   { id: 'forest', name: 'Forest Sounds', icon: 'leaf' },
-  { id: 'singing-bowl', name: 'Singing Bowl', icon: 'musical-notes' },
+  { id: 'singing-bowl', name: 'Harmonious Note', icon: 'musical-notes' },
   { id: 'silence', name: 'Silence', icon: 'moon' },
 ];
 
