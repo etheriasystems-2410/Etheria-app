@@ -20,6 +20,10 @@ import jwt
 import httpx
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 from typing import Dict
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -75,6 +79,16 @@ FREE_TIER_LIMITS = {
     "ai_guided_meditation": False,
     "tts_enabled": False
 }
+
+# Gmail SMTP Configuration for prize drawing
+GMAIL_EMAIL = os.environ.get('GMAIL_EMAIL')
+GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD')
+ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'etheria_admin_secret_2026')
+
+# Mystical code word lists for AI-generated codes
+MYSTICAL_PREFIXES = ["LUNA", "STELLAR", "COSMIC", "MYSTIC", "ETHEREAL", "ASTRAL", "CELESTIAL", "DIVINE", "SACRED", "ORACLE"]
+MYSTICAL_MIDDLES = ["MOON", "STAR", "SPIRIT", "CRYSTAL", "PHOENIX", "DRAGON", "SAGE", "DREAM", "VISION", "FLAME"]
+MYSTICAL_SUFFIXES = ["RISE", "LIGHT", "POWER", "MAGIC", "BLOOM", "FLOW", "GLOW", "WAVE", "PATH", "SOUL"]
 
 # Spirit Guide Voice Configuration
 # Using OpenAI TTS voices with appropriate personalities
@@ -1499,6 +1513,546 @@ async def check_user_feature_access(feature: str, request: Request):
         "feature": feature,
         "has_access": has_access,
         "upgrade_required": not has_access
+    }
+
+# ==================== GIFT CODE SYSTEM ====================
+
+class RedeemCodeRequest(BaseModel):
+    code: str
+
+class PrizeDrawingOptIn(BaseModel):
+    opt_in: bool
+
+async def generate_weekly_code():
+    """AI generates a mystical-themed weekly code"""
+    # Get the current week number for consistency
+    now = datetime.now(timezone.utc)
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_end = week_start + timedelta(days=7)
+    
+    # Check if we already have a code for this week
+    existing_code = await db.gift_codes.find_one({
+        "week_start": week_start,
+        "is_active": True
+    })
+    
+    if existing_code:
+        return existing_code
+    
+    # Generate new code using AI
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            model="gemini/gemini-2.0-flash"
+        )
+        
+        prompt = f"""Generate a single mystical promotional code for a psychic/spiritual app called Etheria. 
+        The code should:
+        - Be 8-12 characters
+        - Use uppercase letters and numbers only
+        - Have a mystical/spiritual feel (examples: LUNA-STAR-24, COSMIC7DREAM, ETHEREAL888)
+        - Be easy to type
+        
+        Just respond with the code only, nothing else."""
+        
+        response = await chat.send_message(
+            UserMessage(text=prompt)
+        )
+        
+        code = response.text.strip().upper().replace(" ", "")
+        # Ensure valid format
+        if len(code) < 6 or len(code) > 15:
+            # Fallback to generated code
+            code = f"{random.choice(MYSTICAL_PREFIXES)}-{random.choice(MYSTICAL_MIDDLES)}-{random.randint(10, 99)}"
+    except Exception as e:
+        logging.error(f"AI code generation failed: {e}")
+        # Fallback to random generation
+        code = f"{random.choice(MYSTICAL_PREFIXES)}-{random.choice(MYSTICAL_MIDDLES)}-{random.randint(10, 99)}"
+    
+    # Store the new code
+    code_doc = {
+        "code": code,
+        "week_start": week_start,
+        "week_end": week_end,
+        "created_at": now,
+        "is_active": True,
+        "redemptions": [],
+        "max_redemptions": 1000  # Per week limit
+    }
+    
+    await db.gift_codes.insert_one(code_doc)
+    
+    return code_doc
+
+@api_router.get("/gift-code/current")
+async def get_current_gift_code(request: Request):
+    """Get the current week's active gift code (admin only or for display)"""
+    # Generate or retrieve the current week's code
+    code_doc = await generate_weekly_code()
+    
+    return {
+        "code": code_doc["code"],
+        "expires_at": code_doc["week_end"].isoformat(),
+        "redemptions_count": len(code_doc.get("redemptions", []))
+    }
+
+@api_router.post("/gift-code/redeem")
+async def redeem_gift_code(redeem_request: RedeemCodeRequest, request: Request):
+    """Redeem a gift code for 1 month free premium"""
+    try:
+        user = await get_current_user(request)
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Please login to redeem a code")
+    
+    code = redeem_request.code.strip().upper()
+    
+    # Find the code
+    code_doc = await db.gift_codes.find_one({
+        "code": code,
+        "is_active": True
+    })
+    
+    if not code_doc:
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+    
+    # Check if code is still valid
+    now = datetime.now(timezone.utc)
+    if now > code_doc["week_end"]:
+        raise HTTPException(status_code=400, detail="This code has expired")
+    
+    # Check if user already redeemed this code
+    user_id = str(user.get("user_id") or user.get("_id"))
+    if user_id in [str(r.get("user_id")) for r in code_doc.get("redemptions", [])]:
+        raise HTTPException(status_code=400, detail="You have already redeemed this code")
+    
+    # Check if user already has an active premium subscription
+    existing_user = await db.users.find_one({"_id": user.get("_id")})
+    if existing_user:
+        current_expires = existing_user.get("subscription_expires")
+        if current_expires:
+            if isinstance(current_expires, str):
+                current_expires = datetime.fromisoformat(current_expires.replace("Z", "+00:00"))
+            if current_expires.tzinfo is None:
+                current_expires = current_expires.replace(tzinfo=timezone.utc)
+            if current_expires > now:
+                # Extend existing subscription
+                new_expires = current_expires + timedelta(days=30)
+            else:
+                new_expires = now + timedelta(days=30)
+        else:
+            new_expires = now + timedelta(days=30)
+    else:
+        new_expires = now + timedelta(days=30)
+    
+    # Update user to premium
+    await db.users.update_one(
+        {"_id": user.get("_id")},
+        {
+            "$set": {
+                "is_premium": True,
+                "subscription_status": "gift_code",
+                "subscription_expires": new_expires.isoformat(),
+                "gift_code_redeemed_at": now.isoformat()
+            }
+        }
+    )
+    
+    # Record the redemption
+    await db.gift_codes.update_one(
+        {"_id": code_doc["_id"]},
+        {
+            "$push": {
+                "redemptions": {
+                    "user_id": user_id,
+                    "email": user.get("email"),
+                    "redeemed_at": now.isoformat()
+                }
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "message": "Congratulations! You now have 1 month of premium access!",
+        "expires_at": new_expires.isoformat()
+    }
+
+# ==================== PRIZE DRAWING SYSTEM ====================
+
+@api_router.post("/prize-drawing/opt-in")
+async def opt_in_prize_drawing(opt_in_request: PrizeDrawingOptIn, request: Request):
+    """Opt in or out of the monthly prize drawing"""
+    try:
+        user = await get_current_user(request)
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Please login to participate")
+    
+    await db.users.update_one(
+        {"_id": user.get("_id")},
+        {
+            "$set": {
+                "prize_drawing_opted_in": opt_in_request.opt_in,
+                "prize_drawing_opted_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "opted_in": opt_in_request.opt_in,
+        "message": "You're now entered in the monthly prize drawing!" if opt_in_request.opt_in else "You've opted out of the prize drawing"
+    }
+
+@api_router.get("/prize-drawing/status")
+async def get_prize_drawing_status(request: Request):
+    """Get user's prize drawing status and eligibility"""
+    try:
+        user = await get_current_user(request)
+    except HTTPException:
+        return {
+            "opted_in": False,
+            "eligible": False,
+            "weekly_usage_minutes": 0,
+            "required_minutes": 30
+        }
+    
+    user_doc = await db.users.find_one({"_id": user.get("_id")})
+    opted_in = user_doc.get("prize_drawing_opted_in", False) if user_doc else False
+    
+    # Calculate weekly usage
+    now = datetime.now(timezone.utc)
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Get all sessions from this week
+    user_id = str(user.get("user_id") or user.get("_id"))
+    sessions = await db.usage_tracking.find({
+        "user_id": user_id,
+        "timestamp": {"$gte": week_start.isoformat()}
+    }).to_list(1000)
+    
+    total_seconds = sum(s.get("duration_seconds", 0) for s in sessions)
+    total_minutes = total_seconds / 60
+    
+    return {
+        "opted_in": opted_in,
+        "eligible": total_minutes >= 30,
+        "weekly_usage_minutes": round(total_minutes, 1),
+        "required_minutes": 30,
+        "week_start": week_start.isoformat(),
+        "next_drawing": get_next_drawing_date().isoformat()
+    }
+
+def get_next_drawing_date():
+    """Get the date of the next monthly drawing (first of the month)"""
+    now = datetime.now(timezone.utc)
+    if now.day == 1:
+        return now.replace(hour=12, minute=0, second=0, microsecond=0)
+    
+    # First of next month
+    if now.month == 12:
+        next_drawing = datetime(now.year + 1, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    else:
+        next_drawing = datetime(now.year, now.month + 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    
+    return next_drawing
+
+@api_router.post("/usage/track")
+async def track_usage(request: Request):
+    """Track user's app usage for prize drawing eligibility"""
+    body = await request.json()
+    duration_seconds = body.get("duration_seconds", 0)
+    activity_type = body.get("activity_type", "general")
+    
+    try:
+        user = await get_current_user(request)
+        user_id = str(user.get("user_id") or user.get("_id"))
+    except HTTPException:
+        return {"tracked": False, "reason": "Not logged in"}
+    
+    await db.usage_tracking.insert_one({
+        "user_id": user_id,
+        "duration_seconds": duration_seconds,
+        "activity_type": activity_type,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"tracked": True, "duration_seconds": duration_seconds}
+
+async def send_winner_email(email: str, code: str, expires_at: str):
+    """Send winner notification email via Gmail SMTP"""
+    if not GMAIL_EMAIL or not GMAIL_APP_PASSWORD:
+        logging.error("Gmail credentials not configured")
+        return False
+    
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = '🎉 Congratulations! You Won the Etheria Monthly Drawing!'
+        msg['From'] = GMAIL_EMAIL
+        msg['To'] = email
+        
+        # Plain text version
+        text = f"""
+Congratulations! 🌟
+
+You have been selected as the winner of Etheria's monthly prize drawing!
+
+Your reward: 1 Month of FREE Premium Access
+
+To claim your prize, use this exclusive code:
+{code}
+
+This code expires on: {expires_at}
+
+How to redeem:
+1. Open the Etheria app
+2. Go to Settings or tap "Subscribe Now"
+3. Click "Have a code?" 
+4. Enter your code: {code}
+5. Enjoy your free month of premium features!
+
+Thank you for being part of the Etheria community.
+
+Blessings on your spiritual journey,
+The Etheria Team
+        """
+        
+        # HTML version
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background: linear-gradient(135deg, #1a0033, #0f0321); color: #e9d5ff; padding: 40px;">
+            <div style="max-width: 600px; margin: 0 auto; background: rgba(45, 27, 78, 0.9); border-radius: 16px; padding: 32px; border: 1px solid #7c3aed;">
+                <h1 style="color: #ffd700; text-align: center;">🎉 Congratulations! 🎉</h1>
+                <p style="font-size: 18px; text-align: center;">You have been selected as the winner of Etheria's monthly prize drawing!</p>
+                
+                <div style="background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+                    <p style="margin: 0; color: #fff; font-size: 16px;">Your Exclusive Code:</p>
+                    <p style="font-size: 32px; font-weight: bold; color: #ffd700; margin: 12px 0; letter-spacing: 3px;">{code}</p>
+                    <p style="margin: 0; color: #e9d5ff; font-size: 14px;">Expires: {expires_at}</p>
+                </div>
+                
+                <h3 style="color: #b794f6;">How to Redeem:</h3>
+                <ol style="color: #c4b5fd;">
+                    <li>Open the Etheria app</li>
+                    <li>Go to Settings or tap "Subscribe Now"</li>
+                    <li>Click "Have a code?"</li>
+                    <li>Enter your code</li>
+                    <li>Enjoy 1 month of FREE premium features!</li>
+                </ol>
+                
+                <p style="text-align: center; color: #9f7aea; margin-top: 32px;">
+                    ✨ Thank you for being part of the Etheria community ✨
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        part1 = MIMEText(text, 'plain')
+        part2 = MIMEText(html, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        # Send via Gmail SMTP
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
+        server.sendmail(GMAIL_EMAIL, email, msg.as_string())
+        server.quit()
+        
+        return True
+    except Exception as e:
+        logging.error(f"Failed to send winner email: {e}")
+        return False
+
+@api_router.post("/admin/prize-drawing/run")
+async def run_prize_drawing(request: Request):
+    """Run the monthly prize drawing (admin only)"""
+    body = await request.json()
+    admin_secret = body.get("admin_secret")
+    
+    if admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # Get all eligible participants
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Find users who opted in
+    opted_in_users = await db.users.find({
+        "prize_drawing_opted_in": True
+    }).to_list(10000)
+    
+    eligible_users = []
+    
+    for user in opted_in_users:
+        user_id = str(user.get("_id"))
+        
+        # Check weekly usage for the past month (average 30 min/week)
+        # Get all weeks in the month
+        weeks_checked = 0
+        weeks_eligible = 0
+        
+        check_date = month_start
+        while check_date < now:
+            week_end = min(check_date + timedelta(days=7), now)
+            
+            sessions = await db.usage_tracking.find({
+                "user_id": user_id,
+                "timestamp": {
+                    "$gte": check_date.isoformat(),
+                    "$lt": week_end.isoformat()
+                }
+            }).to_list(1000)
+            
+            total_seconds = sum(s.get("duration_seconds", 0) for s in sessions)
+            if total_seconds >= 1800:  # 30 minutes = 1800 seconds
+                weeks_eligible += 1
+            
+            weeks_checked += 1
+            check_date = week_end
+        
+        # User is eligible if they met the 30 min requirement for at least half the weeks
+        if weeks_checked > 0 and weeks_eligible >= (weeks_checked / 2):
+            eligible_users.append(user)
+    
+    if not eligible_users:
+        return {
+            "success": False,
+            "message": "No eligible participants this month",
+            "participants_count": len(opted_in_users),
+            "eligible_count": 0
+        }
+    
+    # AI selects the winner (random from eligible)
+    winner = random.choice(eligible_users)
+    
+    # Get or generate the current week's code
+    code_doc = await generate_weekly_code()
+    
+    # Send winner email
+    winner_email = winner.get("email")
+    email_sent = await send_winner_email(
+        winner_email,
+        code_doc["code"],
+        code_doc["week_end"].strftime("%B %d, %Y")
+    )
+    
+    # Record the drawing
+    drawing_record = {
+        "drawing_date": now.isoformat(),
+        "month": now.strftime("%B %Y"),
+        "winner_id": str(winner.get("_id")),
+        "winner_email": winner_email,
+        "code_given": code_doc["code"],
+        "code_expires": code_doc["week_end"].isoformat(),
+        "email_sent": email_sent,
+        "total_participants": len(opted_in_users),
+        "eligible_participants": len(eligible_users)
+    }
+    
+    await db.prize_drawings.insert_one(drawing_record)
+    
+    return {
+        "success": True,
+        "winner_email": winner_email,
+        "code_given": code_doc["code"],
+        "email_sent": email_sent,
+        "total_participants": len(opted_in_users),
+        "eligible_participants": len(eligible_users)
+    }
+
+# ==================== ADMIN DASHBOARD ====================
+
+@api_router.get("/admin/dashboard")
+async def get_admin_dashboard(admin_secret: str):
+    """Get admin dashboard data"""
+    if admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # Get current code
+    code_doc = await generate_weekly_code()
+    
+    # Get drawing participants count
+    participants = await db.users.count_documents({"prize_drawing_opted_in": True})
+    
+    # Get previous winners
+    winners = await db.prize_drawings.find().sort("drawing_date", -1).limit(12).to_list(12)
+    
+    # Get total users
+    total_users = await db.users.count_documents({})
+    premium_users = await db.users.count_documents({"is_premium": True})
+    
+    return {
+        "current_code": {
+            "code": code_doc["code"],
+            "expires_at": code_doc["week_end"].isoformat(),
+            "redemptions_count": len(code_doc.get("redemptions", []))
+        },
+        "prize_drawing": {
+            "participants_count": participants,
+            "next_drawing": get_next_drawing_date().isoformat()
+        },
+        "previous_winners": [
+            {
+                "month": w.get("month"),
+                "winner_email": w.get("winner_email", "").replace("@", " at ").split(" at ")[0] + "...@...",
+                "drawing_date": w.get("drawing_date"),
+                "eligible_count": w.get("eligible_participants", 0)
+            }
+            for w in winners
+        ],
+        "stats": {
+            "total_users": total_users,
+            "premium_users": premium_users
+        }
+    }
+
+@api_router.get("/admin/participants")
+async def get_drawing_participants(admin_secret: str):
+    """Get list of prize drawing participants"""
+    if admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    participants = await db.users.find(
+        {"prize_drawing_opted_in": True},
+        {"email": 1, "name": 1, "prize_drawing_opted_at": 1}
+    ).to_list(10000)
+    
+    return {
+        "count": len(participants),
+        "participants": [
+            {
+                "email": p.get("email"),
+                "name": p.get("name"),
+                "opted_at": p.get("prize_drawing_opted_at")
+            }
+            for p in participants
+        ]
+    }
+
+@api_router.post("/admin/generate-new-code")
+async def admin_generate_new_code(request: Request):
+    """Force generate a new code (admin only)"""
+    body = await request.json()
+    admin_secret = body.get("admin_secret")
+    
+    if admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # Deactivate current codes
+    await db.gift_codes.update_many(
+        {"is_active": True},
+        {"$set": {"is_active": False}}
+    )
+    
+    # Generate new code
+    code_doc = await generate_weekly_code()
+    
+    return {
+        "success": True,
+        "new_code": code_doc["code"],
+        "expires_at": code_doc["week_end"].isoformat()
     }
 
 # Include the router in the main app

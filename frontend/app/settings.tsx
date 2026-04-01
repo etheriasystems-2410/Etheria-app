@@ -29,6 +29,11 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
+  
+  // Gift Code State
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [giftCode, setGiftCode] = useState('');
+  const [redeemingCode, setRedeemingCode] = useState(false);
 
   // Check for payment success on mount
   useEffect(() => {
@@ -36,6 +41,45 @@ export default function Settings() {
       handlePaymentSuccess(params.session_id as string);
     }
   }, [params]);
+
+  const handleRedeemCode = async () => {
+    if (!giftCode.trim()) {
+      Alert.alert('Error', 'Please enter a code');
+      return;
+    }
+
+    setRedeemingCode(true);
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      
+      const response = await fetch(`${BACKEND_URL}/api/gift-code/redeem`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({
+          code: giftCode.trim().toUpperCase()
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Invalid code');
+      }
+
+      setGiftCode('');
+      setShowCodeInput(false);
+      await refreshSubscription();
+      
+      Alert.alert('Success!', data.message);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to redeem code');
+    } finally {
+      setRedeemingCode(false);
+    }
+  };
 
   const handlePaymentSuccess = async (sessionId: string) => {
     setCheckingPayment(true);
@@ -263,6 +307,47 @@ export default function Settings() {
             </View>
           </TouchableOpacity>
         )}
+
+        {/* Redeem Code Section */}
+        <View style={styles.redeemCodeSection}>
+          <TouchableOpacity
+            style={styles.haveCodeButton}
+            onPress={() => setShowCodeInput(!showCodeInput)}
+          >
+            <Ionicons name="gift" size={20} color="#b794f6" />
+            <Text style={styles.haveCodeText}>Have a promotional code?</Text>
+            <Ionicons 
+              name={showCodeInput ? "chevron-up" : "chevron-down"} 
+              size={20} 
+              color="#b794f6" 
+            />
+          </TouchableOpacity>
+
+          {showCodeInput && (
+            <View style={styles.codeInputContainer}>
+              <TextInput
+                style={styles.codeInput}
+                placeholder="Enter your code"
+                placeholderTextColor="#6b7280"
+                value={giftCode}
+                onChangeText={(text) => setGiftCode(text.toUpperCase())}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={[styles.redeemButton, redeemingCode && styles.buttonDisabled]}
+                onPress={handleRedeemCode}
+                disabled={redeemingCode || !giftCode.trim()}
+              >
+                {redeemingCode ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.redeemButtonText}>Redeem</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -682,5 +767,55 @@ const styles = StyleSheet.create({
     color: '#9f7aea',
     fontSize: 14,
     paddingBottom: 32,
+  },
+  // Redeem Code Styles
+  redeemCodeSection: {
+    marginTop: 16,
+  },
+  haveCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  haveCodeText: {
+    color: '#b794f6',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  codeInputContainer: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  codeInput: {
+    flex: 1,
+    backgroundColor: '#2d1b4e',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 1,
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+  },
+  redeemButton: {
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  redeemButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });

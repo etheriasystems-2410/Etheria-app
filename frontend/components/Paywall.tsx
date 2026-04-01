@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -37,6 +39,10 @@ export function Paywall({ visible, onClose, feature }: PaywallProps) {
   const { isAuthenticated, refreshSubscription } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [showCodeInput, setShowCodeInput] = React.useState(false);
+  const [giftCode, setGiftCode] = React.useState('');
+  const [redeemingCode, setRedeemingCode] = React.useState(false);
+  const [codeSuccess, setCodeSuccess] = React.useState(false);
 
   const handleSubscribe = async () => {
     if (!isAuthenticated) {
@@ -86,6 +92,55 @@ export function Paywall({ visible, onClose, feature }: PaywallProps) {
       setError(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRedeemCode = async () => {
+    if (!isAuthenticated) {
+      setError('Please login to redeem a code');
+      return;
+    }
+
+    if (!giftCode.trim()) {
+      setError('Please enter a code');
+      return;
+    }
+
+    setRedeemingCode(true);
+    setError(null);
+
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      
+      const response = await fetch(`${BACKEND_URL}/api/gift-code/redeem`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({
+          code: giftCode.trim().toUpperCase()
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Invalid code');
+      }
+
+      setCodeSuccess(true);
+      await refreshSubscription();
+      
+      Alert.alert(
+        'Success!',
+        data.message,
+        [{ text: 'OK', onPress: onClose }]
+      );
+    } catch (err: any) {
+      setError(err.message || 'Failed to redeem code');
+    } finally {
+      setRedeemingCode(false);
     }
   };
 
@@ -152,6 +207,45 @@ export function Paywall({ visible, onClose, feature }: PaywallProps) {
                 </>
               )}
             </TouchableOpacity>
+
+            {/* Have a Code? Section */}
+            <TouchableOpacity
+              style={styles.haveCodeButton}
+              onPress={() => setShowCodeInput(!showCodeInput)}
+            >
+              <Ionicons name="gift" size={18} color="#b794f6" />
+              <Text style={styles.haveCodeText}>Have a code?</Text>
+              <Ionicons 
+                name={showCodeInput ? "chevron-up" : "chevron-down"} 
+                size={18} 
+                color="#b794f6" 
+              />
+            </TouchableOpacity>
+
+            {showCodeInput && (
+              <View style={styles.codeInputContainer}>
+                <TextInput
+                  style={styles.codeInput}
+                  placeholder="Enter your code"
+                  placeholderTextColor="#6b7280"
+                  value={giftCode}
+                  onChangeText={(text) => setGiftCode(text.toUpperCase())}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  style={[styles.redeemButton, redeemingCode && styles.buttonDisabled]}
+                  onPress={handleRedeemCode}
+                  disabled={redeemingCode || !giftCode.trim()}
+                >
+                  {redeemingCode ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.redeemButtonText}>Redeem</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
 
             <Text style={styles.terms}>
               Cancel anytime. Subscription renews monthly.
@@ -362,5 +456,49 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#e9d5ff',
     fontSize: 14,
+  },
+  haveCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
+    paddingVertical: 8,
+  },
+  haveCodeText: {
+    color: '#b794f6',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  codeInputContainer: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  codeInput: {
+    flex: 1,
+    backgroundColor: '#2d1b4e',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 1,
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+  },
+  redeemButton: {
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  redeemButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

@@ -1,15 +1,82 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useAuth } from '../contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/bfuvm2xh_4327b8ef020d7d471270d8452f31001dbd0d1e664d07a7235c64a236b0e6f6e6.jpg';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function Home() {
   const router = useRouter();
   const { isAuthenticated, user, isPremium } = useAuth();
+  
+  // Prize Drawing State
+  const [prizeDrawingStatus, setPrizeDrawingStatus] = React.useState<{
+    opted_in: boolean;
+    eligible: boolean;
+    weekly_usage_minutes: number;
+    required_minutes: number;
+    next_drawing?: string;
+  } | null>(null);
+  const [loadingPrizeStatus, setLoadingPrizeStatus] = React.useState(false);
+  const [optingIn, setOptingIn] = React.useState(false);
+
+  // Fetch prize drawing status when authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      fetchPrizeDrawingStatus();
+    }
+  }, [isAuthenticated]);
+
+  const fetchPrizeDrawingStatus = async () => {
+    setLoadingPrizeStatus(true);
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${BACKEND_URL}/api/prize-drawing/status`, {
+        headers: {
+          'Authorization': `Bearer ${sessionToken}`
+        }
+      });
+      const data = await response.json();
+      setPrizeDrawingStatus(data);
+    } catch (error) {
+      console.error('Error fetching prize drawing status:', error);
+    } finally {
+      setLoadingPrizeStatus(false);
+    }
+  };
+
+  const handleOptInPrizeDrawing = async (optIn: boolean) => {
+    setOptingIn(true);
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${BACKEND_URL}/api/prize-drawing/opt-in`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({ opt_in: optIn })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setPrizeDrawingStatus(prev => prev ? { ...prev, opted_in: optIn } : null);
+        Alert.alert(
+          optIn ? 'Entered!' : 'Opted Out',
+          data.message
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update prize drawing preference');
+    } finally {
+      setOptingIn(false);
+    }
+  };
 
   const features = [
     {
@@ -116,6 +183,81 @@ export default function Home() {
             <Text style={styles.subscribeButtonText}>Subscribe Now</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Prize Drawing Section */}
+        {isAuthenticated && (
+          <View style={styles.prizeDrawingCard}>
+            <View style={styles.prizeDrawingHeader}>
+              <Ionicons name="gift" size={28} color="#ffd700" />
+              <Text style={styles.prizeDrawingTitle}>Monthly Prize Drawing</Text>
+            </View>
+            
+            <Text style={styles.prizeDrawingText}>
+              Win a FREE month of Premium! Use the app's free features for at least 30 minutes per week to be eligible.
+            </Text>
+
+            {loadingPrizeStatus ? (
+              <ActivityIndicator color="#b794f6" style={{ marginVertical: 12 }} />
+            ) : prizeDrawingStatus ? (
+              <>
+                <View style={styles.usageProgress}>
+                  <Text style={styles.usageLabel}>This Week's Usage:</Text>
+                  <View style={styles.progressBar}>
+                    <View 
+                      style={[
+                        styles.progressFill, 
+                        { 
+                          width: `${Math.min(100, (prizeDrawingStatus.weekly_usage_minutes / prizeDrawingStatus.required_minutes) * 100)}%` 
+                        }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.usageText}>
+                    {prizeDrawingStatus.weekly_usage_minutes.toFixed(0)} / {prizeDrawingStatus.required_minutes} min
+                  </Text>
+                </View>
+
+                {prizeDrawingStatus.opted_in ? (
+                  <View style={styles.optedInContainer}>
+                    <View style={styles.optedInBadge}>
+                      <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                      <Text style={styles.optedInText}>You're entered!</Text>
+                    </View>
+                    {prizeDrawingStatus.next_drawing && (
+                      <Text style={styles.nextDrawingText}>
+                        Next drawing: {new Date(prizeDrawingStatus.next_drawing).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </Text>
+                    )}
+                    <TouchableOpacity
+                      style={styles.optOutButton}
+                      onPress={() => handleOptInPrizeDrawing(false)}
+                      disabled={optingIn}
+                    >
+                      <Text style={styles.optOutButtonText}>Opt Out</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.enterDrawingButton, optingIn && styles.buttonDisabled]}
+                    onPress={() => handleOptInPrizeDrawing(true)}
+                    disabled={optingIn}
+                  >
+                    {optingIn ? (
+                      <ActivityIndicator color="#1a0033" />
+                    ) : (
+                      <>
+                        <Ionicons name="ticket" size={20} color="#1a0033" />
+                        <Text style={styles.enterDrawingButtonText}>Enter Drawing</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <Text style={styles.prizeDrawingText}>Loading status...</Text>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Features Grid */}
@@ -359,5 +501,104 @@ const styles = StyleSheet.create({
     color: '#b794f6',
     marginTop: 12,
     fontWeight: '600',
+  },
+  // Prize Drawing Styles
+  prizeDrawingCard: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  prizeDrawingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  prizeDrawingTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffd700',
+  },
+  prizeDrawingText: {
+    fontSize: 14,
+    color: '#c4b5fd',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  usageProgress: {
+    marginBottom: 16,
+  },
+  usageLabel: {
+    fontSize: 13,
+    color: '#9f7aea',
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: 'rgba(124, 58, 237, 0.3)',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#10b981',
+    borderRadius: 4,
+  },
+  usageText: {
+    fontSize: 12,
+    color: '#c4b5fd',
+    textAlign: 'right',
+  },
+  optedInContainer: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  optedInBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  optedInText: {
+    color: '#10b981',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  nextDrawingText: {
+    color: '#9f7aea',
+    fontSize: 13,
+  },
+  optOutButton: {
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+  },
+  optOutButtonText: {
+    color: '#ef4444',
+    fontSize: 13,
+  },
+  enterDrawingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  enterDrawingButtonText: {
+    color: '#1a0033',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });
