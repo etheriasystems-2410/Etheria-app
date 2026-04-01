@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Audio } from 'expo-av';
 import { useAuth } from '../../contexts/AuthContext';
 import { Paywall } from '../../components/Paywall';
 
@@ -56,6 +58,12 @@ export default function AIGuidedMeditation() {
   const [script, setScript] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  
+  // TTS state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [generatingAudio, setGeneratingAudio] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   // Check premium access on mount
   React.useEffect(() => {
@@ -63,6 +71,24 @@ export default function AIGuidedMeditation() {
       setShowPaywall(true);
     }
   }, [isPremium]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
+
+  // Setup audio mode
+  useEffect(() => {
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      shouldDuckAndroid: true,
+    });
+  }, []);
 
   const generateMeditation = async () => {
     setLoading(true);
@@ -75,8 +101,82 @@ export default function AIGuidedMeditation() {
       setScript(data.script);
     } catch (error) {
       console.error('Error generating meditation:', error);
+      Alert.alert('Error', 'Failed to generate meditation. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const beginSession = async () => {
+    if (!script) return;
+    
+    setGeneratingAudio(true);
+    setAudioError(null);
+    
+    try {
+      // Generate TTS audio for the meditation script
+      const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: script,
+          voice: 'nova', // Calm, soothing voice for meditation
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!data.audio_base64) {
+        setAudioError(data.error || 'Voice generation unavailable');
+        Alert.alert('Voice Unavailable', 'Could not generate voice guidance. You can read the meditation script instead.');
+        return;
+      }
+      
+      // Stop any existing playback
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+      }
+      
+      // Create and play the audio
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: `data:audio/mp3;base64,${data.audio_base64}` },
+        { shouldPlay: true, volume: 1.0 }
+      );
+      
+      soundRef.current = sound;
+      setIsPlaying(true);
+      
+      // Monitor playback status
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+          Alert.alert('Session Complete', 'Your meditation session has ended. Take a moment to return to awareness.');
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error generating audio:', error);
+      setAudioError('Failed to generate voice guidance');
+      Alert.alert('Error', 'Failed to start voice-guided session. Please try again.');
+    } finally {
+      setGeneratingAudio(false);
+    }
+  };
+
+  const stopSession = async () => {
+    if (soundRef.current) {
+      await soundRef.current.stopAsync();
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
+    }
+    setIsPlaying(false);
+  };
+
+  const togglePlayback = async () => {
+    if (isPlaying) {
+      await stopSession();
+    } else {
+      await beginSession();
     }
   };
 
@@ -84,7 +184,13 @@ export default function AIGuidedMeditation() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setScript(null)} style={styles.backButton}>
+          <TouchableOpacity 
+            onPress={() => {
+              stopSession();
+              setScript(null);
+            }} 
+            style={styles.backButton}
+          >
             <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Your Meditation</Text>
@@ -92,14 +198,39 @@ export default function AIGuidedMeditation() {
         </View>
 
         <ScrollView style={styles.scriptContainer} contentContainerStyle={styles.scriptContent}>
+          {audioError && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="warning" size={20} color="#f59e0b" />
+              <Text style={styles.errorText}>{audioError}</Text>
+            </View>
+          )}
           <Text style={styles.scriptText}>{script}</Text>
         </ScrollView>
 
         <View style={styles.scriptControls}>
-          <TouchableOpacity style={styles.playButton}>
-            <Ionicons name="play" size={32} color="#fff" />
-            <Text style={styles.playButtonText}>Begin Session</Text>
-          </TouchableOpacity>
+          {generatingAudio ? (
+            <View style={styles.loadingButton}>
+              <ActivityIndicator color="#fff" />
+              <Text style={styles.playButtonText}>Generating Voice...</Text>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.playButton, isPlaying && styles.stopButton]} 
+              onPress={togglePlayback}
+            >
+              <Ionicons name={isPlaying ? "stop" : "play"} size={32} color="#fff" />
+              <Text style={styles.playButtonText}>
+                {isPlaying ? "Stop Session" : "Begin Session"}
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          {isPlaying && (
+            <View style={styles.playingIndicator}>
+              <Ionicons name="volume-high" size={20} color="#10b981" />
+              <Text style={styles.playingText}>Voice guidance playing...</Text>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -347,9 +478,47 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     gap: 12,
   },
+  stopButton: {
+    backgroundColor: '#ef4444',
+  },
+  loadingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6b7280',
+    paddingVertical: 18,
+    borderRadius: 25,
+    gap: 12,
+  },
   playButtonText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    color: '#f59e0b',
+    fontSize: 14,
+    flex: 1,
+  },
+  playingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
+  playingText: {
+    color: '#10b981',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
