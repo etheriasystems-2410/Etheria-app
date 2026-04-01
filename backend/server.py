@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import random
 from emergentintegrations.llm.chat import LlmChat, UserMessage
-from elevenlabs import ElevenLabs, VoiceSettings
+from emergentintegrations.llm.openai import OpenAITextToSpeech
 import base64
 import io
 import bcrypt
@@ -32,9 +32,8 @@ db = client[os.environ['DB_NAME']]
 # Gemini API key
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
-# ElevenLabs client for TTS
-ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY')
-eleven_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+# OpenAI TTS Configuration (replacing ElevenLabs)
+openai_tts = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
 
 # JWT Configuration
 JWT_SECRET = os.environ.get('JWT_SECRET', 'change_this_secret_key')
@@ -78,28 +77,28 @@ FREE_TIER_LIMITS = {
 }
 
 # Spirit Guide Voice Configuration
-# Using ElevenLabs pre-made voices with appropriate genders
+# Using OpenAI TTS voices with appropriate personalities
 SPIRIT_GUIDE_VOICES = {
     "Ignis": {
-        "voice_id": "TxGEqnHWrfWFTfGW9XjX",  # Josh - Deep masculine voice for Fire
+        "voice": "onyx",  # Deep, authoritative - for Fire
         "gender": "masculine",
         "element": "Fire",
         "personality": "passionate, direct, transformative"
     },
     "Aqua": {
-        "voice_id": "EXAVITQu4vr4xnSDxMaL",  # Bella - Calm feminine voice for Water
+        "voice": "shimmer",  # Bright, cheerful - for Water (feminine feel)
         "gender": "feminine",
         "element": "Water",
         "personality": "intuitive, healing, emotionally wise"
     },
     "Terra": {
-        "voice_id": "VR6AewLTigWG4xSOukaG",  # Arnold - Grounded masculine voice for Earth
+        "voice": "echo",  # Smooth, calm - for Earth (grounded)
         "gender": "masculine",
         "element": "Earth",
         "personality": "grounded, practical, stable"
     },
     "Aether": {
-        "voice_id": "ThT5KcBeYPX3keUQqHPh",  # Dorothy - Clear feminine voice for Air
+        "voice": "nova",  # Energetic, upbeat - for Air (free-spirited)
         "gender": "feminine",
         "element": "Air",
         "personality": "intellectual, free-spirited, enlightening"
@@ -686,22 +685,22 @@ class TTSResponse(BaseModel):
 
 @api_router.post("/tts/generate", response_model=TTSResponse)
 async def generate_tts(request: TTSRequest):
-    """Generate text-to-speech audio using ElevenLabs"""
+    """Generate text-to-speech audio using OpenAI TTS"""
     try:
         # Determine which voice to use
         if request.guide_name and request.guide_name in SPIRIT_GUIDE_VOICES:
-            voice_id = SPIRIT_GUIDE_VOICES[request.guide_name]["voice_id"]
+            voice = SPIRIT_GUIDE_VOICES[request.guide_name]["voice"]
             guide_name = request.guide_name
         elif request.voice_id:
-            voice_id = request.voice_id
+            voice = request.voice_id
             guide_name = None
         else:
             # Default to Aether (Air guide)
-            voice_id = SPIRIT_GUIDE_VOICES["Aether"]["voice_id"]
+            voice = SPIRIT_GUIDE_VOICES["Aether"]["voice"]
             guide_name = "Aether"
         
-        # Check if ElevenLabs API key is configured
-        if not ELEVENLABS_API_KEY:
+        # Check if API key is configured
+        if not EMERGENT_LLM_KEY:
             return TTSResponse(
                 audio_base64=None,
                 text=request.text,
@@ -710,31 +709,16 @@ async def generate_tts(request: TTSRequest):
                 success=False
             )
         
-        # Generate audio using ElevenLabs
-        voice_settings = VoiceSettings(
-            stability=0.75,
-            similarity_boost=0.75,
-            style=0.5,
-            use_speaker_boost=True
-        )
-        
-        audio_generator = eleven_client.text_to_speech.convert(
+        # Generate audio using OpenAI TTS
+        audio_base64 = await openai_tts.generate_speech_base64(
             text=request.text,
-            voice_id=voice_id,
-            model_id="eleven_multilingual_v2",
-            voice_settings=voice_settings
+            voice=voice,
+            model="tts-1",  # Use standard model for faster response
+            response_format="mp3"
         )
-        
-        # Collect audio data
-        audio_data = b""
-        for chunk in audio_generator:
-            audio_data += chunk
-        
-        # Convert to base64
-        audio_b64 = base64.b64encode(audio_data).decode()
         
         return TTSResponse(
-            audio_base64=audio_b64,
+            audio_base64=audio_base64,
             text=request.text,
             guide_name=guide_name,
             success=True
