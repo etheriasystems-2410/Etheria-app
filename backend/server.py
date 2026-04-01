@@ -928,6 +928,107 @@ async def get_binaural_audio_info(frequency_id: str):
         "note": "For production, replace with actual binaural beat audio files"
     }
 
+@api_router.get("/meditation/ambient/generate/{sound_id}")
+async def generate_ambient_sound(sound_id: str, duration: int = 60):
+    """Generate ambient sound audio (synthesized)"""
+    import numpy as np
+    from scipy.io import wavfile
+    
+    # Sound configurations - we'll synthesize nature-like sounds
+    sound_config = {
+        "ocean": {"type": "pink_noise", "modulation": 0.3, "mod_freq": 0.1},
+        "rain": {"type": "white_noise", "modulation": 0.5, "mod_freq": 2.0},
+        "forest": {"type": "brown_noise", "modulation": 0.2, "mod_freq": 0.5},
+        "singing-bowl": {"type": "sine_harmonic", "base_freq": 396, "harmonics": [1, 2, 3, 5]},
+        "silence": {"type": "silence"}
+    }
+    
+    if sound_id not in sound_config:
+        raise HTTPException(status_code=404, detail="Sound not found")
+    
+    config = sound_config[sound_id]
+    sample_rate = 44100
+    duration_seconds = min(duration, 300)  # Max 5 minutes per request
+    num_samples = int(sample_rate * duration_seconds)
+    
+    # Generate audio based on type
+    if config["type"] == "silence":
+        audio = np.zeros(num_samples, dtype=np.float32)
+    
+    elif config["type"] == "pink_noise":
+        # Pink noise (1/f noise) - sounds like ocean waves
+        white = np.random.randn(num_samples).astype(np.float32)
+        # Apply 1/f filter (simple approximation)
+        b = [0.049922035, -0.095993537, 0.050612699, -0.004408786]
+        a = [1, -2.494956002, 2.017265875, -0.522189400]
+        from scipy.signal import lfilter
+        pink = lfilter(b, a, white)
+        # Add wave-like modulation
+        mod = 0.5 + config["modulation"] * np.sin(2 * np.pi * config["mod_freq"] * np.arange(num_samples) / sample_rate)
+        audio = (pink * mod * 0.3).astype(np.float32)
+    
+    elif config["type"] == "white_noise":
+        # White noise with rain-like modulation
+        white = np.random.randn(num_samples).astype(np.float32)
+        # Random amplitude modulation for rain drops
+        mod = 0.3 + config["modulation"] * np.abs(np.sin(2 * np.pi * config["mod_freq"] * np.arange(num_samples) / sample_rate + np.random.randn(num_samples) * 0.5))
+        audio = (white * mod * 0.25).astype(np.float32)
+    
+    elif config["type"] == "brown_noise":
+        # Brown noise (random walk) - deeper, forest-like
+        white = np.random.randn(num_samples).astype(np.float32)
+        brown = np.cumsum(white)
+        brown = brown / np.max(np.abs(brown))  # Normalize
+        # Add gentle modulation
+        mod = 0.7 + config["modulation"] * np.sin(2 * np.pi * config["mod_freq"] * np.arange(num_samples) / sample_rate)
+        audio = (brown * mod * 0.3).astype(np.float32)
+    
+    elif config["type"] == "sine_harmonic":
+        # Singing bowl - harmonic sine waves with decay
+        t = np.arange(num_samples) / sample_rate
+        audio = np.zeros(num_samples, dtype=np.float32)
+        for i, h in enumerate(config["harmonics"]):
+            freq = config["base_freq"] * h
+            # Add decay envelope for each harmonic
+            decay = np.exp(-t * (0.1 + i * 0.05))
+            audio += np.sin(2 * np.pi * freq * t) * decay * (1.0 / (i + 1))
+        audio = (audio / np.max(np.abs(audio)) * 0.5).astype(np.float32)
+        # Add periodic "strikes"
+        strike_interval = int(sample_rate * 8)  # Every 8 seconds
+        for strike_pos in range(0, num_samples, strike_interval):
+            strike_end = min(strike_pos + int(sample_rate * 0.1), num_samples)
+            audio[strike_pos:strike_end] *= 1.5
+    
+    else:
+        audio = np.zeros(num_samples, dtype=np.float32)
+    
+    # Add gentle fade in/out
+    fade_samples = int(sample_rate * 1)
+    fade_in = np.linspace(0, 1, fade_samples, dtype=np.float32)
+    fade_out = np.linspace(1, 0, fade_samples, dtype=np.float32)
+    audio[:fade_samples] *= fade_in
+    audio[-fade_samples:] *= fade_out
+    
+    # Clip and convert to 16-bit
+    audio = np.clip(audio, -1, 1)
+    audio_int16 = (audio * 32767).astype(np.int16)
+    
+    # Write to buffer
+    buffer = io.BytesIO()
+    wavfile.write(buffer, sample_rate, audio_int16)
+    buffer.seek(0)
+    
+    # Convert to base64
+    audio_base64 = base64.b64encode(buffer.read()).decode()
+    
+    return {
+        "sound_id": sound_id,
+        "duration_seconds": duration_seconds,
+        "sample_rate": sample_rate,
+        "audio_base64": audio_base64,
+        "format": "wav"
+    }
+
 @api_router.post("/meditation/session/save")
 async def save_meditation_session(session: dict, request: Request):
     """Save a meditation session to track progress"""

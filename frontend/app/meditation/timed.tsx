@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
+import { AudioPlayerManager } from '../../utils/audioPlayer';
+
+const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
+                    process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 interface TimerPreset {
   label: string;
@@ -36,21 +43,38 @@ export default function TimedMeditation() {
   const [selectedSound, setSelectedSound] = useState('ocean');
   const [isActive, setIsActive] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(600); // seconds
+  const [isLoadingSound, setIsLoadingSound] = useState(false);
+  const [soundError, setSoundError] = useState<string | null>(null);
+  
+  const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.unload();
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-
     if (isActive && timeRemaining > 0) {
-      interval = setInterval(() => {
+      timerRef.current = setInterval(() => {
         setTimeRemaining((time) => time - 1);
       }, 1000);
-    } else if (timeRemaining === 0) {
-      setIsActive(false);
+    } else if (timeRemaining === 0 && isActive) {
       // Session complete
+      setIsActive(false);
+      stopSound();
+      Alert.alert('Session Complete', 'Your meditation session has ended. Take a moment to return to awareness.');
     }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isActive, timeRemaining]);
 
@@ -60,18 +84,82 @@ export default function TimedMeditation() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startMeditation = () => {
+  const loadAndPlaySound = async () => {
+    if (selectedSound === 'silence') {
+      return; // No sound for silence
+    }
+    
+    setIsLoadingSound(true);
+    setSoundError(null);
+    
+    try {
+      // Generate ambient sound (request 60 seconds, we'll loop it)
+      const response = await fetch(
+        `${BACKEND_URL}/api/meditation/ambient/generate/${selectedSound}?duration=60`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to load ambient sound');
+      }
+      
+      const data = await response.json();
+      
+      if (!data.audio_base64) {
+        throw new Error('No audio data received');
+      }
+      
+      // Unload any existing audio
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.unload();
+      }
+      
+      // Create and play audio with looping
+      const player = new AudioPlayerManager();
+      const audioUri = `data:audio/wav;base64,${data.audio_base64}`;
+      await player.loadAndPlay(audioUri, { loop: true, volume: 0.6 });
+      
+      audioPlayerRef.current = player;
+      console.log('Ambient sound playing:', selectedSound);
+      
+    } catch (error) {
+      console.error('Error loading ambient sound:', error);
+      setSoundError('Could not load ambient sound');
+    } finally {
+      setIsLoadingSound(false);
+    }
+  };
+
+  const stopSound = async () => {
+    if (audioPlayerRef.current) {
+      await audioPlayerRef.current.unload();
+      audioPlayerRef.current = null;
+    }
+  };
+
+  const startMeditation = async () => {
     setTimeRemaining(selectedMinutes * 60);
     setIsActive(true);
+    await loadAndPlaySound();
   };
 
-  const pauseMeditation = () => {
+  const pauseMeditation = async () => {
     setIsActive(false);
+    if (audioPlayerRef.current) {
+      await audioPlayerRef.current.pause();
+    }
   };
 
-  const resetMeditation = () => {
+  const resumeMeditation = async () => {
+    setIsActive(true);
+    if (audioPlayerRef.current) {
+      await audioPlayerRef.current.play();
+    }
+  };
+
+  const resetMeditation = async () => {
     setIsActive(false);
     setTimeRemaining(selectedMinutes * 60);
+    await stopSound();
   };
 
   const getProgress = () => {
@@ -168,10 +256,24 @@ export default function TimedMeditation() {
             </View>
 
             <View style={styles.soundIndicator}>
-              <Ionicons name="volume-medium" size={20} color="#c4b5fd" />
-              <Text style={styles.currentSound}>
-                {ambientSounds.find((s) => s.id === selectedSound)?.name}
-              </Text>
+              {isLoadingSound ? (
+                <>
+                  <ActivityIndicator size="small" color="#c4b5fd" />
+                  <Text style={styles.currentSound}>Loading sound...</Text>
+                </>
+              ) : soundError ? (
+                <>
+                  <Ionicons name="warning" size={20} color="#f59e0b" />
+                  <Text style={[styles.currentSound, { color: '#f59e0b' }]}>{soundError}</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="volume-medium" size={20} color="#10b981" />
+                  <Text style={styles.currentSound}>
+                    {ambientSounds.find((s) => s.id === selectedSound)?.name}
+                  </Text>
+                </>
+              )}
             </View>
           </View>
         )}
@@ -187,7 +289,7 @@ export default function TimedMeditation() {
               <TouchableOpacity style={styles.controlButton} onPress={pauseMeditation}>
                 <Ionicons name="pause" size={28} color="#fff" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.controlButton} onPress={resetMeditation}>
+              <TouchableOpacity style={[styles.controlButton, styles.stopButton]} onPress={resetMeditation}>
                 <Ionicons name="stop" size={28} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -359,5 +461,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#7c3aed',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stopButton: {
+    backgroundColor: '#dc2626',
   },
 });
