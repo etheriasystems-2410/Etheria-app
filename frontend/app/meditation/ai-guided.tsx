@@ -97,6 +97,8 @@ export default function AIGuidedMeditation() {
   const generateMeditation = async () => {
     setLoading(true);
     setAudioError(null);
+    setGeneratingAudio(true); // Show generating state immediately
+    
     try {
       const response = await fetch(
         `${BACKEND_URL}/api/meditation/generate-guided?duration_minutes=${duration}&focus=${selectedFocus}`,
@@ -104,12 +106,118 @@ export default function AIGuidedMeditation() {
       );
       const data = await response.json();
       setScript(data.script);
-      // TTS will auto-start via useEffect
+      
+      // Don't wait for useEffect - start TTS immediately with intro
+      if (!isMuted && data.script) {
+        startQuickTTS(data.script);
+      }
     } catch (error) {
       console.error('Error generating meditation:', error);
       Alert.alert('Error', 'Failed to generate meditation. Please try again.');
+      setGeneratingAudio(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Quick TTS - splits script and plays intro first
+  const startQuickTTS = async (fullScript: string) => {
+    try {
+      // Split into intro (first 2 sentences) and rest
+      const sentences = fullScript.match(/[^.!?]+[.!?]+/g) || [fullScript];
+      const introText = sentences.slice(0, 2).join(' ').trim();
+      
+      // Generate just the intro first (faster)
+      const introResponse = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: introText,
+          voice: 'nova',
+        }),
+      });
+      
+      const introData = await introResponse.json();
+      setGeneratingAudio(false);
+      
+      if (!introData.audio_base64) {
+        setAudioError('Voice generation unavailable');
+        return;
+      }
+      
+      // Play intro immediately
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.unload();
+      }
+      
+      const player = new AudioPlayerManager();
+      const audioUri = `data:audio/mp3;base64,${introData.audio_base64}`;
+      await player.loadAndPlay(audioUri, { volume: 1.0 });
+      
+      audioPlayerRef.current = player;
+      setIsPlaying(true);
+      
+      // When intro finishes, generate and play the rest
+      player.onPlaybackStatusChange(async (status) => {
+        if (status.didJustFinish && sentences.length > 2) {
+          // Generate the rest of the script
+          const restText = sentences.slice(2).join(' ').trim();
+          if (restText && !isMuted) {
+            await playRestOfScript(restText);
+          } else {
+            setIsPlaying(false);
+            Alert.alert('Session Complete', 'Your meditation session has ended.');
+          }
+        } else if (status.didJustFinish && sentences.length <= 2) {
+          setIsPlaying(false);
+          Alert.alert('Session Complete', 'Your meditation session has ended.');
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error in quick TTS:', error);
+      setGeneratingAudio(false);
+      setAudioError('Failed to generate voice');
+    }
+  };
+
+  const playRestOfScript = async (restText: string) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: restText,
+          voice: 'nova',
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!data.audio_base64 || isMuted) {
+        setIsPlaying(false);
+        return;
+      }
+      
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.unload();
+      }
+      
+      const player = new AudioPlayerManager();
+      const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
+      await player.loadAndPlay(audioUri, { volume: 1.0 });
+      
+      audioPlayerRef.current = player;
+      
+      player.onPlaybackStatusChange((status) => {
+        if (status.didJustFinish) {
+          setIsPlaying(false);
+          Alert.alert('Session Complete', 'Your meditation session has ended. Take a moment to return to awareness.');
+        }
+      });
+    } catch (error) {
+      console.error('Error playing rest of script:', error);
+      setIsPlaying(false);
     }
   };
 
