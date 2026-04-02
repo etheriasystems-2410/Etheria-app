@@ -7,7 +7,6 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -43,6 +42,7 @@ export default function ChakraMeditation() {
   
   const tonePlayerRef = useRef<AudioPlayerManager | null>(null);
   const voicePlayerRef = useRef<AudioPlayerManager | null>(null);
+  const isPlayingRef = useRef(false);
 
   useEffect(() => {
     fetchChakras();
@@ -51,29 +51,51 @@ export default function ChakraMeditation() {
     };
   }, []);
 
+  // Keep ref synced with state
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
   const fetchChakras = async () => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/meditation/chakra/list`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch chakras');
+      }
       const data = await response.json();
       setChakras(data);
     } catch (error) {
       console.error('Error fetching chakras:', error);
-      Alert.alert('Error', 'Failed to load chakra data');
+      // Use default chakras if fetch fails
+      setChakras([
+        { id: 'root', name: 'Root Chakra', sanskrit: 'Muladhara', frequency: 396, color: '#dc2626', location: 'Base of spine', element: 'Earth', benefits: ['Grounding', 'Security'], affirmation: 'I am safe.' },
+        { id: 'sacral', name: 'Sacral Chakra', sanskrit: 'Svadhisthana', frequency: 417, color: '#ea580c', location: 'Lower abdomen', element: 'Water', benefits: ['Creativity', 'Emotions'], affirmation: 'I embrace creativity.' },
+        { id: 'solar', name: 'Solar Plexus', sanskrit: 'Manipura', frequency: 528, color: '#eab308', location: 'Upper abdomen', element: 'Fire', benefits: ['Confidence', 'Power'], affirmation: 'I am confident.' },
+        { id: 'heart', name: 'Heart Chakra', sanskrit: 'Anahata', frequency: 639, color: '#16a34a', location: 'Center of chest', element: 'Air', benefits: ['Love', 'Compassion'], affirmation: 'I give and receive love.' },
+        { id: 'throat', name: 'Throat Chakra', sanskrit: 'Vishuddha', frequency: 741, color: '#0ea5e9', location: 'Throat', element: 'Ether', benefits: ['Communication', 'Truth'], affirmation: 'I speak my truth.' },
+        { id: 'third-eye', name: 'Third Eye', sanskrit: 'Ajna', frequency: 852, color: '#6366f1', location: 'Between eyebrows', element: 'Light', benefits: ['Intuition', 'Wisdom'], affirmation: 'I trust my intuition.' },
+        { id: 'crown', name: 'Crown Chakra', sanskrit: 'Sahasrara', frequency: 963, color: '#9333ea', location: 'Top of head', element: 'Thought', benefits: ['Spiritual connection', 'Unity'], affirmation: 'I am connected to the divine.' },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const stopAllAudio = async () => {
-    if (tonePlayerRef.current) {
-      await tonePlayerRef.current.unload();
-      tonePlayerRef.current = null;
-    }
-    if (voicePlayerRef.current) {
-      await voicePlayerRef.current.unload();
-      voicePlayerRef.current = null;
-    }
+    isPlayingRef.current = false;
     setIsPlaying(false);
+    try {
+      if (tonePlayerRef.current) {
+        await tonePlayerRef.current.unload();
+        tonePlayerRef.current = null;
+      }
+      if (voicePlayerRef.current) {
+        await voicePlayerRef.current.unload();
+        voicePlayerRef.current = null;
+      }
+    } catch (e) {
+      console.log('Audio cleanup error:', e);
+    }
   };
 
   const handleBack = async () => {
@@ -100,6 +122,11 @@ export default function ChakraMeditation() {
         `${BACKEND_URL}/api/meditation/chakra/generate-guided/${chakra.id}?duration_minutes=5`,
         { method: 'POST' }
       );
+      
+      if (!scriptResponse.ok) {
+        throw new Error('Failed to generate script');
+      }
+      
       const scriptData = await scriptResponse.json();
       setScript(scriptData.script);
 
@@ -108,26 +135,29 @@ export default function ChakraMeditation() {
       const toneResponse = await fetch(
         `${BACKEND_URL}/api/meditation/chakra/tone/${chakra.id}?duration=300`
       );
-      const toneData = await toneResponse.json();
-
-      if (toneData.audio_base64) {
-        const tonePlayer = new AudioPlayerManager();
-        await tonePlayer.loadAndPlay(
-          `data:audio/wav;base64,${toneData.audio_base64}`,
-          { loop: true, volume: 0.3 }
-        );
-        tonePlayerRef.current = tonePlayer;
+      
+      if (toneResponse.ok) {
+        const toneData = await toneResponse.json();
+        if (toneData.audio_base64) {
+          const tonePlayer = new AudioPlayerManager();
+          await tonePlayer.loadAndPlay(
+            `data:audio/wav;base64,${toneData.audio_base64}`,
+            { loop: true, volume: 0.3 }
+          );
+          tonePlayerRef.current = tonePlayer;
+        }
       }
 
       // Generate and play voice guidance
       setLoadingStage('Generating voice guidance...');
+      setIsGenerating(false);
+      setLoadingStage('');
       await playVoiceGuidance(scriptData.script);
 
     } catch (error) {
       console.error('Error starting meditation:', error);
-      Alert.alert('Error', 'Failed to start meditation');
+      Alert.alert('Error', 'Failed to start meditation. Please try again.');
       setShowSession(false);
-    } finally {
       setIsGenerating(false);
       setLoadingStage('');
     }
@@ -146,6 +176,11 @@ export default function ChakraMeditation() {
         `${BACKEND_URL}/api/meditation/chakra/generate-realign?duration_minutes=10`,
         { method: 'POST' }
       );
+      
+      if (!scriptResponse.ok) {
+        throw new Error('Failed to generate realignment script');
+      }
+      
       const scriptData = await scriptResponse.json();
       setScript(scriptData.script);
 
@@ -154,26 +189,29 @@ export default function ChakraMeditation() {
       const toneResponse = await fetch(
         `${BACKEND_URL}/api/meditation/chakra/realign-tone?duration=600`
       );
-      const toneData = await toneResponse.json();
-
-      if (toneData.audio_base64) {
-        const tonePlayer = new AudioPlayerManager();
-        await tonePlayer.loadAndPlay(
-          `data:audio/wav;base64,${toneData.audio_base64}`,
-          { loop: false, volume: 0.3 }
-        );
-        tonePlayerRef.current = tonePlayer;
+      
+      if (toneResponse.ok) {
+        const toneData = await toneResponse.json();
+        if (toneData.audio_base64) {
+          const tonePlayer = new AudioPlayerManager();
+          await tonePlayer.loadAndPlay(
+            `data:audio/wav;base64,${toneData.audio_base64}`,
+            { loop: false, volume: 0.3 }
+          );
+          tonePlayerRef.current = tonePlayer;
+        }
       }
 
       // Generate and play voice guidance
       setLoadingStage('Generating voice guidance...');
+      setIsGenerating(false);
+      setLoadingStage('');
       await playVoiceGuidance(scriptData.script);
 
     } catch (error) {
       console.error('Error starting realign meditation:', error);
-      Alert.alert('Error', 'Failed to start meditation');
+      Alert.alert('Error', 'Failed to start meditation. Please try again.');
       setShowSession(false);
-    } finally {
       setIsGenerating(false);
       setLoadingStage('');
     }
@@ -182,6 +220,7 @@ export default function ChakraMeditation() {
   const playVoiceGuidance = async (fullScript: string) => {
     try {
       setIsPlaying(true);
+      isPlayingRef.current = true;
       
       // Parse script for pauses
       const pauseRegex = /\[pause(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?|s)?\s*\]|\[PAUSE\s+(\d+)\s*(?:seconds?|secs?|s)?\s*\]/gi;
@@ -215,51 +254,64 @@ export default function ChakraMeditation() {
 
       // Play each segment
       for (const segment of segments) {
-        if (!isPlaying) break;
+        if (!isPlayingRef.current) break;
         
         if (segment.type === 'pause') {
           await new Promise(resolve => setTimeout(resolve, (segment.duration || 5) * 1000));
         } else if (segment.type === 'text' && segment.content.trim()) {
-          // Generate TTS for this segment
-          const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: segment.content,
-              voice: 'nova',
-            }),
-          });
-          
-          if (!response.ok) continue;
-          
-          const data = await response.json();
-          if (!data.audio_base64) continue;
-          
-          // Play voice segment
-          await new Promise<void>((resolve) => {
-            const player = new AudioPlayerManager();
-            player.onPlaybackStatusChange((status) => {
-              if (status.didJustFinish) {
-                resolve();
-              }
+          try {
+            // Generate TTS for this segment
+            const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: segment.content,
+                voice: 'nova',
+              }),
             });
-            player.loadAndPlay(
-              `data:audio/mp3;base64,${data.audio_base64}`,
-              { volume: 1.0 }
-            ).catch(() => resolve());
-            voicePlayerRef.current = player;
-          });
+            
+            if (!response.ok) continue;
+            
+            const data = await response.json();
+            if (!data.audio_base64) continue;
+            
+            // Play voice segment
+            await new Promise<void>((resolve) => {
+              if (!isPlayingRef.current) {
+                resolve();
+                return;
+              }
+              
+              const player = new AudioPlayerManager();
+              player.onPlaybackStatusChange((status) => {
+                if (status.didJustFinish) {
+                  resolve();
+                }
+              });
+              player.loadAndPlay(
+                `data:audio/mp3;base64,${data.audio_base64}`,
+                { volume: 1.0 }
+              ).catch(() => resolve());
+              voicePlayerRef.current = player;
+            });
+          } catch (e) {
+            console.log('TTS segment error:', e);
+          }
         }
       }
 
       // Meditation complete
-      setIsPlaying(false);
-      await stopAllAudio();
-      Alert.alert('Session Complete', 'Your chakra meditation has ended. Take a moment to return to awareness.');
+      if (isPlayingRef.current) {
+        setIsPlaying(false);
+        isPlayingRef.current = false;
+        await stopAllAudio();
+        Alert.alert('Session Complete', 'Your chakra meditation has ended. Take a moment to return to awareness.');
+      }
 
     } catch (error) {
       console.error('Error in voice guidance:', error);
       setIsPlaying(false);
+      isPlayingRef.current = false;
     }
   };
 
@@ -309,7 +361,7 @@ export default function ChakraMeditation() {
           >
             <View style={styles.realignGradient}>
               <View style={styles.chakraRainbow}>
-                {chakras.map((c, i) => (
+                {chakras.map((c) => (
                   <View key={c.id} style={[styles.rainbowDot, { backgroundColor: c.color }]} />
                 ))}
               </View>
@@ -337,11 +389,6 @@ export default function ChakraMeditation() {
             <View style={styles.generatingContainer}>
               <ActivityIndicator size="large" color="#a855f7" />
               <Text style={styles.generatingText}>{loadingStage}</Text>
-              <View style={styles.progressDots}>
-                {[1, 2, 3].map(i => (
-                  <View key={i} style={[styles.dot, isGenerating && styles.dotActive]} />
-                ))}
-              </View>
             </View>
           ) : (
             <>
@@ -349,22 +396,16 @@ export default function ChakraMeditation() {
               <View style={styles.visualization}>
                 {isRealignAll ? (
                   <View style={styles.allChakrasVis}>
-                    {chakras.map((c, i) => (
+                    {chakras.map((c) => (
                       <View
                         key={c.id}
-                        style={[
-                          styles.chakraOrb,
-                          { backgroundColor: c.color, opacity: 0.8 + i * 0.03 }
-                        ]}
+                        style={[styles.chakraOrb, { backgroundColor: c.color }]}
                       />
                     ))}
                   </View>
                 ) : (
                   <View
-                    style={[
-                      styles.singleChakraOrb,
-                      { backgroundColor: selectedChakra?.color, shadowColor: selectedChakra?.color }
-                    ]}
+                    style={[styles.singleChakraOrb, { backgroundColor: selectedChakra?.color }]}
                   >
                     <Text style={styles.orbFrequency}>{selectedChakra?.frequency} Hz</Text>
                   </View>
@@ -549,20 +590,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textAlign: 'center',
   },
-  progressDots: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 20,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#2d1b4e',
-  },
-  dotActive: {
-    backgroundColor: '#a855f7',
-  },
   visualization: {
     alignItems: 'center',
     marginVertical: 30,
@@ -582,10 +609,6 @@ const styles = StyleSheet.create({
     borderRadius: 75,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 30,
-    elevation: 10,
   },
   orbFrequency: {
     color: '#fff',
