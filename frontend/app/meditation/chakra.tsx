@@ -154,6 +154,10 @@ export default function ChakraMeditation() {
         }
       }
 
+      // Set playing state BEFORE setting generating to false
+      setIsPlaying(true);
+      isPlayingRef.current = true;
+      
       // Set state before starting voice
       setIsGenerating(false);
       setLoadingStage('');
@@ -167,6 +171,8 @@ export default function ChakraMeditation() {
         }, 500);
       } else {
         console.log('No script available for voice guidance');
+        setIsPlaying(false);
+        isPlayingRef.current = false;
       }
 
     } catch (error) {
@@ -223,6 +229,10 @@ export default function ChakraMeditation() {
         }
       }
 
+      // Set playing state BEFORE setting generating to false
+      setIsPlaying(true);
+      isPlayingRef.current = true;
+      
       // Set state before starting voice
       setIsGenerating(false);
       setLoadingStage('');
@@ -235,6 +245,8 @@ export default function ChakraMeditation() {
         }, 500);
       } else {
         console.log('No script available for realign voice guidance');
+        setIsPlaying(false);
+        isPlayingRef.current = false;
       }
 
     } catch (error) {
