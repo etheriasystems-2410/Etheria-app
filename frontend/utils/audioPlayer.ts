@@ -59,7 +59,7 @@ export class AudioPlayerManager {
         console.log('Web audio started playing');
       } else {
         // Native platform - use expo-audio createAudioPlayer
-        console.log('Creating native audio player');
+        console.log('Creating native audio player for URI length:', uri.length);
         
         this.nativePlayer = createAudioPlayer({ uri }, {
           updateInterval: 250,
@@ -86,10 +86,19 @@ export class AudioPlayerManager {
         // Start polling for playback status changes
         this.startStatusPolling();
         
-        // Play
+        // Play and wait a moment for player to initialize
         this.nativePlayer.play();
         this.lastPlayingState = true;
-        console.log('Native audio player started');
+        
+        // Give player time to start
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const initialStatus = {
+          playing: this.nativePlayer.playing,
+          duration: this.nativePlayer.duration,
+          currentTime: this.nativePlayer.currentTime
+        };
+        console.log('Native audio player started, initial status:', JSON.stringify(initialStatus));
         
         this.isLoadedFlag = true;
       }
@@ -200,6 +209,11 @@ export class AudioPlayerManager {
             const currentTime = this.nativePlayer.currentTime || 0;
             const duration = this.nativePlayer.duration || 0;
             
+            // Log status periodically for debugging
+            if (elapsed % 3000 < 300) {
+              console.log(`Audio status: playing=${isPlaying}, time=${currentTime.toFixed(1)}/${duration.toFixed(1)}`);
+            }
+            
             // Check if finished: not playing AND (near end of duration OR duration is 0 meaning loaded but finished)
             if (!isPlaying && duration > 0 && currentTime >= duration - 0.5) {
               console.log(`waitForCompletion: Native audio finished (${currentTime}/${duration})`);
@@ -207,13 +221,15 @@ export class AudioPlayerManager {
               clearInterval(completionPoll);
               clearTimeout(safetyTimeout);
               resolve();
-            } else if (!isPlaying && elapsed > 2000 && duration === 0) {
-              // If not playing and no duration after 2 seconds, likely an issue
-              console.log('waitForCompletion: Native audio not playing with no duration');
+            } else if (!isPlaying && elapsed > 5000 && duration === 0) {
+              // Wait longer (5 seconds) before giving up on duration
+              console.log('waitForCompletion: Native audio not playing with no duration after 5s');
               resolved = true;
               clearInterval(completionPoll);
               clearTimeout(safetyTimeout);
               resolve();
+            } else if (isPlaying && currentTime > 0) {
+              // Audio is actively playing - good, keep waiting
             }
           } catch (e) {
             console.log('waitForCompletion poll error:', e);
