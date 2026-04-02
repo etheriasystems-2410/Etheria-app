@@ -118,6 +118,7 @@ export default function ChakraMeditation() {
 
     try {
       // Generate meditation script
+      console.log('Generating script for chakra:', chakra.id);
       const scriptResponse = await fetch(
         `${BACKEND_URL}/api/meditation/chakra/generate-guided/${chakra.id}?duration_minutes=5`,
         { method: 'POST' }
@@ -128,10 +129,13 @@ export default function ChakraMeditation() {
       }
       
       const scriptData = await scriptResponse.json();
-      setScript(scriptData.script);
+      const meditationScript = scriptData.script;
+      console.log('Script generated, length:', meditationScript?.length);
+      setScript(meditationScript);
 
       // Load chakra tone
       setLoadingStage('Loading chakra frequency tone...');
+      console.log('Loading tone for chakra:', chakra.id);
       const toneResponse = await fetch(
         `${BACKEND_URL}/api/meditation/chakra/tone/${chakra.id}?duration=300`
       );
@@ -139,20 +143,31 @@ export default function ChakraMeditation() {
       if (toneResponse.ok) {
         const toneData = await toneResponse.json();
         if (toneData.audio_base64) {
+          console.log('Tone data received, loading player...');
           const tonePlayer = new AudioPlayerManager();
           await tonePlayer.loadAndPlay(
             `data:audio/wav;base64,${toneData.audio_base64}`,
             { loop: true, volume: 0.3 }
           );
           tonePlayerRef.current = tonePlayer;
+          console.log('Tone player loaded');
         }
       }
 
-      // Generate and play voice guidance
-      setLoadingStage('Generating voice guidance...');
+      // Set state before starting voice
       setIsGenerating(false);
       setLoadingStage('');
-      await playVoiceGuidance(scriptData.script);
+      
+      // Start voice guidance (don't await - let it run async)
+      if (meditationScript) {
+        console.log('Starting voice guidance with script...');
+        // Use setTimeout to ensure state updates before starting
+        setTimeout(() => {
+          playVoiceGuidance(meditationScript);
+        }, 500);
+      } else {
+        console.log('No script available for voice guidance');
+      }
 
     } catch (error) {
       console.error('Error starting meditation:', error);
@@ -172,6 +187,7 @@ export default function ChakraMeditation() {
 
     try {
       // Generate realign all script
+      console.log('Generating realign all script...');
       const scriptResponse = await fetch(
         `${BACKEND_URL}/api/meditation/chakra/generate-realign?duration_minutes=10`,
         { method: 'POST' }
@@ -182,10 +198,13 @@ export default function ChakraMeditation() {
       }
       
       const scriptData = await scriptResponse.json();
-      setScript(scriptData.script);
+      const meditationScript = scriptData.script;
+      console.log('Realign script generated, length:', meditationScript?.length);
+      setScript(meditationScript);
 
       // Load morphing chakra tone
       setLoadingStage('Loading chakra frequency progression...');
+      console.log('Loading realign tone...');
       const toneResponse = await fetch(
         `${BACKEND_URL}/api/meditation/chakra/realign-tone?duration=600`
       );
@@ -193,20 +212,30 @@ export default function ChakraMeditation() {
       if (toneResponse.ok) {
         const toneData = await toneResponse.json();
         if (toneData.audio_base64) {
+          console.log('Realign tone data received, loading player...');
           const tonePlayer = new AudioPlayerManager();
           await tonePlayer.loadAndPlay(
             `data:audio/wav;base64,${toneData.audio_base64}`,
             { loop: false, volume: 0.3 }
           );
           tonePlayerRef.current = tonePlayer;
+          console.log('Realign tone player loaded');
         }
       }
 
-      // Generate and play voice guidance
-      setLoadingStage('Generating voice guidance...');
+      // Set state before starting voice
       setIsGenerating(false);
       setLoadingStage('');
-      await playVoiceGuidance(scriptData.script);
+      
+      // Start voice guidance (don't await - let it run async)
+      if (meditationScript) {
+        console.log('Starting realign voice guidance...');
+        setTimeout(() => {
+          playVoiceGuidance(meditationScript);
+        }, 500);
+      } else {
+        console.log('No script available for realign voice guidance');
+      }
 
     } catch (error) {
       console.error('Error starting realign meditation:', error);
@@ -252,15 +281,25 @@ export default function ChakraMeditation() {
         segments.push({ type: 'text', content: fullScript });
       }
 
+      console.log('Playing', segments.length, 'segments');
+
       // Play each segment
-      for (const segment of segments) {
-        if (!isPlayingRef.current) break;
+      for (let i = 0; i < segments.length; i++) {
+        if (!isPlayingRef.current) {
+          console.log('Playback stopped by user');
+          break;
+        }
+        
+        const segment = segments[i];
+        console.log('Segment', i + 1, '/', segments.length, ':', segment.type);
         
         if (segment.type === 'pause') {
+          console.log('Pausing for', segment.duration, 'seconds');
           await new Promise(resolve => setTimeout(resolve, (segment.duration || 5) * 1000));
         } else if (segment.type === 'text' && segment.content.trim()) {
           try {
             // Generate TTS for this segment
+            console.log('Generating TTS for segment...');
             const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -270,30 +309,68 @@ export default function ChakraMeditation() {
               }),
             });
             
-            if (!response.ok) continue;
+            if (!response.ok) {
+              console.log('TTS request failed:', response.status);
+              continue;
+            }
             
-            const data = await response.json();
-            if (!data.audio_base64) continue;
+            const responseText = await response.text();
+            let data;
+            try {
+              data = JSON.parse(responseText);
+            } catch (e) {
+              console.log('Failed to parse TTS response');
+              continue;
+            }
             
-            // Play voice segment
+            if (!data.audio_base64) {
+              console.log('No audio data in response');
+              continue;
+            }
+            
+            if (!isPlayingRef.current) break;
+            
+            // Play voice segment and wait for completion
+            console.log('Playing audio segment...');
+            const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
+            
             await new Promise<void>((resolve) => {
-              if (!isPlayingRef.current) {
-                resolve();
-                return;
-              }
-              
               const player = new AudioPlayerManager();
+              let resolved = false;
+              
+              // Set a timeout in case callback doesn't fire
+              const timeout = setTimeout(() => {
+                if (!resolved) {
+                  console.log('Audio timeout - moving to next segment');
+                  resolved = true;
+                  resolve();
+                }
+              }, 120000); // 2 minute max per segment
+              
               player.onPlaybackStatusChange((status) => {
-                if (status.didJustFinish) {
+                if (status.didJustFinish && !resolved) {
+                  console.log('Audio segment finished');
+                  clearTimeout(timeout);
+                  resolved = true;
                   resolve();
                 }
               });
-              player.loadAndPlay(
-                `data:audio/mp3;base64,${data.audio_base64}`,
-                { volume: 1.0 }
-              ).catch(() => resolve());
-              voicePlayerRef.current = player;
+              
+              player.loadAndPlay(audioUri, { volume: 1.0 })
+                .then(() => {
+                  voicePlayerRef.current = player;
+                  console.log('Audio loaded and playing');
+                })
+                .catch((err) => {
+                  console.log('Audio load error:', err);
+                  clearTimeout(timeout);
+                  if (!resolved) {
+                    resolved = true;
+                    resolve();
+                  }
+                });
             });
+            
           } catch (e) {
             console.log('TTS segment error:', e);
           }
@@ -301,6 +378,7 @@ export default function ChakraMeditation() {
       }
 
       // Meditation complete
+      console.log('All segments complete');
       if (isPlayingRef.current) {
         setIsPlaying(false);
         isPlayingRef.current = false;

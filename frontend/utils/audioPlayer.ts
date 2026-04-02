@@ -4,20 +4,7 @@
  */
 
 import { Platform } from 'react-native';
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
-
-// Global audio mode setup
-export const setupAudioMode = async () => {
-  try {
-    await setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: true,
-      interruptionMode: 'doNotMix',
-    });
-  } catch (error) {
-    console.log('Audio mode setup skipped:', error);
-  }
-};
+import { createAudioPlayer } from 'expo-audio';
 
 // Audio player manager class for SDK 55
 export class AudioPlayerManager {
@@ -26,7 +13,8 @@ export class AudioPlayerManager {
   private isLoadedFlag: boolean = false;
   private statusCallback: ((status: { isPlaying: boolean; didJustFinish?: boolean }) => void) | null = null;
   private isWeb: boolean = Platform.OS === 'web';
-  private statusSubscription: any = null;
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
+  private lastPlayingState: boolean = false;
 
   async loadAndPlay(source: string | { uri: string }, options?: {
     loop?: boolean;
@@ -71,37 +59,37 @@ export class AudioPlayerManager {
         console.log('Web audio started playing');
       } else {
         // Native platform - use expo-audio createAudioPlayer
-        console.log('Creating native audio player for URI length:', uri.length);
+        console.log('Creating native audio player');
         
         this.nativePlayer = createAudioPlayer({ uri }, {
-          updateInterval: 500,
+          updateInterval: 250,
         });
         
         // Set volume if provided
-        if (options?.volume !== undefined && this.nativePlayer.volume !== undefined) {
-          this.nativePlayer.volume = options.volume;
+        if (options?.volume !== undefined) {
+          try {
+            this.nativePlayer.volume = options.volume;
+          } catch (e) {
+            console.log('Could not set volume:', e);
+          }
         }
         
         // Set loop if provided
-        if (options?.loop && this.nativePlayer.loop !== undefined) {
-          this.nativePlayer.loop = true;
+        if (options?.loop) {
+          try {
+            this.nativePlayer.loop = true;
+          } catch (e) {
+            console.log('Could not set loop:', e);
+          }
         }
         
-        // Subscribe to status updates
-        if (this.nativePlayer.addListener) {
-          this.statusSubscription = this.nativePlayer.addListener('playbackStatusUpdate', (status: any) => {
-            console.log('Playback status:', status);
-            if (status.didJustFinish && this.statusCallback) {
-              this.statusCallback({ isPlaying: false, didJustFinish: true });
-            }
-          });
-        }
+        // Start polling for playback status changes
+        this.startStatusPolling();
         
         // Play
-        if (this.nativePlayer.play) {
-          this.nativePlayer.play();
-          console.log('Native audio player started');
-        }
+        this.nativePlayer.play();
+        this.lastPlayingState = true;
+        console.log('Native audio player started');
         
         this.isLoadedFlag = true;
       }
@@ -111,11 +99,52 @@ export class AudioPlayerManager {
     }
   }
 
+  private startStatusPolling(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+    }
+    
+    this.pollInterval = setInterval(() => {
+      if (!this.nativePlayer) {
+        this.stopStatusPolling();
+        return;
+      }
+      
+      try {
+        const isPlaying = this.nativePlayer.playing;
+        const currentTime = this.nativePlayer.currentTime;
+        const duration = this.nativePlayer.duration;
+        
+        // Check if playback just finished
+        if (this.lastPlayingState && !isPlaying && duration > 0 && currentTime >= duration - 0.5) {
+          console.log('Audio playback finished');
+          this.stopStatusPolling();
+          if (this.statusCallback) {
+            this.statusCallback({ isPlaying: false, didJustFinish: true });
+          }
+        }
+        
+        this.lastPlayingState = isPlaying;
+      } catch (e) {
+        // Ignore polling errors
+      }
+    }, 250);
+  }
+
+  private stopStatusPolling(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+  }
+
   async play(): Promise<void> {
     if (this.isWeb && this.webAudioElement) {
       await this.webAudioElement.play();
     } else if (this.nativePlayer?.play) {
       this.nativePlayer.play();
+      this.lastPlayingState = true;
+      this.startStatusPolling();
     }
   }
 
@@ -124,30 +153,28 @@ export class AudioPlayerManager {
       this.webAudioElement.pause();
     } else if (this.nativePlayer?.pause) {
       this.nativePlayer.pause();
+      this.lastPlayingState = false;
     }
   }
 
   async stop(): Promise<void> {
+    this.stopStatusPolling();
     if (this.isWeb && this.webAudioElement) {
       this.webAudioElement.pause();
       this.webAudioElement.currentTime = 0;
     } else if (this.nativePlayer) {
-      if (this.nativePlayer.seekTo) {
-        this.nativePlayer.seekTo(0);
-      }
-      if (this.nativePlayer.pause) {
-        this.nativePlayer.pause();
+      try {
+        this.nativePlayer.seekTo?.(0);
+        this.nativePlayer.pause?.();
+      } catch (e) {
+        // Ignore
       }
     }
   }
 
   async unload(): Promise<void> {
+    this.stopStatusPolling();
     try {
-      if (this.statusSubscription?.remove) {
-        this.statusSubscription.remove();
-        this.statusSubscription = null;
-      }
-      
       if (this.webAudioElement) {
         this.webAudioElement.pause();
         this.webAudioElement.src = '';
@@ -155,15 +182,17 @@ export class AudioPlayerManager {
       }
       
       if (this.nativePlayer) {
-        if (this.nativePlayer.remove) {
-          this.nativePlayer.remove();
-        } else if (this.nativePlayer.release) {
-          this.nativePlayer.release();
+        try {
+          this.nativePlayer.pause?.();
+          this.nativePlayer.remove?.();
+        } catch (e) {
+          // Ignore cleanup errors
         }
         this.nativePlayer = null;
       }
       
       this.isLoadedFlag = false;
+      this.statusCallback = null;
     } catch (e) {
       console.log('Audio unload cleanup:', e);
     }
@@ -173,8 +202,12 @@ export class AudioPlayerManager {
     if (this.isWeb && this.webAudioElement) {
       return !this.webAudioElement.paused;
     }
-    if (this.nativePlayer?.playing !== undefined) {
-      return this.nativePlayer.playing;
+    if (this.nativePlayer) {
+      try {
+        return this.nativePlayer.playing ?? false;
+      } catch (e) {
+        return false;
+      }
     }
     return false;
   }
@@ -186,16 +219,24 @@ export class AudioPlayerManager {
   setVolume(volume: number): void {
     if (this.isWeb && this.webAudioElement) {
       this.webAudioElement.volume = volume;
-    } else if (this.nativePlayer && this.nativePlayer.volume !== undefined) {
-      this.nativePlayer.volume = volume;
+    } else if (this.nativePlayer) {
+      try {
+        this.nativePlayer.volume = volume;
+      } catch (e) {
+        // Ignore
+      }
     }
   }
 
   setLoop(loop: boolean): void {
     if (this.isWeb && this.webAudioElement) {
       this.webAudioElement.loop = loop;
-    } else if (this.nativePlayer && this.nativePlayer.loop !== undefined) {
-      this.nativePlayer.loop = loop;
+    } else if (this.nativePlayer) {
+      try {
+        this.nativePlayer.loop = loop;
+      } catch (e) {
+        // Ignore
+      }
     }
   }
 
