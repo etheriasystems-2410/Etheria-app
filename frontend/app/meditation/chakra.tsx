@@ -114,65 +114,50 @@ export default function ChakraMeditation() {
     setIsRealignAll(false);
     setIsGenerating(true);
     setShowSession(true);
-    setLoadingStage('Generating meditation script...');
+    setScript(null);
 
     try {
-      // Generate meditation script
-      console.log('Generating script for chakra:', chakra.id);
-      const scriptResponse = await fetch(
-        `${BACKEND_URL}/api/meditation/chakra/generate-guided/${chakra.id}?duration_minutes=5`,
-        { method: 'POST' }
-      );
-      
-      if (!scriptResponse.ok) {
-        throw new Error('Failed to generate script');
-      }
-      
-      const scriptData = await scriptResponse.json();
-      const meditationScript = scriptData.script;
-      console.log('Script generated, length:', meditationScript?.length);
-      setScript(meditationScript);
-
-      // Load chakra tone
+      // Load chakra tone (5 minutes = 300 seconds)
       setLoadingStage('Loading chakra frequency tone...');
       console.log('Loading tone for chakra:', chakra.id);
       const toneResponse = await fetch(
         `${BACKEND_URL}/api/meditation/chakra/tone/${chakra.id}?duration=300`
       );
       
-      if (toneResponse.ok) {
-        const toneData = await toneResponse.json();
-        if (toneData.audio_base64) {
-          console.log('Tone data received, loading player...');
-          const tonePlayer = new AudioPlayerManager();
-          await tonePlayer.loadAndPlay(
-            `data:audio/wav;base64,${toneData.audio_base64}`,
-            { loop: true, volume: 0.3 }
-          );
-          tonePlayerRef.current = tonePlayer;
-          console.log('Tone player loaded');
-        }
+      if (!toneResponse.ok) {
+        throw new Error('Failed to load chakra tone');
       }
+      
+      const toneData = await toneResponse.json();
+      if (!toneData.audio_base64) {
+        throw new Error('No tone audio data received');
+      }
+      
+      console.log('Tone data received, loading player...');
+      const tonePlayer = new AudioPlayerManager();
+      await tonePlayer.loadAndPlay(
+        `data:audio/wav;base64,${toneData.audio_base64}`,
+        { loop: false, volume: 0.8 }
+      );
+      tonePlayerRef.current = tonePlayer;
+      console.log('Tone player loaded and playing');
 
-      // Set playing state BEFORE setting generating to false
+      // Set playing state
       setIsPlaying(true);
       isPlayingRef.current = true;
-      
-      // Set state before starting voice
       setIsGenerating(false);
       setLoadingStage('');
       
-      // Start voice guidance (don't await - let it run async)
-      if (meditationScript) {
-        console.log('Starting voice guidance with script...');
-        // Use setTimeout to ensure state updates before starting
-        setTimeout(() => {
-          playVoiceGuidance(meditationScript);
-        }, 500);
-      } else {
-        console.log('No script available for voice guidance');
+      // Wait for tone to complete
+      console.log('Waiting for chakra tone to complete...');
+      await tonePlayer.waitForCompletion(360000); // 6 minute max
+      
+      console.log('Chakra tone meditation complete');
+      if (isPlayingRef.current) {
         setIsPlaying(false);
         isPlayingRef.current = false;
+        await stopAllAudio();
+        Alert.alert('Session Complete', 'Your chakra meditation has ended. Take a moment to return to awareness.');
       }
 
     } catch (error) {
@@ -189,64 +174,50 @@ export default function ChakraMeditation() {
     setSelectedChakra(null);
     setIsGenerating(true);
     setShowSession(true);
-    setLoadingStage('Generating full chakra realignment...');
+    setScript(null);
 
     try {
-      // Generate realign all script
-      console.log('Generating realign all script...');
-      const scriptResponse = await fetch(
-        `${BACKEND_URL}/api/meditation/chakra/generate-realign?duration_minutes=10`,
-        { method: 'POST' }
-      );
-      
-      if (!scriptResponse.ok) {
-        throw new Error('Failed to generate realignment script');
-      }
-      
-      const scriptData = await scriptResponse.json();
-      const meditationScript = scriptData.script;
-      console.log('Realign script generated, length:', meditationScript?.length);
-      setScript(meditationScript);
-
-      // Load morphing chakra tone
+      // Load morphing chakra tone (10 minutes = 600 seconds)
       setLoadingStage('Loading chakra frequency progression...');
       console.log('Loading realign tone...');
       const toneResponse = await fetch(
         `${BACKEND_URL}/api/meditation/chakra/realign-tone?duration=600`
       );
       
-      if (toneResponse.ok) {
-        const toneData = await toneResponse.json();
-        if (toneData.audio_base64) {
-          console.log('Realign tone data received, loading player...');
-          const tonePlayer = new AudioPlayerManager();
-          await tonePlayer.loadAndPlay(
-            `data:audio/wav;base64,${toneData.audio_base64}`,
-            { loop: false, volume: 0.3 }
-          );
-          tonePlayerRef.current = tonePlayer;
-          console.log('Realign tone player loaded');
-        }
+      if (!toneResponse.ok) {
+        throw new Error('Failed to load realignment tone');
       }
+      
+      const toneData = await toneResponse.json();
+      if (!toneData.audio_base64) {
+        throw new Error('No tone audio data received');
+      }
+      
+      console.log('Realign tone data received, loading player...');
+      const tonePlayer = new AudioPlayerManager();
+      await tonePlayer.loadAndPlay(
+        `data:audio/wav;base64,${toneData.audio_base64}`,
+        { loop: false, volume: 0.8 }
+      );
+      tonePlayerRef.current = tonePlayer;
+      console.log('Realign tone player loaded and playing');
 
-      // Set playing state BEFORE setting generating to false
+      // Set playing state
       setIsPlaying(true);
       isPlayingRef.current = true;
-      
-      // Set state before starting voice
       setIsGenerating(false);
       setLoadingStage('');
       
-      // Start voice guidance (don't await - let it run async)
-      if (meditationScript) {
-        console.log('Starting realign voice guidance...');
-        setTimeout(() => {
-          playVoiceGuidance(meditationScript);
-        }, 500);
-      } else {
-        console.log('No script available for realign voice guidance');
+      // Wait for tone to complete
+      console.log('Waiting for realign tone to complete...');
+      await tonePlayer.waitForCompletion(660000); // 11 minute max
+      
+      console.log('Realign chakra tone meditation complete');
+      if (isPlayingRef.current) {
         setIsPlaying(false);
         isPlayingRef.current = false;
+        await stopAllAudio();
+        Alert.alert('Session Complete', 'Your chakra realignment meditation has ended. Take a moment to return to awareness.');
       }
 
     } catch (error) {
@@ -488,7 +459,9 @@ export default function ChakraMeditation() {
                   <>
                     <View style={styles.playingIndicator}>
                       <Ionicons name="volume-high" size={20} color="#10b981" />
-                      <Text style={styles.playingText}>Playing - Voice + Tone</Text>
+                      <Text style={styles.playingText}>
+                        {isRealignAll ? 'Playing Chakra Frequency Progression' : `Playing ${selectedChakra?.frequency} Hz Tone`}
+                      </Text>
                     </View>
                     <TouchableOpacity style={styles.stopButton} onPress={stopAllAudio}>
                       <Ionicons name="stop" size={24} color="#fff" />
@@ -496,17 +469,17 @@ export default function ChakraMeditation() {
                     </TouchableOpacity>
                   </>
                 ) : (
-                  <Text style={styles.completeText}>Meditation Complete</Text>
+                  <Text style={styles.completeText}>Session Complete</Text>
                 )}
               </View>
 
-              {/* Script Display */}
-              {script && (
-                <View style={styles.scriptContainer}>
-                  <Text style={styles.scriptTitle}>Meditation Script</Text>
-                  <ScrollView style={styles.scriptScroll} nestedScrollEnabled>
-                    <Text style={styles.scriptText}>{script}</Text>
-                  </ScrollView>
+              {/* Chakra Info */}
+              {selectedChakra && !isRealignAll && (
+                <View style={styles.chakraInfoContainer}>
+                  <Text style={styles.chakraInfoTitle}>{selectedChakra.name}</Text>
+                  <Text style={styles.chakraInfoSanskrit}>{selectedChakra.sanskrit}</Text>
+                  <Text style={styles.chakraInfoLocation}>{selectedChakra.location}</Text>
+                  <Text style={styles.chakraAffirmation}>"{selectedChakra.affirmation}"</Text>
                 </View>
               )}
             </>
@@ -716,25 +689,35 @@ const styles = StyleSheet.create({
     color: '#c4b5fd',
     fontSize: 18,
   },
-  scriptContainer: {
+  chakraInfoContainer: {
     width: '100%',
     backgroundColor: '#1a0033',
     borderRadius: 12,
-    padding: 16,
-    maxHeight: 300,
+    padding: 20,
+    alignItems: 'center',
+    marginTop: 20,
   },
-  scriptTitle: {
+  chakraInfoTitle: {
     color: '#e9d5ff',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  chakraInfoSanskrit: {
+    color: '#a855f7',
     fontSize: 16,
-    fontWeight: '600',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  chakraInfoLocation: {
+    color: '#9f7aea',
+    fontSize: 14,
     marginBottom: 12,
   },
-  scriptScroll: {
-    maxHeight: 250,
-  },
-  scriptText: {
+  chakraAffirmation: {
     color: '#c4b5fd',
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 16,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });
