@@ -346,42 +346,22 @@ export default function ChakraMeditation() {
             console.log('Playing audio segment...');
             const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
             
-            await new Promise<void>((resolve) => {
+            try {
               const player = new AudioPlayerManager();
-              let resolved = false;
+              await player.loadAndPlay(audioUri, { volume: 1.0 });
+              voicePlayerRef.current = player;
+              console.log('Audio loaded and playing, waiting for completion...');
               
-              // Set a timeout in case callback doesn't fire
-              const timeout = setTimeout(() => {
-                if (!resolved) {
-                  console.log('Audio timeout - moving to next segment');
-                  resolved = true;
-                  resolve();
-                }
-              }, 120000); // 2 minute max per segment
+              // Use the new waitForCompletion method which polls for audio end
+              await player.waitForCompletion(180000); // 3 minute max per segment
+              console.log('Audio segment finished');
               
-              player.onPlaybackStatusChange((status) => {
-                if (status.didJustFinish && !resolved) {
-                  console.log('Audio segment finished');
-                  clearTimeout(timeout);
-                  resolved = true;
-                  resolve();
-                }
-              });
-              
-              player.loadAndPlay(audioUri, { volume: 1.0 })
-                .then(() => {
-                  voicePlayerRef.current = player;
-                  console.log('Audio loaded and playing');
-                })
-                .catch((err) => {
-                  console.log('Audio load error:', err);
-                  clearTimeout(timeout);
-                  if (!resolved) {
-                    resolved = true;
-                    resolve();
-                  }
-                });
-            });
+              // Clean up the voice player for next segment
+              await player.unload();
+              voicePlayerRef.current = null;
+            } catch (err) {
+              console.log('Audio playback error:', err);
+            }
             
           } catch (e) {
             console.log('TTS segment error:', e);

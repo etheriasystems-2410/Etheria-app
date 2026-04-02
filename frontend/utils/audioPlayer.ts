@@ -148,6 +148,88 @@ export class AudioPlayerManager {
     }
   }
 
+  /**
+   * Wait for the current audio to finish playing
+   * Returns a Promise that resolves when playback completes
+   * @param maxDuration Maximum time to wait in milliseconds (default 5 minutes)
+   */
+  waitForCompletion(maxDuration: number = 300000): Promise<void> {
+    return new Promise((resolve) => {
+      // If not loaded or not playing, resolve immediately
+      if (!this.isLoadedFlag) {
+        console.log('waitForCompletion: Not loaded, resolving immediately');
+        resolve();
+        return;
+      }
+
+      let resolved = false;
+      const startTime = Date.now();
+
+      // Safety timeout
+      const safetyTimeout = setTimeout(() => {
+        if (!resolved) {
+          console.log('waitForCompletion: Safety timeout reached');
+          resolved = true;
+          resolve();
+        }
+      }, maxDuration);
+
+      // Poll for completion
+      const completionPoll = setInterval(() => {
+        if (resolved) {
+          clearInterval(completionPoll);
+          clearTimeout(safetyTimeout);
+          return;
+        }
+
+        const elapsed = Date.now() - startTime;
+        
+        if (this.isWeb && this.webAudioElement) {
+          // Web: check if ended or paused at end
+          if (this.webAudioElement.ended || 
+              (this.webAudioElement.paused && this.webAudioElement.currentTime >= this.webAudioElement.duration - 0.1)) {
+            console.log('waitForCompletion: Web audio ended');
+            resolved = true;
+            clearInterval(completionPoll);
+            clearTimeout(safetyTimeout);
+            resolve();
+          }
+        } else if (this.nativePlayer) {
+          try {
+            const isPlaying = this.nativePlayer.playing;
+            const currentTime = this.nativePlayer.currentTime || 0;
+            const duration = this.nativePlayer.duration || 0;
+            
+            // Check if finished: not playing AND (near end of duration OR duration is 0 meaning loaded but finished)
+            if (!isPlaying && duration > 0 && currentTime >= duration - 0.5) {
+              console.log(`waitForCompletion: Native audio finished (${currentTime}/${duration})`);
+              resolved = true;
+              clearInterval(completionPoll);
+              clearTimeout(safetyTimeout);
+              resolve();
+            } else if (!isPlaying && elapsed > 2000 && duration === 0) {
+              // If not playing and no duration after 2 seconds, likely an issue
+              console.log('waitForCompletion: Native audio not playing with no duration');
+              resolved = true;
+              clearInterval(completionPoll);
+              clearTimeout(safetyTimeout);
+              resolve();
+            }
+          } catch (e) {
+            console.log('waitForCompletion poll error:', e);
+          }
+        } else {
+          // Player was unloaded
+          console.log('waitForCompletion: Player unloaded');
+          resolved = true;
+          clearInterval(completionPoll);
+          clearTimeout(safetyTimeout);
+          resolve();
+        }
+      }, 300);
+    });
+  }
+
   async pause(): Promise<void> {
     if (this.isWeb && this.webAudioElement) {
       this.webAudioElement.pause();
