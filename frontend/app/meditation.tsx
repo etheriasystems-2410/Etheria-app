@@ -13,6 +13,13 @@ interface MeditationType {
 
 const meditationTypes: MeditationType[] = [
   {
+    title: 'Chakra Meditation',
+    description: 'Heal and realign your energy centers',
+    icon: 'ellipse',
+    color: '#ec4899',
+    route: '/meditation/chakra',
+  },
+  {
     title: 'Binaural Meditation',
     description: 'Brain wave synchronization through sound',
     icon: 'headset',

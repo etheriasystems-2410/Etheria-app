@@ -961,6 +961,312 @@ async def get_binaural_audio_info(frequency_id: str):
         "note": "For production, replace with actual binaural beat audio files"
     }
 
+# ==================== CHAKRA MEDITATION ====================
+
+CHAKRA_DATA = {
+    "root": {
+        "name": "Root Chakra (Muladhara)",
+        "sanskrit": "Muladhara",
+        "frequency": 396,
+        "color": "#dc2626",
+        "location": "Base of spine",
+        "element": "Earth",
+        "benefits": ["Grounding", "Security", "Stability", "Survival instincts"],
+        "affirmation": "I am safe, grounded, and secure."
+    },
+    "sacral": {
+        "name": "Sacral Chakra (Svadhisthana)",
+        "sanskrit": "Svadhisthana", 
+        "frequency": 417,
+        "color": "#ea580c",
+        "location": "Lower abdomen",
+        "element": "Water",
+        "benefits": ["Creativity", "Emotions", "Sexuality", "Pleasure"],
+        "affirmation": "I embrace my creativity and emotions freely."
+    },
+    "solar": {
+        "name": "Solar Plexus Chakra (Manipura)",
+        "sanskrit": "Manipura",
+        "frequency": 528,
+        "color": "#eab308",
+        "location": "Upper abdomen",
+        "element": "Fire",
+        "benefits": ["Personal power", "Confidence", "Willpower", "Self-esteem"],
+        "affirmation": "I am confident, powerful, and in control of my life."
+    },
+    "heart": {
+        "name": "Heart Chakra (Anahata)",
+        "sanskrit": "Anahata",
+        "frequency": 639,
+        "color": "#16a34a",
+        "location": "Center of chest",
+        "element": "Air",
+        "benefits": ["Love", "Compassion", "Forgiveness", "Connection"],
+        "affirmation": "I give and receive love freely and unconditionally."
+    },
+    "throat": {
+        "name": "Throat Chakra (Vishuddha)",
+        "sanskrit": "Vishuddha",
+        "frequency": 741,
+        "color": "#0ea5e9",
+        "location": "Throat",
+        "element": "Ether",
+        "benefits": ["Communication", "Expression", "Truth", "Authenticity"],
+        "affirmation": "I speak my truth with clarity and confidence."
+    },
+    "third-eye": {
+        "name": "Third Eye Chakra (Ajna)",
+        "sanskrit": "Ajna",
+        "frequency": 852,
+        "color": "#6366f1",
+        "location": "Between eyebrows",
+        "element": "Light",
+        "benefits": ["Intuition", "Wisdom", "Insight", "Imagination"],
+        "affirmation": "I trust my intuition and see clearly."
+    },
+    "crown": {
+        "name": "Crown Chakra (Sahasrara)",
+        "sanskrit": "Sahasrara",
+        "frequency": 963,
+        "color": "#9333ea",
+        "location": "Top of head",
+        "element": "Thought",
+        "benefits": ["Spiritual connection", "Enlightenment", "Unity", "Transcendence"],
+        "affirmation": "I am connected to the divine and universal consciousness."
+    }
+}
+
+@api_router.get("/meditation/chakra/list")
+async def get_chakras():
+    """Get all chakra information"""
+    chakras = []
+    for chakra_id, data in CHAKRA_DATA.items():
+        chakras.append({
+            "id": chakra_id,
+            **data
+        })
+    return chakras
+
+@api_router.get("/meditation/chakra/tone/{chakra_id}")
+async def generate_chakra_tone(chakra_id: str, duration: int = 60):
+    """Generate a pure chakra frequency tone"""
+    import numpy as np
+    from scipy.io import wavfile
+    
+    if chakra_id not in CHAKRA_DATA:
+        raise HTTPException(status_code=404, detail="Chakra not found")
+    
+    chakra = CHAKRA_DATA[chakra_id]
+    frequency = chakra["frequency"]
+    
+    sample_rate = 44100
+    duration_seconds = min(duration, 300)
+    num_samples = int(sample_rate * duration_seconds)
+    
+    t = np.linspace(0, duration_seconds, num_samples, dtype=np.float32)
+    
+    # Generate main frequency with harmonics for richer sound
+    audio = np.sin(2 * np.pi * frequency * t) * 0.5
+    audio += np.sin(2 * np.pi * frequency * 2 * t) * 0.15  # 2nd harmonic
+    audio += np.sin(2 * np.pi * frequency * 3 * t) * 0.08  # 3rd harmonic
+    
+    # Add gentle amplitude modulation for warmth
+    mod = 1 + 0.1 * np.sin(2 * np.pi * 0.2 * t)
+    audio = audio * mod
+    
+    # Fade in/out
+    fade_samples = int(sample_rate * 2)
+    fade_in = np.linspace(0, 1, fade_samples, dtype=np.float32)
+    fade_out = np.linspace(1, 0, fade_samples, dtype=np.float32)
+    audio[:fade_samples] *= fade_in
+    audio[-fade_samples:] *= fade_out
+    
+    # Normalize and convert
+    audio = audio / np.max(np.abs(audio)) * 0.7
+    audio_int16 = (audio * 32767).astype(np.int16)
+    
+    buffer = io.BytesIO()
+    wavfile.write(buffer, sample_rate, audio_int16)
+    buffer.seek(0)
+    
+    audio_base64 = base64.b64encode(buffer.read()).decode()
+    
+    return {
+        "chakra_id": chakra_id,
+        "chakra_name": chakra["name"],
+        "frequency": frequency,
+        "duration_seconds": duration_seconds,
+        "audio_base64": audio_base64,
+        "format": "wav"
+    }
+
+@api_router.get("/meditation/chakra/realign-tone")
+async def generate_realign_all_tone(duration: int = 300):
+    """Generate a morphing tone that transitions through all chakras"""
+    import numpy as np
+    from scipy.io import wavfile
+    
+    sample_rate = 44100
+    duration_seconds = min(duration, 600)  # Max 10 minutes
+    num_samples = int(sample_rate * duration_seconds)
+    
+    # Chakra order from root to crown
+    chakra_order = ["root", "sacral", "solar", "heart", "throat", "third-eye", "crown"]
+    frequencies = [CHAKRA_DATA[c]["frequency"] for c in chakra_order]
+    
+    # Time spent on each chakra
+    time_per_chakra = duration_seconds / len(chakra_order)
+    
+    t = np.linspace(0, duration_seconds, num_samples, dtype=np.float32)
+    audio = np.zeros(num_samples, dtype=np.float32)
+    
+    for i, freq in enumerate(frequencies):
+        start_time = i * time_per_chakra
+        end_time = (i + 1) * time_per_chakra
+        
+        # Create smooth transition envelope
+        for j in range(num_samples):
+            current_time = j / sample_rate
+            if start_time <= current_time < end_time:
+                # Calculate position within this chakra's segment
+                progress = (current_time - start_time) / time_per_chakra
+                
+                # Smooth fade in/out within each chakra segment
+                if progress < 0.1:
+                    envelope = progress / 0.1
+                elif progress > 0.9:
+                    envelope = (1 - progress) / 0.1
+                else:
+                    envelope = 1.0
+                
+                # Add frequency with harmonics
+                audio[j] += envelope * 0.5 * np.sin(2 * np.pi * freq * current_time)
+                audio[j] += envelope * 0.15 * np.sin(2 * np.pi * freq * 2 * current_time)
+    
+    # Global fade in/out
+    fade_samples = int(sample_rate * 3)
+    audio[:fade_samples] *= np.linspace(0, 1, fade_samples, dtype=np.float32)
+    audio[-fade_samples:] *= np.linspace(1, 0, fade_samples, dtype=np.float32)
+    
+    # Normalize
+    audio = audio / np.max(np.abs(audio)) * 0.7
+    audio_int16 = (audio * 32767).astype(np.int16)
+    
+    buffer = io.BytesIO()
+    wavfile.write(buffer, sample_rate, audio_int16)
+    buffer.seek(0)
+    
+    audio_base64 = base64.b64encode(buffer.read()).decode()
+    
+    return {
+        "type": "realign_all",
+        "duration_seconds": duration_seconds,
+        "chakra_order": chakra_order,
+        "audio_base64": audio_base64,
+        "format": "wav"
+    }
+
+@api_router.post("/meditation/chakra/generate-guided/{chakra_id}")
+async def generate_chakra_meditation(chakra_id: str, duration_minutes: int = 5):
+    """Generate a guided meditation script for a specific chakra"""
+    if chakra_id not in CHAKRA_DATA:
+        raise HTTPException(status_code=404, detail="Chakra not found")
+    
+    chakra = CHAKRA_DATA[chakra_id]
+    
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"chakra-{uuid.uuid4()}",
+            system_message=f"""You are a chakra healing meditation guide. Create a {duration_minutes}-minute guided meditation for the {chakra['name']}.
+
+IMPORTANT FORMATTING RULES:
+1. Include pauses using EXACTLY this format: [pause for X seconds] where X is between 3 and 10
+2. Focus on the {chakra['location']} area and the color {chakra['color']}
+3. Include the affirmation: "{chakra['affirmation']}"
+4. Reference the {chakra['element']} element
+5. Include visualization of the chakra's color energy
+6. Keep language calm, soothing, and spiritually uplifting"""
+        ).with_model("gemini", "gemini-2.5-pro")
+        
+        prompt = f"""Create a complete {duration_minutes}-minute chakra meditation for the {chakra['name']} located at the {chakra['location']}.
+
+Include:
+1. Opening and settling (with pauses)
+2. Breathing to connect with the chakra
+3. Color visualization ({chakra['color']} energy)
+4. Element connection ({chakra['element']})
+5. Affirmation work: "{chakra['affirmation']}"
+6. Benefits focus: {', '.join(chakra['benefits'])}
+7. Gentle closing
+
+Use [pause for X seconds] format for all pauses."""
+        
+        user_message = UserMessage(text=prompt)
+        script = await chat.send_message(user_message)
+        
+        return {
+            "chakra_id": chakra_id,
+            "chakra_name": chakra["name"],
+            "script": script,
+            "duration_minutes": duration_minutes,
+            "frequency": chakra["frequency"]
+        }
+    except Exception as e:
+        logging.error(f"Error generating chakra meditation: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate meditation")
+
+@api_router.post("/meditation/chakra/generate-realign")
+async def generate_realign_all_meditation(duration_minutes: int = 15):
+    """Generate a guided meditation that works through all chakras"""
+    chakra_order = ["root", "sacral", "solar", "heart", "throat", "third-eye", "crown"]
+    chakra_info = [f"- {CHAKRA_DATA[c]['name']} ({CHAKRA_DATA[c]['location']}): {CHAKRA_DATA[c]['affirmation']}" for c in chakra_order]
+    
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"chakra-realign-{uuid.uuid4()}",
+            system_message=f"""You are a chakra healing meditation guide. Create a {duration_minutes}-minute full chakra realignment meditation that moves through all seven chakras from root to crown.
+
+IMPORTANT FORMATTING RULES:
+1. Include pauses using EXACTLY this format: [pause for X seconds] where X is between 3 and 15
+2. Spend roughly equal time on each chakra
+3. Include smooth transitions between chakras
+4. Use color visualization for each chakra
+5. Include each chakra's affirmation
+6. The tone will automatically shift to match each chakra, so mention when moving to next chakra"""
+        ).with_model("gemini", "gemini-2.5-pro")
+        
+        prompt = f"""Create a complete {duration_minutes}-minute chakra realignment meditation that moves through all seven chakras:
+
+{chr(10).join(chakra_info)}
+
+Structure:
+1. Opening and grounding
+2. Root Chakra (red) - grounding and security
+3. Sacral Chakra (orange) - creativity and emotions  
+4. Solar Plexus Chakra (yellow) - personal power
+5. Heart Chakra (green) - love and compassion
+6. Throat Chakra (blue) - communication and truth
+7. Third Eye Chakra (indigo) - intuition and wisdom
+8. Crown Chakra (violet) - spiritual connection
+9. Integration and closing
+
+Use [pause for X seconds] for breathing and integration moments."""
+        
+        user_message = UserMessage(text=prompt)
+        script = await chat.send_message(user_message)
+        
+        return {
+            "type": "realign_all",
+            "script": script,
+            "duration_minutes": duration_minutes,
+            "chakra_order": chakra_order
+        }
+    except Exception as e:
+        logging.error(f"Error generating realign meditation: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate meditation")
+
 @api_router.get("/meditation/ambient/generate/{sound_id}")
 async def generate_ambient_sound(sound_id: str, duration: int = 60):
     """Generate ambient sound audio (synthesized)"""

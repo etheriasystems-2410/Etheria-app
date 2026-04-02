@@ -1,0 +1,647 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Modal,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
+import { AudioPlayerManager } from '../../utils/audioPlayer';
+
+const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
+                    process.env.EXPO_PUBLIC_BACKEND_URL || '';
+
+interface Chakra {
+  id: string;
+  name: string;
+  sanskrit: string;
+  frequency: number;
+  color: string;
+  location: string;
+  element: string;
+  benefits: string[];
+  affirmation: string;
+}
+
+export default function ChakraMeditation() {
+  const router = useRouter();
+  const [chakras, setChakras] = useState<Chakra[]>([]);
+  const [selectedChakra, setSelectedChakra] = useState<Chakra | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [script, setScript] = useState<string | null>(null);
+  const [showSession, setShowSession] = useState(false);
+  const [loadingStage, setLoadingStage] = useState('');
+  const [isRealignAll, setIsRealignAll] = useState(false);
+  
+  const tonePlayerRef = useRef<AudioPlayerManager | null>(null);
+  const voicePlayerRef = useRef<AudioPlayerManager | null>(null);
+
+  useEffect(() => {
+    fetchChakras();
+    return () => {
+      stopAllAudio();
+    };
+  }, []);
+
+  const fetchChakras = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/meditation/chakra/list`);
+      const data = await response.json();
+      setChakras(data);
+    } catch (error) {
+      console.error('Error fetching chakras:', error);
+      Alert.alert('Error', 'Failed to load chakra data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const stopAllAudio = async () => {
+    if (tonePlayerRef.current) {
+      await tonePlayerRef.current.unload();
+      tonePlayerRef.current = null;
+    }
+    if (voicePlayerRef.current) {
+      await voicePlayerRef.current.unload();
+      voicePlayerRef.current = null;
+    }
+    setIsPlaying(false);
+  };
+
+  const handleBack = async () => {
+    await stopAllAudio();
+    if (showSession) {
+      setShowSession(false);
+      setScript(null);
+      setIsRealignAll(false);
+    } else {
+      router.back();
+    }
+  };
+
+  const startSingleChakraMeditation = async (chakra: Chakra) => {
+    setSelectedChakra(chakra);
+    setIsRealignAll(false);
+    setIsGenerating(true);
+    setShowSession(true);
+    setLoadingStage('Generating meditation script...');
+
+    try {
+      // Generate meditation script
+      const scriptResponse = await fetch(
+        `${BACKEND_URL}/api/meditation/chakra/generate-guided/${chakra.id}?duration_minutes=5`,
+        { method: 'POST' }
+      );
+      const scriptData = await scriptResponse.json();
+      setScript(scriptData.script);
+
+      // Load chakra tone
+      setLoadingStage('Loading chakra frequency tone...');
+      const toneResponse = await fetch(
+        `${BACKEND_URL}/api/meditation/chakra/tone/${chakra.id}?duration=300`
+      );
+      const toneData = await toneResponse.json();
+
+      if (toneData.audio_base64) {
+        const tonePlayer = new AudioPlayerManager();
+        await tonePlayer.loadAndPlay(
+          `data:audio/wav;base64,${toneData.audio_base64}`,
+          { loop: true, volume: 0.3 }
+        );
+        tonePlayerRef.current = tonePlayer;
+      }
+
+      // Generate and play voice guidance
+      setLoadingStage('Generating voice guidance...');
+      await playVoiceGuidance(scriptData.script);
+
+    } catch (error) {
+      console.error('Error starting meditation:', error);
+      Alert.alert('Error', 'Failed to start meditation');
+      setShowSession(false);
+    } finally {
+      setIsGenerating(false);
+      setLoadingStage('');
+    }
+  };
+
+  const startRealignAllMeditation = async () => {
+    setIsRealignAll(true);
+    setSelectedChakra(null);
+    setIsGenerating(true);
+    setShowSession(true);
+    setLoadingStage('Generating full chakra realignment...');
+
+    try {
+      // Generate realign all script
+      const scriptResponse = await fetch(
+        `${BACKEND_URL}/api/meditation/chakra/generate-realign?duration_minutes=10`,
+        { method: 'POST' }
+      );
+      const scriptData = await scriptResponse.json();
+      setScript(scriptData.script);
+
+      // Load morphing chakra tone
+      setLoadingStage('Loading chakra frequency progression...');
+      const toneResponse = await fetch(
+        `${BACKEND_URL}/api/meditation/chakra/realign-tone?duration=600`
+      );
+      const toneData = await toneResponse.json();
+
+      if (toneData.audio_base64) {
+        const tonePlayer = new AudioPlayerManager();
+        await tonePlayer.loadAndPlay(
+          `data:audio/wav;base64,${toneData.audio_base64}`,
+          { loop: false, volume: 0.3 }
+        );
+        tonePlayerRef.current = tonePlayer;
+      }
+
+      // Generate and play voice guidance
+      setLoadingStage('Generating voice guidance...');
+      await playVoiceGuidance(scriptData.script);
+
+    } catch (error) {
+      console.error('Error starting realign meditation:', error);
+      Alert.alert('Error', 'Failed to start meditation');
+      setShowSession(false);
+    } finally {
+      setIsGenerating(false);
+      setLoadingStage('');
+    }
+  };
+
+  const playVoiceGuidance = async (fullScript: string) => {
+    try {
+      setIsPlaying(true);
+      
+      // Parse script for pauses
+      const pauseRegex = /\[pause(?:\s+for)?\s+(\d+)\s*(?:seconds?|secs?|s)?\s*\]|\[PAUSE\s+(\d+)\s*(?:seconds?|secs?|s)?\s*\]/gi;
+      const segments: Array<{type: 'text' | 'pause', content: string, duration?: number}> = [];
+      
+      let lastIndex = 0;
+      let match;
+      
+      while ((match = pauseRegex.exec(fullScript)) !== null) {
+        if (match.index > lastIndex) {
+          const textBefore = fullScript.slice(lastIndex, match.index).trim();
+          if (textBefore) {
+            segments.push({ type: 'text', content: textBefore });
+          }
+        }
+        const duration = parseInt(match[1] || match[2] || '5', 10);
+        segments.push({ type: 'pause', content: match[0], duration: Math.min(duration, 30) });
+        lastIndex = match.index + match[0].length;
+      }
+      
+      if (lastIndex < fullScript.length) {
+        const remaining = fullScript.slice(lastIndex).trim();
+        if (remaining) {
+          segments.push({ type: 'text', content: remaining });
+        }
+      }
+      
+      if (segments.length === 0) {
+        segments.push({ type: 'text', content: fullScript });
+      }
+
+      // Play each segment
+      for (const segment of segments) {
+        if (!isPlaying) break;
+        
+        if (segment.type === 'pause') {
+          await new Promise(resolve => setTimeout(resolve, (segment.duration || 5) * 1000));
+        } else if (segment.type === 'text' && segment.content.trim()) {
+          // Generate TTS for this segment
+          const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: segment.content,
+              voice: 'nova',
+            }),
+          });
+          
+          if (!response.ok) continue;
+          
+          const data = await response.json();
+          if (!data.audio_base64) continue;
+          
+          // Play voice segment
+          await new Promise<void>((resolve) => {
+            const player = new AudioPlayerManager();
+            player.onPlaybackStatusChange((status) => {
+              if (status.didJustFinish) {
+                resolve();
+              }
+            });
+            player.loadAndPlay(
+              `data:audio/mp3;base64,${data.audio_base64}`,
+              { volume: 1.0 }
+            ).catch(() => resolve());
+            voicePlayerRef.current = player;
+          });
+        }
+      }
+
+      // Meditation complete
+      setIsPlaying(false);
+      await stopAllAudio();
+      Alert.alert('Session Complete', 'Your chakra meditation has ended. Take a moment to return to awareness.');
+
+    } catch (error) {
+      console.error('Error in voice guidance:', error);
+      setIsPlaying(false);
+    }
+  };
+
+  const renderChakraCard = (chakra: Chakra) => (
+    <TouchableOpacity
+      key={chakra.id}
+      style={[styles.chakraCard, { borderLeftColor: chakra.color }]}
+      onPress={() => startSingleChakraMeditation(chakra)}
+    >
+      <View style={[styles.chakraColorDot, { backgroundColor: chakra.color }]} />
+      <View style={styles.chakraInfo}>
+        <Text style={styles.chakraName}>{chakra.name}</Text>
+        <Text style={styles.chakraLocation}>{chakra.location}</Text>
+        <Text style={styles.chakraFrequency}>{chakra.frequency} Hz</Text>
+      </View>
+      <Ionicons name="play-circle" size={32} color={chakra.color} />
+    </TouchableOpacity>
+  );
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#a855f7" />
+        <Text style={styles.loadingText}>Loading chakras...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {showSession ? (isRealignAll ? 'Chakra Realignment' : selectedChakra?.name) : 'Chakra Meditation'}
+        </Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      {!showSession ? (
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* Realign All Card */}
+          <TouchableOpacity
+            style={styles.realignCard}
+            onPress={startRealignAllMeditation}
+          >
+            <View style={styles.realignGradient}>
+              <View style={styles.chakraRainbow}>
+                {chakras.map((c, i) => (
+                  <View key={c.id} style={[styles.rainbowDot, { backgroundColor: c.color }]} />
+                ))}
+              </View>
+              <Text style={styles.realignTitle}>Realign All Chakras</Text>
+              <Text style={styles.realignSubtitle}>
+                Full journey from Root to Crown with morphing frequencies
+              </Text>
+              <View style={styles.realignButton}>
+                <Ionicons name="infinite" size={24} color="#fff" />
+                <Text style={styles.realignButtonText}>Begin Journey</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <Text style={styles.sectionTitle}>Individual Chakras</Text>
+          <Text style={styles.sectionSubtitle}>
+            Select a chakra to focus on with its specific healing frequency
+          </Text>
+
+          {chakras.map(renderChakraCard)}
+        </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={styles.sessionContent}>
+          {isGenerating ? (
+            <View style={styles.generatingContainer}>
+              <ActivityIndicator size="large" color="#a855f7" />
+              <Text style={styles.generatingText}>{loadingStage}</Text>
+              <View style={styles.progressDots}>
+                {[1, 2, 3].map(i => (
+                  <View key={i} style={[styles.dot, isGenerating && styles.dotActive]} />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <>
+              {/* Chakra Visualization */}
+              <View style={styles.visualization}>
+                {isRealignAll ? (
+                  <View style={styles.allChakrasVis}>
+                    {chakras.map((c, i) => (
+                      <View
+                        key={c.id}
+                        style={[
+                          styles.chakraOrb,
+                          { backgroundColor: c.color, opacity: 0.8 + i * 0.03 }
+                        ]}
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.singleChakraOrb,
+                      { backgroundColor: selectedChakra?.color, shadowColor: selectedChakra?.color }
+                    ]}
+                  >
+                    <Text style={styles.orbFrequency}>{selectedChakra?.frequency} Hz</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Status */}
+              <View style={styles.statusContainer}>
+                {isPlaying ? (
+                  <>
+                    <View style={styles.playingIndicator}>
+                      <Ionicons name="volume-high" size={20} color="#10b981" />
+                      <Text style={styles.playingText}>Playing - Voice + Tone</Text>
+                    </View>
+                    <TouchableOpacity style={styles.stopButton} onPress={stopAllAudio}>
+                      <Ionicons name="stop" size={24} color="#fff" />
+                      <Text style={styles.stopText}>Stop</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={styles.completeText}>Meditation Complete</Text>
+                )}
+              </View>
+
+              {/* Script Display */}
+              {script && (
+                <View style={styles.scriptContainer}>
+                  <Text style={styles.scriptTitle}>Meditation Script</Text>
+                  <ScrollView style={styles.scriptScroll} nestedScrollEnabled>
+                    <Text style={styles.scriptText}>{script}</Text>
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0f0321',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#0f0321',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#c4b5fd',
+    marginTop: 16,
+    fontSize: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#1a0033',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2d1b4e',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#e9d5ff',
+  },
+  content: {
+    padding: 16,
+  },
+  realignCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 24,
+  },
+  realignGradient: {
+    padding: 24,
+    backgroundColor: '#1a0033',
+    borderWidth: 2,
+    borderColor: '#7c3aed',
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  chakraRainbow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  rainbowDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  realignTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  realignSubtitle: {
+    fontSize: 14,
+    color: '#c4b5fd',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  realignButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7c3aed',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    gap: 8,
+  },
+  realignButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#e9d5ff',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#9f7aea',
+    marginBottom: 16,
+  },
+  chakraCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a0033',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+  },
+  chakraColorDot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  chakraInfo: {
+    flex: 1,
+  },
+  chakraName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e9d5ff',
+  },
+  chakraLocation: {
+    fontSize: 13,
+    color: '#9f7aea',
+    marginTop: 2,
+  },
+  chakraFrequency: {
+    fontSize: 12,
+    color: '#c4b5fd',
+    marginTop: 2,
+  },
+  sessionContent: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  generatingContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  generatingText: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  progressDots: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 20,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#2d1b4e',
+  },
+  dotActive: {
+    backgroundColor: '#a855f7',
+  },
+  visualization: {
+    alignItems: 'center',
+    marginVertical: 30,
+  },
+  allChakrasVis: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  chakraOrb: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  singleChakraOrb: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 30,
+    elevation: 10,
+  },
+  orbFrequency: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  statusContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  playingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  playingText: {
+    color: '#10b981',
+    fontSize: 16,
+  },
+  stopButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dc2626',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    gap: 8,
+  },
+  stopText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  completeText: {
+    color: '#c4b5fd',
+    fontSize: 18,
+  },
+  scriptContainer: {
+    width: '100%',
+    backgroundColor: '#1a0033',
+    borderRadius: 12,
+    padding: 16,
+    maxHeight: 300,
+  },
+  scriptTitle: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  scriptScroll: {
+    maxHeight: 250,
+  },
+  scriptText: {
+    color: '#c4b5fd',
+    fontSize: 14,
+    lineHeight: 22,
+  },
+});
