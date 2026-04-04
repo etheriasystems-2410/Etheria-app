@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,13 +16,26 @@ interface Module {
   free: boolean;
 }
 
+interface Lesson {
+  id: number;
+  title: string;
+  content: string;
+}
+
 export default function Training() {
   const { isPremium } = useAuth();
   const [modules, setModules] = useState<Module[]>([]);
-  const [completedModules, setCompletedModules] = useState<string[]>([]);
+  const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
+  
+  // Lesson viewing state
+  const [showLessons, setShowLessons] = useState(false);
+  const [currentModule, setCurrentModule] = useState<Module | null>(null);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
+  const [loadingLessons, setLoadingLessons] = useState(false);
 
   useEffect(() => {
     loadTrainingData();
@@ -43,29 +56,77 @@ export default function Training() {
 
   const loadProgress = async () => {
     try {
-      const progress = await AsyncStorage.getItem('training_progress');
+      const progress = await AsyncStorage.getItem('completed_lessons');
       if (progress) {
-        setCompletedModules(JSON.parse(progress));
+        setCompletedLessons(JSON.parse(progress));
       }
     } catch (error) {
       console.error('Error loading progress:', error);
     }
   };
 
-  const handleModulePress = (module: Module) => {
-    // Check if user can access this module
-    if (module.free || isPremium) {
-      // Allow access - in future this would navigate to module details
-      Alert.alert(
-        module.title,
-        `Starting ${module.lessons} lessons on ${module.title}`,
-        [{ text: 'Begin', style: 'default' }]
-      );
-    } else {
-      // Show paywall
+  const saveProgress = async (lessonKey: string) => {
+    try {
+      const updated = [...completedLessons, lessonKey];
+      setCompletedLessons(updated);
+      await AsyncStorage.setItem('completed_lessons', JSON.stringify(updated));
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    }
+  };
+
+  const handleModulePress = async (module: Module) => {
+    if (!module.free && !isPremium) {
       setSelectedModule(module);
       setShowPaywall(true);
+      return;
     }
+
+    // Load lessons for this module
+    setCurrentModule(module);
+    setLoadingLessons(true);
+    setShowLessons(true);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/training/modules/${module.id}/lessons`);
+      const data = await response.json();
+      setLessons(data.lessons || []);
+    } catch (error) {
+      console.error('Error loading lessons:', error);
+      setLessons([]);
+    } finally {
+      setLoadingLessons(false);
+    }
+  };
+
+  const handleLessonPress = (lesson: Lesson) => {
+    setCurrentLesson(lesson);
+  };
+
+  const markLessonComplete = () => {
+    if (currentModule && currentLesson) {
+      const lessonKey = `${currentModule.id}-${currentLesson.id}`;
+      if (!completedLessons.includes(lessonKey)) {
+        saveProgress(lessonKey);
+      }
+      
+      // Go to next lesson if available
+      const currentIndex = lessons.findIndex(l => l.id === currentLesson.id);
+      if (currentIndex < lessons.length - 1) {
+        setCurrentLesson(lessons[currentIndex + 1]);
+      } else {
+        setCurrentLesson(null);
+      }
+    }
+  };
+
+  const isLessonCompleted = (moduleId: string, lessonId: number) => {
+    return completedLessons.includes(`${moduleId}-${lessonId}`);
+  };
+
+  const getModuleProgress = (module: Module) => {
+    const completed = lessons.filter(l => isLessonCompleted(module.id, l.id)).length;
+    return { completed, total: module.lessons };
   };
 
   const getCategoryColor = (category: string) => {
@@ -81,169 +142,231 @@ export default function Training() {
     }
   };
 
-  // Count free vs premium modules
-  const freeModules = modules.filter(m => m.free);
-  const premiumModules = modules.filter(m => !m.free);
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'beginner':
+        return 'leaf';
+      case 'intermediate':
+        return 'flame';
+      case 'advanced':
+        return 'star';
+      default:
+        return 'school';
+    }
+  };
+
+  const renderModuleCard = (module: Module) => {
+    const isLocked = !module.free && !isPremium;
+    const categoryColor = getCategoryColor(module.category);
+
+    return (
+      <TouchableOpacity
+        key={module.id}
+        style={[styles.moduleCard, isLocked && styles.lockedCard]}
+        onPress={() => handleModulePress(module)}
+        activeOpacity={0.8}
+      >
+        <View style={[styles.categoryBadge, { backgroundColor: categoryColor }]}>
+          <Ionicons name={getCategoryIcon(module.category) as any} size={14} color="#fff" />
+          <Text style={styles.categoryText}>{module.category}</Text>
+        </View>
+
+        <Text style={styles.moduleTitle}>{module.title}</Text>
+        <Text style={styles.moduleDescription}>{module.description}</Text>
+
+        <View style={styles.moduleFooter}>
+          <View style={styles.lessonCount}>
+            <Ionicons name="book-outline" size={16} color="#9f7aea" />
+            <Text style={styles.lessonCountText}>{module.lessons} lessons</Text>
+          </View>
+
+          {isLocked ? (
+            <View style={styles.lockBadge}>
+              <Ionicons name="lock-closed" size={14} color="#fbbf24" />
+              <Text style={styles.lockText}>Premium</Text>
+            </View>
+          ) : (
+            <View style={styles.freeBadge}>
+              <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+              <Text style={styles.freeText}>{module.free ? 'Free' : 'Unlocked'}</Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Lesson List View
+  const renderLessonList = () => (
+    <Modal
+      visible={showLessons && !currentLesson}
+      animationType="slide"
+      onRequestClose={() => setShowLessons(false)}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setShowLessons(false)} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {currentModule?.title || 'Lessons'}
+          </Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        {loadingLessons ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#a855f7" />
+            <Text style={styles.loadingText}>Loading lessons...</Text>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={styles.lessonListContent}>
+            <Text style={styles.moduleDescHeader}>{currentModule?.description}</Text>
+            
+            {lessons.map((lesson, index) => {
+              const completed = currentModule ? isLessonCompleted(currentModule.id, lesson.id) : false;
+              return (
+                <TouchableOpacity
+                  key={lesson.id}
+                  style={[styles.lessonCard, completed && styles.lessonCompleted]}
+                  onPress={() => handleLessonPress(lesson)}
+                >
+                  <View style={[styles.lessonNumber, completed && styles.lessonNumberCompleted]}>
+                    {completed ? (
+                      <Ionicons name="checkmark" size={18} color="#10b981" />
+                    ) : (
+                      <Text style={styles.lessonNumberText}>{index + 1}</Text>
+                    )}
+                  </View>
+                  <View style={styles.lessonInfo}>
+                    <Text style={styles.lessonTitle}>{lesson.title}</Text>
+                    <Text style={styles.lessonStatus}>
+                      {completed ? 'Completed' : 'Tap to start'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
+    </Modal>
+  );
+
+  // Lesson Content View
+  const renderLessonContent = () => (
+    <Modal
+      visible={!!currentLesson}
+      animationType="slide"
+      onRequestClose={() => setCurrentLesson(null)}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setCurrentLesson(null)} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Lesson {currentLesson?.id}
+          </Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.lessonContentContainer}>
+          <Text style={styles.lessonContentTitle}>{currentLesson?.title}</Text>
+          
+          <View style={styles.lessonContentBox}>
+            <Text style={styles.lessonContentText}>
+              {currentLesson?.content}
+            </Text>
+          </View>
+        </ScrollView>
+
+        <View style={styles.lessonFooter}>
+          <TouchableOpacity
+            style={styles.completeButton}
+            onPress={markLessonComplete}
+          >
+            <Ionicons name="checkmark-circle" size={20} color="#0f0321" />
+            <Text style={styles.completeButtonText}>
+              {lessons.findIndex(l => l.id === currentLesson?.id) < lessons.length - 1
+                ? 'Complete & Next'
+                : 'Complete Lesson'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#b794f6" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#a855f7" />
+        <Text style={styles.loadingText}>Loading training modules...</Text>
       </View>
     );
   }
 
+  const beginnerModules = modules.filter(m => m.category === 'beginner');
+  const intermediateModules = modules.filter(m => m.category === 'intermediate');
+  const advancedModules = modules.filter(m => m.category === 'advanced');
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Psychic Training Programs</Text>
-        <Text style={styles.headerSubtitle}>Develop your abilities step by step</Text>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{completedModules.length}</Text>
-          <Text style={styles.statLabel}>Completed</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{modules.length}</Text>
-          <Text style={styles.statLabel}>Total Modules</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>
-            {modules.length > 0 ? Math.round((completedModules.length / modules.length) * 100) : 0}%
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.introSection}>
+          <Text style={styles.introTitle}>Psychic Training</Text>
+          <Text style={styles.introText}>
+            Develop your psychic abilities through structured lessons and guided exercises.
           </Text>
-          <Text style={styles.statLabel}>Progress</Text>
         </View>
-      </View>
 
-      {/* Free Modules Section */}
-      <View style={styles.sectionHeader}>
-        <View style={styles.sectionTitleRow}>
-          <Ionicons name="gift" size={20} color="#10b981" />
-          <Text style={styles.sectionTitle}>Free Modules</Text>
-        </View>
-        <Text style={styles.sectionSubtitle}>Start your journey here</Text>
-      </View>
-
-      <View style={styles.modulesContainer}>
-        {freeModules.map((module) => {
-          const isCompleted = completedModules.includes(module.id);
-          return (
-            <TouchableOpacity 
-              key={module.id} 
-              style={styles.moduleCard} 
-              activeOpacity={0.7}
-              onPress={() => handleModulePress(module)}
-            >
-              <View style={styles.moduleHeader}>
-                <View style={styles.badgeRow}>
-                  <View
-                    style={[
-                      styles.categoryBadge,
-                      { backgroundColor: getCategoryColor(module.category) },
-                    ]}
-                  >
-                    <Text style={styles.categoryText}>{module.category}</Text>
-                  </View>
-                  <View style={styles.freeBadge}>
-                    <Text style={styles.freeBadgeText}>FREE</Text>
-                  </View>
-                </View>
-                {isCompleted && <Ionicons name="checkmark-circle" size={24} color="#10b981" />}
-              </View>
-              <Text style={styles.moduleTitle}>{module.title}</Text>
-              <Text style={styles.moduleDescription}>{module.description}</Text>
-              <View style={styles.moduleFooter}>
-                <View style={styles.lessonInfo}>
-                  <Ionicons name="book-outline" size={16} color="#c4b5fd" />
-                  <Text style={styles.lessonCount}>{module.lessons} lessons</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#b794f6" />
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Premium Modules Section */}
-      <View style={styles.sectionHeader}>
-        <View style={styles.sectionTitleRow}>
-          <Ionicons name="diamond" size={20} color="#ffd700" />
-          <Text style={styles.sectionTitle}>Premium Modules</Text>
-          {!isPremium && (
-            <View style={styles.premiumRequiredBadge}>
-              <Ionicons name="lock-closed" size={12} color="#ffd700" />
-              <Text style={styles.premiumRequiredText}>Premium</Text>
+        {/* Beginner Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIcon, { backgroundColor: '#10b981' }]}>
+              <Ionicons name="leaf" size={20} color="#fff" />
             </View>
-          )}
+            <Text style={styles.sectionTitle}>Beginner</Text>
+          </View>
+          {beginnerModules.map(renderModuleCard)}
         </View>
-        <Text style={styles.sectionSubtitle}>
-          {isPremium ? 'Advanced training unlocked' : 'Unlock with subscription'}
-        </Text>
-      </View>
 
-      <View style={styles.modulesContainer}>
-        {premiumModules.map((module) => {
-          const isCompleted = completedModules.includes(module.id);
-          const isLocked = !isPremium;
-          
-          return (
-            <TouchableOpacity 
-              key={module.id} 
-              style={[styles.moduleCard, isLocked && styles.lockedModuleCard]} 
-              activeOpacity={0.7}
-              onPress={() => handleModulePress(module)}
-            >
-              <View style={styles.moduleHeader}>
-                <View style={styles.badgeRow}>
-                  <View
-                    style={[
-                      styles.categoryBadge,
-                      { backgroundColor: getCategoryColor(module.category) },
-                    ]}
-                  >
-                    <Text style={styles.categoryText}>{module.category}</Text>
-                  </View>
-                  {isLocked && (
-                    <View style={styles.lockedBadge}>
-                      <Ionicons name="lock-closed" size={12} color="#ffd700" />
-                    </View>
-                  )}
-                </View>
-                {isCompleted && <Ionicons name="checkmark-circle" size={24} color="#10b981" />}
-                {isLocked && !isCompleted && (
-                  <Ionicons name="lock-closed" size={20} color="#9f7aea" />
-                )}
-              </View>
-              <Text style={[styles.moduleTitle, isLocked && styles.lockedText]}>{module.title}</Text>
-              <Text style={[styles.moduleDescription, isLocked && styles.lockedText]}>{module.description}</Text>
-              <View style={styles.moduleFooter}>
-                <View style={styles.lessonInfo}>
-                  <Ionicons name="book-outline" size={16} color={isLocked ? '#6b5b8a' : '#c4b5fd'} />
-                  <Text style={[styles.lessonCount, isLocked && styles.lockedText]}>{module.lessons} lessons</Text>
-                </View>
-                {isLocked ? (
-                  <Text style={styles.unlockText}>Tap to unlock</Text>
-                ) : (
-                  <Ionicons name="chevron-forward" size={20} color="#b794f6" />
-                )}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+        {/* Intermediate Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIcon, { backgroundColor: '#f59e0b' }]}>
+              <Ionicons name="flame" size={20} color="#fff" />
+            </View>
+            <Text style={styles.sectionTitle}>Intermediate</Text>
+          </View>
+          {intermediateModules.map(renderModuleCard)}
+        </View>
 
-      {/* Paywall Modal */}
+        {/* Advanced Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIcon, { backgroundColor: '#ef4444' }]}>
+              <Ionicons name="star" size={20} color="#fff" />
+            </View>
+            <Text style={styles.sectionTitle}>Advanced</Text>
+          </View>
+          {advancedModules.map(renderModuleCard)}
+        </View>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+
+      {renderLessonList()}
+      {renderLessonContent()}
+
       <Paywall
         visible={showPaywall}
-        onClose={() => {
-          setShowPaywall(false);
-          setSelectedModule(null);
-        }}
-        feature={selectedModule?.title || 'Premium Training Module'}
+        onClose={() => setShowPaywall(false)}
+        feature={selectedModule?.title || 'Premium Training'}
       />
-    </ScrollView>
+    </View>
   );
 }
 
@@ -252,170 +375,254 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f0321',
   },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   header: {
-    padding: 20,
-    paddingTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#1a0033',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2d1b4e',
+  },
+  backButton: {
+    padding: 4,
   },
   headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#e9d5ff',
+    flex: 1,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f0321',
+  },
+  loadingText: {
+    color: '#c4b5fd',
+    marginTop: 16,
+    fontSize: 16,
+  },
+  content: {
+    padding: 16,
+  },
+  introSection: {
+    marginBottom: 24,
+  },
+  introTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#e9d5ff',
     marginBottom: 8,
   },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#c4b5fd',
+  introText: {
+    fontSize: 15,
+    color: '#9f7aea',
+    lineHeight: 22,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
+  section: {
     marginBottom: 24,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#1a0033',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2d1b4e',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#b794f6',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#c4b5fd',
   },
   sectionHeader: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    marginBottom: 12,
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#e9d5ff',
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#9f7aea',
-    marginLeft: 28,
-  },
-  premiumRequiredBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-    marginLeft: 8,
-  },
-  premiumRequiredText: {
-    fontSize: 11,
-    color: '#ffd700',
-    fontWeight: '600',
-  },
-  modulesContainer: {
-    padding: 16,
-    paddingTop: 4,
-  },
   moduleCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#2d1b4e',
   },
-  lockedModuleCard: {
-    opacity: 0.8,
-    borderColor: '#3d2b5e',
-  },
-  moduleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  lockedCard: {
+    opacity: 0.7,
   },
   categoryBadge: {
-    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    marginBottom: 10,
+    gap: 4,
   },
   categoryText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  freeBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  freeBadgeText: {
-    color: '#10b981',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  lockedBadge: {
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
-    padding: 4,
-    borderRadius: 6,
+    textTransform: 'capitalize',
   },
   moduleTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#e9d5ff',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   moduleDescription: {
     fontSize: 14,
-    color: '#c4b5fd',
+    color: '#9f7aea',
     lineHeight: 20,
     marginBottom: 12,
   },
-  lockedText: {
-    color: '#8b7ba0',
-  },
   moduleFooter: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  lessonInfo: {
+  lessonCount: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  lessonCount: {
-    fontSize: 14,
-    color: '#c4b5fd',
+  lessonCountText: {
+    color: '#9f7aea',
+    fontSize: 13,
   },
-  unlockText: {
+  lockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  lockText: {
+    color: '#fbbf24',
     fontSize: 12,
-    color: '#ffd700',
     fontWeight: '600',
+  },
+  freeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  freeText: {
+    color: '#10b981',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Lesson List Styles
+  lessonListContent: {
+    padding: 16,
+  },
+  moduleDescHeader: {
+    fontSize: 15,
+    color: '#9f7aea',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  lessonCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a0033',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  lessonCompleted: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+  },
+  lessonNumber: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2d1b4e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  lessonNumberCompleted: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  lessonNumberText: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  lessonInfo: {
+    flex: 1,
+  },
+  lessonTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e9d5ff',
+    marginBottom: 2,
+  },
+  lessonStatus: {
+    fontSize: 13,
+    color: '#9f7aea',
+  },
+  // Lesson Content Styles
+  lessonContentContainer: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  lessonContentTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginBottom: 20,
+  },
+  lessonContentBox: {
+    backgroundColor: '#1a0033',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  lessonContentText: {
+    fontSize: 16,
+    color: '#c4b5fd',
+    lineHeight: 26,
+  },
+  lessonFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    backgroundColor: '#0f0321',
+    borderTopWidth: 1,
+    borderTopColor: '#2d1b4e',
+  },
+  completeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  completeButtonText: {
+    color: '#0f0321',
+    fontSize: 17,
+    fontWeight: 'bold',
   },
 });
