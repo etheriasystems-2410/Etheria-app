@@ -508,12 +508,12 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
   },
   content: {
-    padding: 20,
+    padding: 12,
   },
   infoCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 1,

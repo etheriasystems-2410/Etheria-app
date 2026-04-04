@@ -162,18 +162,18 @@ export default function Home() {
       {/* Welcome Message */}
       <View style={styles.welcomeSection}>
         <Text style={styles.welcomeText}>
-          Here you will find and discover tools to help you progress on your spiritual path, whether it be discovering latent psychic abilities and practicing those abilities, guided meditations in this and the astral realm, a fully-intuitive oracle deck to consult your spirit guides, or receiving communications directly from a spirit guide in tune to your zodiac sign.
+          Discover tools to help you progress on your spiritual path. Practice and develop latent psychic abilities, enjoy guided meditations in this realm and beyond, consult a fully-intuitive oracle deck to receive guidance from your spirit guides, or communicate directly with a spirit guide attuned to your zodiac sign.
         </Text>
 
         <View style={styles.pricingCard}>
           <Ionicons name="diamond" size={28} color="#ffd700" />
           <Text style={styles.pricingTitle}>Unlock Full Access</Text>
           <Text style={styles.pricingText}>
-            However, to access all Etheria has to offer it does require a monthly commitment of only{' '}
+            Access everything Etheria has to offer for a monthly commitment of only{' '}
             <Text style={styles.priceHighlight}>$3.99</Text>.
           </Text>
           <Text style={styles.pricingText}>
-            What a small sum for all this little app has to offer! Join today and completely unlock your potential.
+            A small investment to completely unlock your spiritual potential. Join today!
           </Text>
           <TouchableOpacity 
             style={styles.subscribeButton}
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f0321',
   },
   authSection: {
-    padding: 16,
+    padding: 12,
     paddingTop: 12,
     paddingBottom: 8,
   },
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   userWelcome: {
-    padding: 16,
+    padding: 12,
     paddingTop: 12,
     paddingBottom: 8,
   },
@@ -375,8 +375,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 24,
-    paddingBottom: 32,
+    padding: 16,
+    paddingBottom: 24,
     backgroundColor: 'rgba(15, 3, 33, 0.7)',
   },
   heroTitle: {
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   welcomeSection: {
-    padding: 20,
+    padding: 12,
   },
   welcomeText: {
     fontSize: 16,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   pricingCard: {
     backgroundColor: '#1a0033',
     borderRadius: 20,
-    padding: 24,
+    padding: 16,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#7c3aed',
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   featuresHeader: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingTop: 24,
     paddingBottom: 12,
   },

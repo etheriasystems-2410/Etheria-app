@@ -1008,7 +1008,7 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
   },
   content: {
-    padding: 20,
+    padding: 12,
   },
   section: {
     marginBottom: 32,
@@ -1025,7 +1025,7 @@ const styles = StyleSheet.create({
   focusCard: {
     backgroundColor: '#2d1b4e',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#2d1b4e',
@@ -1098,7 +1098,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scriptContent: {
-    padding: 20,
+    padding: 12,
   },
   scriptText: {
     fontSize: 16,
@@ -1106,7 +1106,7 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
   },
   scriptControls: {
-    padding: 20,
+    padding: 12,
     backgroundColor: '#1a0033',
     borderTopWidth: 1,
     borderTopColor: '#2d1b4e',

@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
   lessonContentBox: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#2d1b4e',
   },
@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#a855f7',
   },

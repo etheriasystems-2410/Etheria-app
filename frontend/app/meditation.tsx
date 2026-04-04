@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     paddingVertical: 32,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
   },
   title: {
     fontSize: 28,
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#2d1b4e',
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     margin: 16,
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#2d1b4e',
   },

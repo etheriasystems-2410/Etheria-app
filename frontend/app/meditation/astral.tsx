@@ -228,12 +228,12 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
   },
   content: {
-    padding: 20,
+    padding: 12,
   },
   warningCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: '#f59e0b',
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   levelCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     marginBottom: 16,
     borderWidth: 2,
     borderColor: '#2d1b4e',
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   tipsCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#2d1b4e',
   },

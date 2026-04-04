@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   introCard: {
     backgroundColor: 'rgba(236, 72, 153, 0.1)',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 1,

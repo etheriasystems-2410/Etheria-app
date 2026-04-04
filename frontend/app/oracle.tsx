@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f0321',
   },
   scrollContent: {
-    padding: 20,
+    padding: 12,
   },
   backButton: {
     flexDirection: 'row',
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
   instructionCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     marginTop: 32,
     borderWidth: 1,
     borderColor: '#2d1b4e',
@@ -959,12 +959,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalScrollContent: {
-    padding: 20,
+    padding: 12,
   },
   modalContent: {
     backgroundColor: '#1a0033',
     borderRadius: 24,
-    padding: 24,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#2d1b4e',
   },
@@ -993,7 +993,7 @@ const styles = StyleSheet.create({
   positionLabel: {
     alignSelf: 'center',
     backgroundColor: '#7c3aed',
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     marginBottom: 16,
@@ -1105,7 +1105,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#b794f6',
     paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     borderRadius: 16,
     marginTop: 16,
     gap: 10,
@@ -1121,7 +1121,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     borderRadius: 16,
     marginTop: 16,
     gap: 8,
@@ -1171,7 +1171,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#2d1b4e',
   },

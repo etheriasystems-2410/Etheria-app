@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 12,
     paddingTop: 24,
   },
   headerTitle: {
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a0033',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
+    padding: 16,
     maxHeight: '90%',
   },
   modalHeader: {

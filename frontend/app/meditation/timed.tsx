@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
   },
   content: {
-    padding: 20,
+    padding: 12,
   },
   section: {
     marginBottom: 32,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   presetButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 20,
     backgroundColor: '#2d1b4e',

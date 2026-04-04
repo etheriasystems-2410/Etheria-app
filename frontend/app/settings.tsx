@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     paddingVertical: 32,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
   },
   avatarContainer: {
     marginBottom: 16,
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   section: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     marginBottom: 24,
   },
   sectionTitle: {
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   subscriptionCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     borderWidth: 2,
     borderColor: '#ffd700',
   },
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
   upgradeCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#7c3aed',
   },
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   infoCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#2d1b4e',
   },
@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
   },
   redeemButton: {
     backgroundColor: '#7c3aed',
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 8,
     justifyContent: 'center',

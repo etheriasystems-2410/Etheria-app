@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   selectionContainer: {
-    padding: 20,
+    padding: 12,
   },
   header: {
     alignItems: 'center',
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
   guideCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#2d1b4e',

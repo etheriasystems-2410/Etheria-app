@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   realignGradient: {
-    padding: 24,
+    padding: 16,
     backgroundColor: '#1a0033',
     borderWidth: 2,
     borderColor: '#7c3aed',
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#7c3aed',
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     borderRadius: 25,
     gap: 8,
   },
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sessionContent: {
-    padding: 20,
+    padding: 12,
     alignItems: 'center',
   },
   generatingContainer: {
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#dc2626',
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     borderRadius: 25,
     gap: 8,
   },
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 24,
+    padding: 16,
     width: '85%',
     alignItems: 'center',
     borderWidth: 1,
