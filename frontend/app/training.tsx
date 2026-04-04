@@ -155,12 +155,12 @@ export default function Training() {
         }
       }
 
-      console.log(`Meditation has ${segments.length} segments`);
+      if (__DEV__) console.log(`Meditation has ${segments.length} segments`);
 
       // Process each segment
       for (let i = 0; i < segments.length; i++) {
         if (!isPlayingRef.current) {
-          console.log('Meditation stopped by user');
+          if (__DEV__) console.log('Meditation stopped by user');
           break;
         }
 
@@ -169,7 +169,7 @@ export default function Training() {
         if (segment.type === 'pause') {
           // Handle pause
           setTtsProgress(`Pause... (${segment.duration}s)`);
-          console.log(`Pausing for ${segment.duration} seconds`);
+          if (__DEV__) console.log(`Pausing for ${segment.duration} seconds`);
           
           // Wait for the pause duration
           await new Promise<void>((resolve) => {
@@ -191,7 +191,7 @@ export default function Training() {
           const totalText = textSegments.length;
           
           setTtsProgress(`Speaking ${textIndex}/${totalText}...`);
-          console.log(`Generating TTS for segment ${i + 1}`);
+          if (__DEV__) console.log(`Generating TTS for segment ${i + 1}`);
 
           // Split long text into chunks if needed
           const maxChunkSize = 4000;

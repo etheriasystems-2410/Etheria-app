@@ -236,8 +236,8 @@ export class AudioPlayerManager {
               hasStartedPlaying = true;
             }
             
-            // Log status periodically for debugging
-            if (elapsed % 3000 < 300) {
+            // Log status periodically for debugging (production: remove or use __DEV__)
+            if (__DEV__ && elapsed % 3000 < 300) {
               console.log(`Audio status: playing=${isPlaying}, time=${currentTime.toFixed(1)}/${duration.toFixed(1)}, started=${hasStartedPlaying}`);
             }
             

@@ -5,18 +5,38 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/etheria-icon.jpg",
-    "scheme": "frontend",
-    "userInterfaceStyle": "automatic",
+    "scheme": "etheria",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/etheria-icon.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f0321"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.etheriasystems.etheria",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Record voice memos for your spiritual journal",
+        "NSCameraUsageDescription": "Capture moments for your spiritual journey",
+        "NSPhotoLibraryUsageDescription": "Save and share your oracle readings",
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/etheria-icon.jpg",
         "backgroundColor": "#0f0321"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.etheriasystems.etheria",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "INTERNET",
+        "RECORD_AUDIO",
+        "VIBRATE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -43,6 +63,12 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "etheria-app"
+      }
+    },
+    "owner": "etheriasystems"
   }
 }
