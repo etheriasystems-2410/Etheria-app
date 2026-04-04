@@ -20,6 +20,11 @@ interface Lesson {
   id: number;
   title: string;
   content: string;
+  meditation?: {
+    title: string;
+    duration: number;
+    script: string;
+  };
 }
 
 export default function Training() {
@@ -280,6 +285,37 @@ export default function Training() {
               {currentLesson?.content}
             </Text>
           </View>
+
+          {/* Meditation Section */}
+          {currentLesson?.meditation && (
+            <View style={styles.meditationSection}>
+              <View style={styles.meditationHeader}>
+                <View style={styles.meditationIcon}>
+                  <Ionicons name="flower-outline" size={24} color="#a855f7" />
+                </View>
+                <View style={styles.meditationInfo}>
+                  <Text style={styles.meditationTitle}>{currentLesson.meditation.title}</Text>
+                  <Text style={styles.meditationDuration}>
+                    {currentLesson.meditation.duration} minutes
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.meditationScriptBox}>
+                <Text style={styles.meditationScriptLabel}>Guided Meditation Script</Text>
+                <Text style={styles.meditationScript}>
+                  {currentLesson.meditation.script}
+                </Text>
+              </View>
+              
+              <View style={styles.meditationTip}>
+                <Ionicons name="information-circle" size={18} color="#9f7aea" />
+                <Text style={styles.meditationTipText}>
+                  Read through the script slowly, pausing at each [pause] instruction. You can also record yourself reading it.
+                </Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.lessonFooter}>
@@ -624,5 +660,72 @@ const styles = StyleSheet.create({
     color: '#0f0321',
     fontSize: 17,
     fontWeight: 'bold',
+  },
+  // Meditation Styles
+  meditationSection: {
+    marginTop: 24,
+    backgroundColor: '#1a0033',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#a855f7',
+  },
+  meditationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  meditationIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  meditationInfo: {
+    flex: 1,
+  },
+  meditationTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+  },
+  meditationDuration: {
+    fontSize: 14,
+    color: '#9f7aea',
+    marginTop: 2,
+  },
+  meditationScriptBox: {
+    backgroundColor: '#0f0321',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  meditationScriptLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#a855f7',
+    marginBottom: 12,
+  },
+  meditationScript: {
+    fontSize: 15,
+    color: '#c4b5fd',
+    lineHeight: 24,
+  },
+  meditationTip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    gap: 8,
+  },
+  meditationTipText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#9f7aea',
+    lineHeight: 18,
   },
 });

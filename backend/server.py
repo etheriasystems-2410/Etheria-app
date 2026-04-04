@@ -340,7 +340,44 @@ The third eye is your connection to higher consciousness and inner wisdom. When 
 - Enhanced creativity
 
 **Today's Exercise:**
-Close your eyes and focus on the space between your eyebrows. Breathe deeply and imagine a indigo light glowing there. Hold this visualization for 5 minutes."""
+Close your eyes and focus on the space between your eyebrows. Breathe deeply and imagine a indigo light glowing there. Hold this visualization for 5 minutes.""",
+            "meditation": {
+                "title": "Third Eye Awakening Meditation",
+                "duration": 10,
+                "script": """Find a comfortable seated position and gently close your eyes. Take three deep breaths to settle into this moment.
+
+[pause for 10 seconds]
+
+Bring your awareness to the space between your eyebrows - your third eye center. Simply notice this area without trying to change anything.
+
+[pause for 15 seconds]
+
+Now visualize a small point of indigo light at your third eye. See it glowing softly, like a distant star in the night sky.
+
+[pause for 20 seconds]
+
+With each inhale, imagine this light growing slightly brighter. With each exhale, feel yourself relaxing more deeply.
+
+[pause for 30 seconds]
+
+Allow the indigo light to expand gently, filling the space behind your forehead with its soothing glow. There is no effort needed - just allow.
+
+[pause for 45 seconds]
+
+If any images, colors, or impressions arise, simply observe them without judgment. You are opening the doorway to your inner vision.
+
+[pause for 60 seconds]
+
+Feel a gentle warmth or tingling at your third eye. This is your psychic center awakening. Welcome this sensation.
+
+[pause for 45 seconds]
+
+Now slowly let the light soften. Know that your third eye remains active, ready to guide you with intuitive wisdom.
+
+[pause for 20 seconds]
+
+Take a deep breath and gently return your awareness to your body. When you're ready, slowly open your eyes."""
+            }
         },
         {
             "id": 2,
@@ -366,7 +403,52 @@ Practice 4-7-8 breathing:
 - Exhale for 8 counts
 - Repeat 4 times
 
-This calms the nervous system and prepares you for deeper perception."""
+This calms the nervous system and prepares you for deeper perception.""",
+            "meditation": {
+                "title": "Mental Clarity & Grounding Meditation",
+                "duration": 12,
+                "script": """Sit comfortably with your feet flat on the floor. Close your eyes and take a deep, cleansing breath.
+
+[pause for 10 seconds]
+
+Begin by noticing any mental chatter. Don't fight it - simply observe your thoughts as if watching clouds pass across the sky.
+
+[pause for 20 seconds]
+
+Now we'll practice 4-7-8 breathing. Inhale through your nose for 4 counts... 1, 2, 3, 4.
+
+[pause for 2 seconds]
+
+Hold your breath for 7 counts... 1, 2, 3, 4, 5, 6, 7.
+
+[pause for 2 seconds]
+
+Exhale slowly through your mouth for 8 counts... 1, 2, 3, 4, 5, 6, 7, 8.
+
+[pause for 5 seconds]
+
+Let's repeat this three more times at your own pace.
+
+[pause for 60 seconds]
+
+Now bring your attention to your feet. Visualize roots growing from the soles of your feet, extending deep into the earth below.
+
+[pause for 30 seconds]
+
+See these roots reaching down through soil and rock, anchoring you firmly to the planet. Feel yourself becoming stable and grounded.
+
+[pause for 30 seconds]
+
+Draw earth energy up through these roots - a warm, golden light rising through your feet, your legs, filling your entire body with stability.
+
+[pause for 45 seconds]
+
+Your mind is now clear. Your body is grounded. You are prepared for deeper psychic work.
+
+[pause for 20 seconds]
+
+Take a final deep breath and slowly open your eyes, maintaining this grounded clarity."""
+            }
         },
         {
             "id": 3,
@@ -391,7 +473,56 @@ This calms the nervous system and prepares you for deeper perception."""
 **After the Meditation:**
 - Open your eyes slowly
 - Journal any images, colors, or feelings you experienced
-- Drink water to stay grounded"""
+- Drink water to stay grounded""",
+            "meditation": {
+                "title": "Deep Third Eye Activation",
+                "duration": 15,
+                "script": """Dim the lights around you if possible. Sit in a position that allows your spine to be straight yet relaxed. Close your eyes.
+
+[pause for 10 seconds]
+
+Take three deep breaths, releasing any tension with each exhale.
+
+[pause for 15 seconds]
+
+Bring all of your attention to the point between your eyebrows. Feel as if your consciousness is gathering there.
+
+[pause for 20 seconds]
+
+Visualize a small sphere of deep indigo light at your third eye. See it pulsing gently with each heartbeat.
+
+[pause for 30 seconds]
+
+With your next inhale, see this sphere of light expand slightly. It grows brighter, more luminous.
+
+[pause for 10 seconds]
+
+Continue this pattern - each breath causes the light to grow and intensify.
+
+[pause for 45 seconds]
+
+You may begin to feel warmth, tingling, or gentle pressure at your third eye. This is normal and welcome. Lean into these sensations.
+
+[pause for 60 seconds]
+
+Now allow the indigo light to open like a flower blooming. Petals of light unfold, revealing your inner vision.
+
+[pause for 30 seconds]
+
+In this open state, simply receive. Allow any images, colors, symbols, or impressions to arise. Don't analyze - just observe.
+
+[pause for 90 seconds]
+
+Whatever you experienced is valid. Your third eye is awakening at exactly the right pace for you.
+
+[pause for 30 seconds]
+
+Gently visualize the light softening, the petals closing slightly - not fully, just enough to protect this sacred center.
+
+[pause for 20 seconds]
+
+Take a deep breath, feel your physical body, and when ready, slowly open your eyes. Take a moment to journal your experience."""
+            }
         },
         {
             "id": 4,
@@ -416,7 +547,48 @@ This calms the nervous system and prepares you for deeper perception."""
 - Have someone draw a simple symbol on paper
 - Without seeing it, tune into your third eye
 - Describe what you perceive
-- Practice daily to improve accuracy"""
+- Practice daily to improve accuracy""",
+            "meditation": {
+                "title": "Blue Flame Visualization Practice",
+                "duration": 10,
+                "script": """Close your eyes and settle into a comfortable position. Take a few breaths to center yourself.
+
+[pause for 15 seconds]
+
+Focus your attention on your third eye center. Feel the energy gathering there.
+
+[pause for 10 seconds]
+
+Now visualize a flame appearing at your third eye - not an ordinary flame, but a mystical blue flame. See its deep, sapphire color.
+
+[pause for 20 seconds]
+
+Watch this blue flame flicker and dance gently. Notice its shape, its movement, its ethereal quality.
+
+[pause for 30 seconds]
+
+See the flame grow slightly taller, its blue light illuminating the darkness behind your closed eyes.
+
+[pause for 30 seconds]
+
+This blue flame represents your inner vision - your ability to see beyond the physical. As you strengthen this flame, you strengthen your sight.
+
+[pause for 45 seconds]
+
+Now imagine the flame casting its blue light outward, like a searchlight. It can illuminate anything you focus on.
+
+[pause for 30 seconds]
+
+Direct this light toward something you wish to understand better. What do you see? What impressions arise?
+
+[pause for 45 seconds]
+
+Gently bring the flame back to a soft glow at your third eye. Thank it for its service.
+
+[pause for 15 seconds]
+
+Take a deep breath and slowly open your eyes, carrying this strengthened inner vision with you."""
+            }
         },
         {
             "id": 5,
@@ -449,7 +621,50 @@ Always close your session by:
 - Thanking your higher self
 - Visualizing the indigo light dimming slightly
 - Grounding yourself with deep breaths
-- Returning to normal awareness gently"""
+- Returning to normal awareness gently""",
+            "meditation": {
+                "title": "Daily Third Eye Integration",
+                "duration": 8,
+                "script": """This is a quick daily practice to keep your third eye active and integrated into your life. Close your eyes.
+
+[pause for 5 seconds]
+
+Take three conscious breaths, arriving fully in this moment.
+
+[pause for 10 seconds]
+
+Quickly scan your body from feet to head, noticing any tension and releasing it.
+
+[pause for 15 seconds]
+
+Bring your awareness to your third eye. Feel it as if it were a real eye - awake, alert, ready to perceive.
+
+[pause for 20 seconds]
+
+Set an intention: "My third eye guides me wisely today. I trust my intuition."
+
+[pause for 15 seconds]
+
+Visualize a quick flash of indigo light at your third eye - activating it for the day ahead.
+
+[pause for 10 seconds]
+
+Ask your higher self: "What do I need to know today?" Wait for any impressions.
+
+[pause for 30 seconds]
+
+Accept whatever came - or didn't come. Trust that guidance will arrive when needed.
+
+[pause for 10 seconds]
+
+Visualize a gentle protective light around your third eye, allowing only beneficial information to enter.
+
+[pause for 10 seconds]
+
+Ground yourself by feeling your feet on the earth. Take a deep breath and open your eyes.
+
+You are now ready to move through your day with heightened intuition and inner guidance."""
+            }
         }
     ],
     "beginner-2": [
@@ -476,7 +691,48 @@ Always close your session by:
 - Start with just 5 minutes daily
 - Same time and place builds habit
 - Comfortable position (sitting or lying down)
-- No judgment - wandering thoughts are normal"""
+- No judgment - wandering thoughts are normal""",
+            "meditation": {
+                "title": "Your First Meditation",
+                "duration": 8,
+                "script": """Welcome to your first meditation practice. There's nothing to achieve here - simply be present.
+
+[pause for 5 seconds]
+
+Find a comfortable position. You can sit in a chair with feet flat, or on the floor with legs crossed. Close your eyes.
+
+[pause for 10 seconds]
+
+Notice how you feel right now. Don't try to change anything - just observe.
+
+[pause for 15 seconds]
+
+Bring your attention to your breath. Notice the natural rhythm of your breathing. You don't need to control it.
+
+[pause for 20 seconds]
+
+Feel the air entering through your nose, cool and fresh. Feel it leaving, slightly warmer.
+
+[pause for 30 seconds]
+
+Your mind will wander - this is completely normal. When you notice thoughts arising, simply label them "thinking" and return to your breath.
+
+[pause for 45 seconds]
+
+There's no such thing as a bad meditation. Every moment you spend in awareness is valuable.
+
+[pause for 30 seconds]
+
+Continue following your breath. In... and out. Simple and natural.
+
+[pause for 45 seconds]
+
+Begin to deepen your breath slightly. Feel your body. Hear the sounds around you.
+
+[pause for 10 seconds]
+
+When you're ready, gently open your eyes. Congratulations - you've meditated."""
+            }
         },
         {
             "id": 2,
@@ -503,7 +759,56 @@ Always close your session by:
 - Visualize breathing in white light
 - See it filling your entire body
 - Exhale any tension or darkness
-- Feel yourself becoming lighter"""
+- Feel yourself becoming lighter""",
+            "meditation": {
+                "title": "Breath Awareness Practice",
+                "duration": 12,
+                "script": """Settle into a comfortable seated position with your spine straight but relaxed. Close your eyes.
+
+[pause for 10 seconds]
+
+For the first minute, simply notice your natural breathing. Don't change it - observe it like a curious scientist.
+
+[pause for 30 seconds]
+
+Where do you feel the breath most strongly? Your nostrils? Your chest? Your belly? Focus on that area.
+
+[pause for 30 seconds]
+
+Now we'll practice counting breaths. As you inhale, mentally count "one." As you exhale, count "two." Continue up to ten.
+
+[pause for 5 seconds]
+
+Begin now. One... two... three... four...
+
+[pause for 60 seconds]
+
+If you lost count, simply start again at one. This is part of the practice.
+
+[pause for 30 seconds]
+
+Now release the counting. Simply follow each breath with your full attention.
+
+[pause for 45 seconds]
+
+Notice the brief pause between the inhale and exhale. Rest in that stillness.
+
+[pause for 30 seconds]
+
+Now add visualization. As you inhale, imagine breathing in pure white light. See it filling your body.
+
+[pause for 20 seconds]
+
+As you exhale, release any darkness, tension, or negativity. Let it dissolve.
+
+[pause for 45 seconds]
+
+Continue this light breathing, feeling yourself becoming clearer and brighter with each breath.
+
+[pause for 30 seconds]
+
+Gently release the visualization and return to normal breathing. Open your eyes when ready."""
+            }
         },
         {
             "id": 3,
@@ -531,7 +836,60 @@ Always close your session by:
 - Any emotions arising
 
 **Practice:**
-Do this scan daily. Over time, you'll notice subtle energy sensations that indicate psychic awakening."""
+Do this scan daily. Over time, you'll notice subtle energy sensations that indicate psychic awakening.""",
+            "meditation": {
+                "title": "Complete Body Scan",
+                "duration": 15,
+                "script": """Lie down on your back in a comfortable position. Let your arms rest at your sides, palms facing up. Close your eyes.
+
+[pause for 10 seconds]
+
+Take three deep breaths, allowing your body to settle and relax with each exhale.
+
+[pause for 15 seconds]
+
+Bring your awareness to your feet. Notice any sensations there - warmth, coolness, tingling, pressure. Simply observe.
+
+[pause for 20 seconds]
+
+Move your attention to your ankles and lower legs. Scan slowly, noticing the sensations without judging them.
+
+[pause for 20 seconds]
+
+Now bring awareness to your knees and thighs. Feel the weight of your legs resting on the surface beneath you.
+
+[pause for 20 seconds]
+
+Notice your hips and pelvis. This area often holds tension. Breathe into any tightness you find.
+
+[pause for 20 seconds]
+
+Scan your lower back and abdomen. Feel the gentle rise and fall of your belly with each breath.
+
+[pause for 20 seconds]
+
+Move up to your chest and upper back. Notice your heartbeat. Feel your ribcage expand and contract.
+
+[pause for 20 seconds]
+
+Bring awareness to your hands - each finger, your palms, your wrists. Notice any subtle sensations.
+
+[pause for 20 seconds]
+
+Scan up through your forearms, upper arms, and shoulders. Let any tension melt away.
+
+[pause for 20 seconds]
+
+Notice your neck and throat. Relax your jaw. Let your tongue rest softly.
+
+[pause for 20 seconds]
+
+Finally, scan your face and head - your eyes, forehead, the crown of your head. Feel your entire body now as one unified field of awareness.
+
+[pause for 30 seconds]
+
+Take a deep breath, filling your whole body with energy. Slowly begin to move your fingers and toes, and when ready, open your eyes."""
+            }
         },
         {
             "id": 4,
@@ -559,7 +917,60 @@ A mantra is a word or phrase repeated during meditation. The vibration affects y
 **Using Mala Beads:**
 - Hold beads in your right hand
 - Move one bead per mantra repetition
-- Complete 108 repetitions for full effect"""
+- Complete 108 repetitions for full effect""",
+            "meditation": {
+                "title": "OM Mantra Practice",
+                "duration": 12,
+                "script": """Sit in a comfortable position with your spine straight. Rest your hands on your knees. Close your eyes.
+
+[pause for 10 seconds]
+
+Take a few deep breaths to center yourself.
+
+[pause for 15 seconds]
+
+We will use the mantra OM - the primordial sound of the universe. This sound connects you to all that is.
+
+[pause for 10 seconds]
+
+First, I'll chant OM aloud three times. Feel the vibration in your body. Then you'll continue silently.
+
+[pause for 5 seconds]
+
+OOOOMMMMM...
+
+[pause for 8 seconds]
+
+OOOOMMMMM...
+
+[pause for 8 seconds]
+
+OOOOMMMMM...
+
+[pause for 10 seconds]
+
+Now begin repeating OM silently in your mind. Let the sound arise naturally with each exhale.
+
+[pause for 60 seconds]
+
+Feel the mantra vibrating through your entire being. Each repetition raises your vibration higher.
+
+[pause for 45 seconds]
+
+If thoughts interrupt, simply return to OM. The mantra is your anchor.
+
+[pause for 45 seconds]
+
+Now let the mantra fade into the background. Rest in the silence and expanded awareness it has created.
+
+[pause for 30 seconds]
+
+Feel the heightened state of consciousness you've accessed through this ancient practice.
+
+[pause for 20 seconds]
+
+Take a deep breath and slowly return to normal awareness. Open your eyes when ready."""
+            }
         },
         {
             "id": 5,
@@ -586,7 +997,60 @@ A mantra is a word or phrase repeated during meditation. The vibration affects y
 - Visualize energy entering through your feet
 - See it flowing up through your body
 - Release it through your crown
-- Feel connected to earth and sky"""
+- Feel connected to earth and sky""",
+            "meditation": {
+                "title": "Mindful Walking Practice",
+                "duration": 10,
+                "script": """Stand at the beginning of your chosen walking path. Take a moment to feel your feet on the ground.
+
+[pause for 10 seconds]
+
+Take three deep breaths, centering your awareness in your body.
+
+[pause for 10 seconds]
+
+Set an intention: "I walk with full presence and awareness."
+
+[pause for 5 seconds]
+
+Begin walking very slowly. Lift your right foot. Notice the sensation of lifting.
+
+[pause for 5 seconds]
+
+Move your foot forward. Feel the movement through space.
+
+[pause for 5 seconds]
+
+Place your foot down. Feel the heel, then the ball, then the toes making contact with the earth.
+
+[pause for 5 seconds]
+
+Now lift your left foot. Continue this slow, deliberate walking.
+
+[pause for 30 seconds]
+
+With each step, feel yourself more connected to the ground beneath you. You are walking on the earth itself.
+
+[pause for 30 seconds]
+
+Now expand your awareness while continuing to walk. Notice what you see around you - colors, shapes, movement.
+
+[pause for 30 seconds]
+
+Hear the sounds - near and far. Let them enter without labeling or judging.
+
+[pause for 30 seconds]
+
+Feel the air on your skin. Notice temperature, movement of breeze.
+
+[pause for 30 seconds]
+
+Now visualize energy from the earth rising up through your feet with each step. Feel it filling your body with each footfall.
+
+[pause for 30 seconds]
+
+Gradually slow to a stop. Stand still and feel the accumulated presence and energy. Bow slightly to honor your practice."""
+            }
         },
         {
             "id": 6,
@@ -619,7 +1083,60 @@ A mantra is a word or phrase repeated during meditation. The vibration affects y
 - "May all beings be happy"
 - "May all beings be free from suffering"
 
-This practice develops empathy, essential for psychic connection."""
+This practice develops empathy, essential for psychic connection.""",
+            "meditation": {
+                "title": "Loving-Kindness (Metta) Meditation",
+                "duration": 15,
+                "script": """Sit comfortably and close your eyes. Take a few breaths to settle in.
+
+[pause for 10 seconds]
+
+Place your hand on your heart. Feel its steady beat - the center of love within you.
+
+[pause for 15 seconds]
+
+We begin by offering loving-kindness to yourself. Silently repeat: "May I be happy."
+
+[pause for 10 seconds]
+
+"May I be healthy."
+
+[pause for 10 seconds]
+
+"May I be safe."
+
+[pause for 10 seconds]
+
+"May I live with ease."
+
+[pause for 15 seconds]
+
+Feel these wishes as genuine blessings to yourself. You deserve this kindness.
+
+[pause for 20 seconds]
+
+Now think of someone you love deeply. See their face clearly. Repeat: "May you be happy. May you be healthy. May you be safe. May you live with ease."
+
+[pause for 30 seconds]
+
+Feel your love flowing to this person like warm light.
+
+[pause for 20 seconds]
+
+Now think of someone neutral - perhaps a neighbor or shopkeeper you've seen but don't know well. Send them the same wishes: "May you be happy. May you be healthy. May you be safe. May you live with ease."
+
+[pause for 30 seconds]
+
+Now - and this can be challenging - think of someone difficult in your life. They too suffer and want happiness. Offer them: "May you be happy. May you be healthy. May you be safe. May you live with ease."
+
+[pause for 30 seconds]
+
+Finally, expand to all beings everywhere: "May all beings be happy. May all beings be healthy. May all beings be safe. May all beings live with ease."
+
+[pause for 30 seconds]
+
+Feel your heart expanded, connected to all life. Take a deep breath and slowly open your eyes."""
+            }
         },
         {
             "id": 7,
@@ -657,7 +1174,52 @@ Keep a meditation journal noting:
 - Date and duration
 - Technique used
 - How you felt before/after
-- Any insights or experiences"""
+- Any insights or experiences""",
+            "meditation": {
+                "title": "Morning Activation Practice",
+                "duration": 10,
+                "script": """This is your morning practice to start each day with clarity and intention. Sit comfortably and close your eyes.
+
+[pause for 5 seconds]
+
+Take three deep breaths, awakening your body and mind.
+
+[pause for 15 seconds]
+
+Scan quickly from feet to head, noticing how you feel this morning. No judgment - just awareness.
+
+[pause for 15 seconds]
+
+Bring attention to your breath. Follow five complete breaths with full presence.
+
+[pause for 30 seconds]
+
+Now focus on your third eye center. Visualize a quick flash of indigo light - activating your intuition for the day.
+
+[pause for 15 seconds]
+
+Open your heart center with a feeling of gratitude. Think of one thing you're grateful for this morning.
+
+[pause for 20 seconds]
+
+Set an intention for your day. What quality do you want to embody? What do you want to create or experience?
+
+[pause for 20 seconds]
+
+Silently state: "I move through this day with awareness, compassion, and openness to guidance."
+
+[pause for 15 seconds]
+
+Visualize your day unfolding positively. See yourself calm, focused, and receptive to intuition.
+
+[pause for 20 seconds]
+
+Ground yourself by feeling your connection to the earth. Take a deep breath of energy and possibility.
+
+[pause for 10 seconds]
+
+Open your eyes slowly. You are ready for your day."""
+            }
         }
     ],
     "beginner-3": [
@@ -685,7 +1247,52 @@ Keep a meditation journal noting:
 4. Move hands closer, then apart
 5. Feel the energy ball you've created
 
-This is your first step to energy awareness."""
+This is your first step to energy awareness.""",
+            "meditation": {
+                "title": "Energy Sensing Practice",
+                "duration": 10,
+                "script": """Sit comfortably and close your eyes. Take a few centering breaths.
+
+[pause for 10 seconds]
+
+We'll begin by activating the energy centers in your hands. Rub your palms together vigorously for 30 seconds.
+
+[pause for 30 seconds]
+
+Now slowly stop rubbing and hold your hands about 6 inches apart, palms facing each other. Don't let them touch.
+
+[pause for 10 seconds]
+
+Notice what you feel between your palms. Warmth? Tingling? Pressure? Magnetism? This is energy.
+
+[pause for 20 seconds]
+
+Slowly move your hands closer together, stopping before they touch. Feel the energy compress between them.
+
+[pause for 15 seconds]
+
+Now slowly move them apart again. Feel the energy stretch.
+
+[pause for 15 seconds]
+
+Play with this - moving closer, moving apart. You're feeling your own life force energy.
+
+[pause for 30 seconds]
+
+Now imagine you're holding a ball of glowing light between your palms. See its color - whatever appears.
+
+[pause for 20 seconds]
+
+Make the ball larger, then smaller. Feel the energy respond to your intention.
+
+[pause for 20 seconds]
+
+When ready, bring your palms together and absorb this energy back into your body. Feel it spreading through you.
+
+[pause for 15 seconds]
+
+Take a breath and open your eyes. You've just consciously worked with energy."""
+            }
         },
         {
             "id": 2,
@@ -715,7 +1322,60 @@ This is your first step to energy awareness."""
 - Breathe deeply
 - Visualize your aura growing
 - Push it outward with intention
-- Fill the room with your energy"""
+- Fill the room with your energy""",
+            "meditation": {
+                "title": "Aura Awareness Meditation",
+                "duration": 12,
+                "script": """Stand if possible, or sit with your spine straight. Close your eyes.
+
+[pause for 10 seconds]
+
+Take three deep breaths, feeling yourself become more present and aware.
+
+[pause for 15 seconds]
+
+Begin by feeling the boundaries of your physical body - your skin, the edge of your form.
+
+[pause for 15 seconds]
+
+Now extend your awareness just beyond your skin. Feel the space immediately around your body - this is your etheric field.
+
+[pause for 20 seconds]
+
+Push your awareness further out. Feel your energy extending 6 inches, then a foot, then two feet beyond your body.
+
+[pause for 20 seconds]
+
+Notice where your energy field seems to end. You might feel a subtle edge, a shift in sensation.
+
+[pause for 20 seconds]
+
+Now raise one hand. Hold it about 2 feet from your torso. Slowly move it toward your body.
+
+[pause for 10 seconds]
+
+Notice any sensations as your hand passes through layers of your aura. Warmth? Tingling? Resistance?
+
+[pause for 20 seconds]
+
+Return your hand to your side. Now we'll expand your aura.
+
+[pause for 5 seconds]
+
+With each inhale, visualize your aura growing larger, more luminous. Push it outward with intention.
+
+[pause for 30 seconds]
+
+Feel yourself filling the room with your energy field. You are larger than your physical body.
+
+[pause for 20 seconds]
+
+Now gently draw your aura back to a comfortable size - about arm's length from your body.
+
+[pause for 15 seconds]
+
+Take a deep breath and open your eyes, maintaining awareness of the energy field around you."""
+            }
         },
         {
             "id": 3,
@@ -747,7 +1407,52 @@ This is your first step to energy awareness."""
 - **Green**: Healing, growth, balance
 - **Blue**: Communication, calm
 - **Purple**: Intuition, spirituality
-- **White**: Pure, high vibration"""
+- **White**: Pure, high vibration""",
+            "meditation": {
+                "title": "Developing Aura Vision",
+                "duration": 10,
+                "script": """For this practice, you'll need to keep your eyes open with a soft gaze. Sit facing a plain, light-colored wall.
+
+[pause for 10 seconds]
+
+Take a few deep breaths to relax your body and mind.
+
+[pause for 15 seconds]
+
+Hold one hand up in front of you, about a foot from your face, against the plain background.
+
+[pause for 10 seconds]
+
+Soften your gaze. Don't focus directly on your hand - look slightly past it. Let your vision become gentle and unfocused.
+
+[pause for 20 seconds]
+
+In your peripheral vision, begin to notice the space immediately around your fingers. Don't strain - just softly observe.
+
+[pause for 30 seconds]
+
+You may begin to see a faint glow - often appearing as a thin line of light around your fingers. This is your etheric aura.
+
+[pause for 30 seconds]
+
+If you don't see it yet, that's okay. Close your eyes and visualize light around your hand. Then open and look again with soft eyes.
+
+[pause for 30 seconds]
+
+Now spread your fingers apart. Notice if the glow extends between them.
+
+[pause for 20 seconds]
+
+The more you practice this soft gaze, the more easily you'll perceive auras. It's like a muscle - it strengthens with use.
+
+[pause for 15 seconds]
+
+Lower your hand and close your eyes for a moment. Know that your aura vision is developing.
+
+[pause for 10 seconds]
+
+Open your eyes normally. Practice this technique daily."""
+            }
         },
         {
             "id": 4,
@@ -779,7 +1484,52 @@ This is your first step to energy awareness."""
 - Clear the energy regularly
 - Add crystals and plants
 - Keep it clean and organized
-- Use it for meditation and practice"""
+- Use it for meditation and practice""",
+            "meditation": {
+                "title": "Space Energy Sensing",
+                "duration": 8,
+                "script": """For this meditation, remain where you are. We'll practice sensing the energy of your current space.
+
+[pause for 5 seconds]
+
+Close your eyes and take a few deep breaths.
+
+[pause for 10 seconds]
+
+Without moving, extend your awareness into the room around you. Don't analyze - just feel.
+
+[pause for 15 seconds]
+
+What is your first impression of this space right now? Heavy or light? Calm or agitated?
+
+[pause for 15 seconds]
+
+Notice any areas that feel different. Perhaps one corner feels different from another. Just observe.
+
+[pause for 20 seconds]
+
+Feel the history of this space. What emotions have been expressed here? What energy lingers?
+
+[pause for 20 seconds]
+
+Now imagine white light beginning to fill the room, starting from where you sit.
+
+[pause for 15 seconds]
+
+See this light expanding, touching every corner, every surface. It's clearing any stagnant or negative energy.
+
+[pause for 20 seconds]
+
+Set an intention for this space. What energy do you want it to hold? Peace? Creativity? Healing?
+
+[pause for 15 seconds]
+
+Feel the space responding to your intention, aligning with your vision.
+
+[pause for 10 seconds]
+
+Take a deep breath. Open your eyes and look at your space with fresh perception."""
+            }
         },
         {
             "id": 5,
@@ -808,7 +1558,48 @@ This is your first step to energy awareness."""
 - Take a salt bath
 - Spend time in nature
 - Meditate to clear absorbed energy
-- Practice grounding exercises"""
+- Practice grounding exercises""",
+            "meditation": {
+                "title": "Energy Shield Activation",
+                "duration": 10,
+                "script": """Sit or stand comfortably. Close your eyes and center yourself with a few breaths.
+
+[pause for 10 seconds]
+
+Feel your own energy field around you. Know that this field can protect you.
+
+[pause for 15 seconds]
+
+Visualize a beautiful golden light beginning to form at your heart center.
+
+[pause for 15 seconds]
+
+See this golden light expanding outward, surrounding your entire body in a luminous cocoon.
+
+[pause for 20 seconds]
+
+Watch as this light forms a complete bubble around you - above, below, and on all sides. You are enclosed in golden protection.
+
+[pause for 20 seconds]
+
+Set the intention: "This shield allows love and positive energy to enter, while deflecting all negativity."
+
+[pause for 15 seconds]
+
+See the outer surface of your shield becoming slightly mirror-like - reflecting back any harmful energy sent your way.
+
+[pause for 20 seconds]
+
+Feel completely safe and protected within your golden bubble. Nothing can harm you here.
+
+[pause for 20 seconds]
+
+Know that this shield will remain with you throughout your day. You can strengthen it anytime by taking a breath and visualizing it.
+
+[pause for 15 seconds]
+
+Ground yourself by feeling your feet on the earth. Open your eyes, carrying your protection with you."""
+            }
         },
         {
             "id": 6,
@@ -838,7 +1629,48 @@ This is your first step to energy awareness."""
 - Running water (not for all crystals)
 - Sage smoke
 - Sound (bells, singing bowls)
-- Selenite plate"""
+- Selenite plate""",
+            "meditation": {
+                "title": "Crystal Attunement Meditation",
+                "duration": 10,
+                "script": """If you have a crystal, hold it in your hands. If not, you can visualize one. Close your eyes.
+
+[pause for 10 seconds]
+
+Take three deep breaths, centering yourself.
+
+[pause for 10 seconds]
+
+Feel the crystal in your hands or in your mind's eye. Notice its weight, its temperature, its texture.
+
+[pause for 15 seconds]
+
+Crystals are ancient beings of the earth. They hold wisdom and energy from millions of years.
+
+[pause for 15 seconds]
+
+Set an intention to connect with this crystal's energy. Say silently: "I am open to receiving your gifts."
+
+[pause for 15 seconds]
+
+Begin to sense the crystal's unique vibration. It might feel like tingling, warmth, or a subtle hum.
+
+[pause for 25 seconds]
+
+Ask the crystal: "What do you want me to know?" Listen with your inner senses for any message.
+
+[pause for 30 seconds]
+
+Now visualize the crystal's energy merging with yours - amplifying your own abilities and intentions.
+
+[pause for 20 seconds]
+
+Thank the crystal for its partnership. Know that you can call on its energy whenever you work together.
+
+[pause for 15 seconds]
+
+Take a deep breath and open your eyes, maintaining connection with your crystal ally."""
+            }
         }
     ],
     "beginner-4": [
@@ -871,7 +1703,48 @@ This is your first step to energy awareness."""
 - Paper and pen (not computer initially)
 - Quiet, comfortable space
 - Open, receptive mindset
-- Patience and regular practice"""
+- Patience and regular practice""",
+            "meditation": {
+                "title": "Preparing for Automatic Writing",
+                "duration": 8,
+                "script": """Sit at a table with paper and pen ready. Close your eyes for this preparation.
+
+[pause for 10 seconds]
+
+Take several deep breaths, releasing any tension or expectation.
+
+[pause for 15 seconds]
+
+Set an intention: "I am open to receiving messages from my higher wisdom."
+
+[pause for 10 seconds]
+
+Visualize a column of white light descending from above, entering through the crown of your head.
+
+[pause for 15 seconds]
+
+See this light flowing down through your neck, your shoulder, your arm, and into your writing hand.
+
+[pause for 15 seconds]
+
+Your hand is now a channel for wisdom to flow through. You don't need to control it.
+
+[pause for 15 seconds]
+
+Release your conscious mind. Let it step aside, becoming an observer rather than a director.
+
+[pause for 20 seconds]
+
+When you feel ready, open your eyes, hold your pen loosely, and let your hand begin to move.
+
+[pause for 10 seconds]
+
+Don't think about what you're writing. Let the pen flow. Trust the process.
+
+[pause for 10 seconds]
+
+Continue for at least 10 minutes. Then read what came through without judgment."""
+            }
         },
         {
             "id": 2,
@@ -909,7 +1782,44 @@ Before writing, ask:
 - Take three deep breaths
 - Say a prayer or affirmation
 - Hold your pen loosely
-- Begin when you feel ready"""
+- Begin when you feel ready""",
+            "meditation": {
+                "title": "Sacred Writing Space Creation",
+                "duration": 10,
+                "script": """Sit in your writing space with everything you need. Close your eyes.
+
+[pause for 10 seconds]
+
+Take three deep breaths, arriving fully in this moment.
+
+[pause for 15 seconds]
+
+Visualize a sphere of white light surrounding you and your writing space. This is your sacred container.
+
+[pause for 15 seconds]
+
+Within this sphere, you are protected. State silently: "Only loving, truthful messages may enter here."
+
+[pause for 15 seconds]
+
+Call upon your guides, your higher self, the wisdom of the universe. Invite them to communicate through you.
+
+[pause for 20 seconds]
+
+Set your intention clearly. What do you seek guidance on? Or simply state: "I am open to whatever I need to know."
+
+[pause for 15 seconds]
+
+Feel the presence of wisdom gathering around you, ready to flow through your hand.
+
+[pause for 15 seconds]
+
+Release your need to understand or control. Trust that what comes through will serve you.
+
+[pause for 15 seconds]
+
+Take a final deep breath. You are prepared. Open your eyes when ready and begin to write."""
+            }
         },
         {
             "id": 3,
@@ -948,7 +1858,60 @@ Before writing, ask:
 - Start with 10-minute sessions
 - Practice at the same time daily
 - Keep all writings in a journal
-- Look for improvement over time"""
+- Look for improvement over time""",
+            "meditation": {
+                "title": "First Automatic Writing Session",
+                "duration": 15,
+                "script": """Have your paper and pen ready. Sit comfortably and close your eyes.
+
+[pause for 10 seconds]
+
+Take five deep breaths, each one releasing more tension, more thought, more control.
+
+[pause for 20 seconds]
+
+Visualize white protective light surrounding you. You are safe and ready to receive.
+
+[pause for 15 seconds]
+
+Set your intention. You might ask: "What do I need to know right now?" Or simply say: "I am open to wisdom."
+
+[pause for 15 seconds]
+
+Feel your arm and hand becoming lighter, almost separate from your conscious control.
+
+[pause for 15 seconds]
+
+Open your eyes now but keep them soft and unfocused. Place your pen on the paper.
+
+[pause for 10 seconds]
+
+Begin to move your pen. Don't think. Let it wander, scribble, write whatever comes.
+
+[pause for 15 seconds]
+
+If words form, let them. If it's just lines and shapes, that's fine too. Don't judge.
+
+[pause for 60 seconds]
+
+Keep writing. If you feel stuck, write "I am open" over and over until something else comes.
+
+[pause for 90 seconds]
+
+Continue to let the pen move. Trust what's coming through you.
+
+[pause for 90 seconds]
+
+Begin to slow down now. Let the writing come to a natural close.
+
+[pause for 15 seconds]
+
+Put down your pen. Close your eyes. Thank whatever wisdom came through.
+
+[pause for 10 seconds]
+
+Take three breaths. Open your eyes and read what you wrote with curiosity, not criticism."""
+            }
         },
         {
             "id": 4,
@@ -985,7 +1948,48 @@ Ask clear questions like:
 - Ask to connect with your spirit guide
 - Ask their name
 - Request their guidance
-- Build ongoing relationship"""
+- Build ongoing relationship""",
+            "meditation": {
+                "title": "Deepening Your Channel",
+                "duration": 12,
+                "script": """Prepare for a deeper automatic writing session. Close your eyes and breathe deeply.
+
+[pause for 15 seconds]
+
+Ground yourself by feeling roots extending from your feet into the earth.
+
+[pause for 15 seconds]
+
+Now open your crown chakra at the top of your head. See it as a lotus flower opening to the sky.
+
+[pause for 15 seconds]
+
+Invite your spirit guides, your higher self, your soul to come closer. Feel their presence gathering around you.
+
+[pause for 20 seconds]
+
+Ask: "Please make our connection stronger. Help me receive your messages more clearly."
+
+[pause for 20 seconds]
+
+Feel the channel between your crown and your hand becoming wider, clearer, more open.
+
+[pause for 20 seconds]
+
+You may feel tingling, warmth, or pressure as this connection strengthens.
+
+[pause for 20 seconds]
+
+Now set a specific intention or question. What do you truly want guidance on? State it clearly.
+
+[pause for 15 seconds]
+
+Open your eyes and begin writing. Let the pen move without hesitation or editing.
+
+[pause for 10 seconds]
+
+Write continuously for the next 10 minutes. Trust what flows through you."""
+            }
         },
         {
             "id": 5,
@@ -1018,7 +2022,48 @@ Not all messages are profound. Ask:
 - Note your question
 - Record any synchronicities
 - Track accuracy of guidance
-- Review periodically for patterns"""
+- Review periodically for patterns""",
+            "meditation": {
+                "title": "Message Integration Practice",
+                "duration": 10,
+                "script": """After completing an automatic writing session, use this meditation to integrate and understand your messages. Close your eyes.
+
+[pause for 10 seconds]
+
+Hold your writing in your hands or place it before you. Take a few centering breaths.
+
+[pause for 15 seconds]
+
+Ask: "Help me understand the deeper meaning of what I've received."
+
+[pause for 15 seconds]
+
+Even with eyes closed, sense the energy of the words on the page. What feelings do they evoke?
+
+[pause for 20 seconds]
+
+If there were specific words or phrases that stood out, bring them to mind now. What do they mean for your life?
+
+[pause for 30 seconds]
+
+Ask for any symbols or metaphors to be clarified. What images come to mind?
+
+[pause for 30 seconds]
+
+Consider how this guidance applies to your current situation. What action is being suggested?
+
+[pause for 30 seconds]
+
+Feel gratitude for the wisdom received. Even if not fully understood now, trust it will become clear.
+
+[pause for 15 seconds]
+
+Set an intention to remain open to further insight over the coming days. The message may unfold gradually.
+
+[pause for 10 seconds]
+
+Take a deep breath and open your eyes. Journal any additional insights."""
+            }
         },
         {
             "id": 6,
@@ -1059,1681 +2104,59 @@ Not all messages are profound. Ask:
 - Act on guidance received
 - Notice results
 - Adjust practice as needed
-- Trust the process"""
-        }
-    ],
-    "intermediate-1": [
-        {
-            "id": 1,
-            "title": "Introduction to Clairvoyance",
-            "content": """Clairvoyance means "clear seeing" - the ability to receive intuitive information through mental images and visions.
+- Trust the process""",
+            "meditation": {
+                "title": "Advanced Channeling Session",
+                "duration": 15,
+                "script": """This is an advanced practice for receiving deeper guidance. Prepare yourself carefully. Close your eyes.
 
-**Types of Clairvoyant Experiences:**
-- **Mental images**: Pictures in your mind's eye
-- **Symbols**: Meaningful images requiring interpretation
-- **Visions**: More complete scenes or movies
-- **Precognition**: Seeing future events
-- **Remote viewing**: Seeing distant locations
+[pause for 10 seconds]
 
-**How Clairvoyance Differs:**
-- Clairvoyance: Clear seeing
-- Clairaudience: Clear hearing
-- Clairsentience: Clear feeling
-- Claircognizance: Clear knowing
+Take several deep breaths, entering a light trance state. Feel yourself shifting into a receptive mode.
 
-**Signs You May Be Clairvoyant:**
-- Vivid imagination
-- Strong visual memory
-- Seeing colors or lights others don't
-- Meaningful dreams with imagery
-- Daydreaming with purpose
+[pause for 20 seconds]
 
-**Development Approach:**
-Clairvoyance develops through:
-1. Third eye activation
-2. Visualization exercises
-3. Trusting mental images
-4. Practice and validation"""
-        },
-        {
-            "id": 2,
-            "title": "Activating the Third Eye for Seeing",
-            "content": """The third eye is your clairvoyant center. Specific techniques enhance its visual capacity.
+Surround yourself with protective white light. State: "I am protected. Only the highest wisdom may come through."
 
-**Third Eye Activation Meditation:**
-1. Sit comfortably, eyes closed
-2. Focus on the space between your brows
-3. Visualize an indigo lotus flower there
-4. See the petals slowly opening
-5. Feel warmth or tingling
-6. Maintain for 10-15 minutes
+[pause for 15 seconds]
 
-**Color Breathing:**
-- Breathe in indigo light
-- Direct it to your third eye
-- See it glowing brighter
-- Exhale any blockages
+Open your crown chakra wide. Feel a beam of light connecting you to higher dimensions.
 
-**Crystal Activation:**
-- Place amethyst on third eye
-- Lie down and relax
-- Feel the crystal's vibration
-- Allow images to arise
+[pause for 20 seconds]
 
-**Third Eye Pressure Points:**
-- Gently massage between brows
-- Circular motion for 1 minute
-- Stimulates energy flow
-- Practice before meditation"""
-        },
-        {
-            "id": 3,
-            "title": "Visualization Training",
-            "content": """Strong visualization skills are essential for clairvoyance.
+If you wish to connect with a specific being - a guide, your higher self, or a departed loved one - call them now by name or intention.
 
-**Basic Visualization:**
-Close your eyes and visualize:
-- A red apple - see its color, shape, stem
-- A yellow sunflower - notice petals, center
-- A blue ocean wave - see movement, foam
-- A white dove - imagine it flying
+[pause for 20 seconds]
 
-**Progressive Exercises:**
+Feel their presence drawing near. You may sense their energy, see their light, or simply know they're there.
 
-**Level 1 - Static Objects:**
-Visualize simple shapes and colors
-Hold image for 30 seconds
+[pause for 20 seconds]
 
-**Level 2 - Complex Objects:**
-Visualize detailed scenes
-Your bedroom, a forest, a beach
+Ask your question or state your openness to receive whatever message serves your highest good.
 
-**Level 3 - Movement:**
-See things in motion
-Flowing water, flying birds, dancing flames
+[pause for 15 seconds]
 
-**Level 4 - Full Scenes:**
-Create complete environments
-Enter and explore them mentally
+Open your eyes and begin writing. Let the communication flow without interruption.
 
-**Memory Visualization:**
-- Recall a happy memory
-- See it in full detail
-- Add sensory elements
-- Make it more vivid each time"""
-        },
-        {
-            "id": 4,
-            "title": "Receiving Clairvoyant Images",
-            "content": """Learn to receive visual information from beyond your physical sight.
+[pause for 10 seconds]
 
-**Opening to Receive:**
-1. Meditate for 10 minutes
-2. Set intention to receive images
-3. Ask a question or state openness
-4. Relax and observe your inner screen
-5. Notice any images that appear
-6. Don't force or analyze - just observe
+Write until the energy naturally subsides. Don't force it to continue or to stop.
 
-**Types of Images You May Receive:**
-- Faces of people
-- Symbols (hearts, numbers, objects)
-- Colors or lights
-- Scenes or locations
-- Words appearing visually
+[pause for 120 seconds]
 
-**Common Clairvoyant Symbols:**
-- Water: Emotions, cleansing
-- Fire: Transformation, passion
-- Birds: Freedom, messages
-- Flowers: Growth, love
-- Numbers: Specific meanings
-- Colors: Energy states
+When complete, thank the source of wisdom. Close your crown chakra partially - like closing a flower at dusk.
 
-**Practice Exercise:**
-- Have someone think of an object
-- Close your eyes and tune in
-- Describe any images you receive
-- Don't judge - report everything
-- Compare results"""
-        },
-        {
-            "id": 5,
-            "title": "Reading Auras Clairvoyantly",
-            "content": """Use your clairvoyant ability to see and interpret auras in detail.
+[pause for 15 seconds]
 
-**Seeing Aura Layers:**
-- **Etheric**: Closest to body, bluish-gray
-- **Emotional**: Shows feelings, changes rapidly
-- **Mental**: Thoughts, usually yellow
-- **Astral**: Love and relationships, rainbow
-- **Higher layers**: Spiritual connection
+Ground yourself fully. Feel your body, the room around you, the earth beneath you.
 
-**Detailed Aura Reading:**
-1. Have subject stand against plain background
-2. Soften your gaze
-3. Focus slightly to their side
-4. Notice colors appearing
-5. Observe where colors are located
-6. Look for dark spots or bright areas
+[pause for 10 seconds]
 
-**Interpreting What You See:**
-- Bright, clear colors: Health, balance
-- Muddy colors: Blocked energy
-- Holes or tears: Energy leaks
-- Spikes: Anger or defense
-- Expanded aura: Confidence, openness
-
-**Practice:**
-- Read friends' auras
-- Verify with their emotional state
-- Track accuracy over time
-- Notice patterns in your readings"""
-        },
-        {
-            "id": 6,
-            "title": "Precognitive Vision",
-            "content": """Developing the ability to see future possibilities through clairvoyance.
-
-**Understanding Precognition:**
-- Future is not fixed - you see possibilities
-- Some events are more likely than others
-- Free will affects outcomes
-- Time is non-linear at higher levels
-
-**Developing Precognition:**
-1. Keep a dream journal
-2. Note any future-related images
-3. Practice with small predictions
-4. Verify results
-
-**Precognitive Exercise:**
-- Before bed, ask to see tomorrow
-- Note any images upon waking
-- Write them down immediately
-- Check accuracy the next day
-
-**Flash Forward Meditation:**
-1. Enter meditative state
-2. Set intention to see future
-3. Ask specific question about timeline
-4. Observe images that arise
-5. Note details: people, places, feelings
-6. Record everything
-
-**Ethics of Precognition:**
-- Use for guidance, not control
-- Don't frighten others with visions
-- Remember futures can change
-- Focus on positive outcomes"""
-        },
-        {
-            "id": 7,
-            "title": "Remote Viewing Basics",
-            "content": """See distant locations using your clairvoyant abilities.
-
-**What is Remote Viewing?**
-- Scientifically studied phenomenon
-- Viewing locations without being there
-- Used by military and intelligence agencies
-- Anyone can develop this skill
-
-**Basic Protocol:**
-1. Have target coordinates or reference
-2. Enter relaxed, receptive state
-3. Focus on target
-4. Sketch or describe impressions
-5. Note colors, shapes, textures, emotions
-6. Compare to actual target
-
-**Practice Exercise:**
-- Have friend photograph location
-- Without seeing photo, tune in
-- Describe what you perceive
-- Be specific: indoors/outdoors, colors, objects
-- Compare with actual photo
-
-**Tips for Accuracy:**
-- Report first impressions
-- Avoid analysis during session
-- Sketch even vague impressions
-- Note feelings and sensations
-- Don't guess - report only what you perceive"""
-        },
-        {
-            "id": 8,
-            "title": "Integrating Clairvoyance",
-            "content": """Use your clairvoyant abilities in everyday life.
-
-**Daily Clairvoyant Practice:**
-- Morning: Ask to see important events today
-- Before meetings: Visualize outcomes
-- Decision making: See options playing out
-- Evening: Review clairvoyant hits
-
-**Keeping a Clairvoyance Journal:**
-- Record all images received
-- Note date, time, circumstances
-- Track accuracy rate
-- Identify your strongest areas
-
-**Combining with Other Abilities:**
-- Clairvoyance + clairsentience for full readings
-- Visual + feeling impressions are powerful
-- Build comprehensive psychic toolkit
-
-**Professional Development:**
-- Practice with willing friends
-- Offer free readings for experience
-- Get feedback on accuracy
-- Consider certification courses
-
-**Self-Care:**
-- Clairvoyance can be draining
-- Take breaks between sessions
-- Ground after receiving visions
-- Protect your energy field
-- Rest your physical eyes too"""
-        }
-    ],
-    "intermediate-2": [
-        {
-            "id": 1,
-            "title": "Understanding Telepathy",
-            "content": """Telepathy is the transmission of thoughts, feelings, or mental images between minds without physical communication.
-
-**Types of Telepathy:**
-- **Thought transmission**: Sending specific thoughts
-- **Emotional telepathy**: Sensing others' emotions
-- **Image transmission**: Sending mental pictures
-- **Dream telepathy**: Connecting in dreams
-- **Intuitive telepathy**: Knowing what someone will say
-
-**How Telepathy Works:**
-- Consciousness is interconnected
-- Thoughts are energy with frequency
-- Like minds can tune to same frequency
-- Heart connection enhances transmission
-
-**Signs of Natural Telepathy:**
-- Knowing who's calling before answering
-- Finishing others' sentences
-- Feeling distant loved ones' emotions
-- Thinking of someone then hearing from them
-- Twin or close sibling connections"""
-        },
-        {
-            "id": 2,
-            "title": "Developing Receptive Telepathy",
-            "content": """Learn to receive thoughts and impressions from others.
-
-**Preparing to Receive:**
-1. Clear your own thoughts through meditation
-2. Set intention to be receptive
-3. Open your heart center
-4. Create mental stillness
-
-**Basic Receiving Exercise:**
-- Partner thinks of a simple image
-- You relax and open your mind
-- Notice first impressions
-- Don't analyze - just receive
-- Report what you perceive
-
-**Tuning to Others:**
-- Focus on the person
-- Breathe deeply
-- Ask internally: "What are they feeling?"
-- Notice what arises
-- Trust first impressions
-
-**Developing Sensitivity:**
-- Practice in quiet environments
-- Start with people you're close to
-- Work up to strangers
-- Note which connections are strongest
-
-**Signs You're Receiving:**
-- Thoughts feel different from your own
-- Sudden images or words
-- Unexpected emotions
-- Physical sensations
-- Knowing without reason"""
-        },
-        {
-            "id": 3,
-            "title": "Transmitting Thoughts",
-            "content": """Learn to send thoughts and images to others.
-
-**Principles of Transmission:**
-- Clear intention is essential
-- Emotional energy powers transmission
-- Simple messages work best
-- Receiver must be open
-
-**Basic Sending Exercise:**
-1. Choose simple image (shape, color)
-2. Visualize it clearly
-3. Feel emotion about it
-4. Project it to receiver
-5. Imagine them receiving it
-6. Have them report impressions
-
-**Strengthening Transmission:**
-- Use deep breathing
-- Engage heart energy
-- Visualize message traveling
-- Add emotional intensity
-- Repeat if needed
-
-**Long-Distance Telepathy:**
-- Works same as close range
-- Focus on person's face or energy
-- Send message with love
-- Trust it will be received
-
-**Verification:**
-- Always verify with receiver
-- Note hits and misses
-- Track accuracy over time
-- Identify optimal conditions"""
-        },
-        {
-            "id": 4,
-            "title": "Emotional Telepathy",
-            "content": """Emotional connections are the strongest form of telepathy.
-
-**Why Emotions Transmit Easily:**
-- Emotions have strong energy
-- Heart generates powerful electromagnetic field
-- Emotional bonds create connections
-- Feelings are universal language
-
-**Sensing Others' Emotions:**
-1. Quiet your own emotional state
-2. Focus on the person
-3. Notice what you feel
-4. Distinguish your emotions from theirs
-
-**The Heart Connection:**
-- Place hand on heart
-- Think of person with love
-- Feel your heart open
-- Sense their emotional state
-- Note any physical sensations
-
-**Empathic Boundaries:**
-When sensing too much:
-- Ground yourself
-- Visualize separation
-- Clear absorbed emotions
-- Protect your energy field
-
-**Healing Applications:**
-- Send loving energy to those in pain
-- Help calm anxious friends
-- Support from distance
-- Use ethically and with permission"""
-        },
-        {
-            "id": 5,
-            "title": "Dream Telepathy",
-            "content": """Connect with others through the dream state.
-
-**How Dream Telepathy Works:**
-- Consciousness is free during sleep
-- Dream state allows easier connection
-- Less mental interference
-- Scientific studies confirm phenomenon
-
-**Sending Dream Messages:**
-Before sleep:
-1. Hold person in your heart
-2. Visualize your message clearly
-3. Intend to meet in dreams
-4. Repeat as you fall asleep
-5. Journal any dreams about them
-
-**Receiving Dream Messages:**
-- Set intention before sleep
-- Ask to receive any messages
-- Keep journal by bed
-- Record dreams immediately
-- Contact sender to verify
-
-**Dream Meeting Practice:**
-With a partner:
-- Both intend to meet in dreams
-- Agree on a location
-- Sleep at same time
-- Compare dream reports
-- Note any overlaps
-
-**Increasing Success:**
-- Practice regularly
-- Strong emotional connection helps
-- Same sleep schedule
-- Clear intentions
-- Detailed recording"""
-        },
-        {
-            "id": 6,
-            "title": "Advanced Telepathy Applications",
-            "content": """Use telepathy skillfully in various situations.
-
-**Animal Telepathy:**
-- Animals communicate telepathically
-- Send simple images to pets
-- Receive their feelings and needs
-- Build deeper bond
-
-**Group Telepathy:**
-- Meditation groups can share experiences
-- Set collective intention
-- Share impressions afterward
-- Notice common themes
-
-**Telepathy in Relationships:**
-- Strengthen bonds through practice
-- Send love and support
-- Receive partner's needs
-- Use for deeper understanding
-
-**Professional Applications:**
-- Enhance counseling work
-- Support clients energetically
-- Read group dynamics
-- Use in negotiations (ethically)
-
-**Ethics of Telepathy:**
-- Never intrude without permission
-- Don't use for manipulation
-- Respect privacy
-- Use for healing and help
-- Send only positive energy
-
-**Continued Practice:**
-- Daily sending/receiving exercises
-- Practice with different people
-- Expand range and accuracy
-- Develop your unique style"""
-        }
-    ],
-    "intermediate-3": [
-        {
-            "id": 1,
-            "title": "The Power of Dreams",
-            "content": """Dreams are a gateway to higher consciousness and psychic information.
-
-**Types of Dreams:**
-- **Processing dreams**: Mind sorting daily experiences
-- **Symbolic dreams**: Subconscious messages in symbols
-- **Prophetic dreams**: Glimpses of future events
-- **Visitation dreams**: Contact with departed or guides
-- **Lucid dreams**: Aware you're dreaming
-
-**Why Dreams Matter for Psychic Development:**
-- Defenses are down during sleep
-- Access to subconscious wisdom
-- Connection to collective unconscious
-- Time and space barriers dissolve
-- Higher self communicates freely
-
-**Starting a Dream Practice:**
-- Keep journal by bed
-- Write immediately upon waking
-- Record even fragments
-- Note feelings and colors
-- Date every entry"""
-        },
-        {
-            "id": 2,
-            "title": "Dream Recall",
-            "content": """Most people forget dreams. These techniques help you remember.
-
-**Before Sleep:**
-- Say aloud: "I will remember my dreams"
-- Review day briefly to clear mind
-- Set intention clearly
-- Relax completely
-
-**Upon Waking:**
-- Don't move immediately
-- Keep eyes closed
-- Let dream images return
-- Trace dream backward
-- Then record everything
-
-**Recall Techniques:**
-- Wake naturally when possible
-- Sleep 7-9 hours for more REM
-- Avoid alcohol (suppresses dreams)
-- Stay in same position to recall
-- Use voice recorder if writing is hard
-
-**Building Dream Memory:**
-- Even "no dream" is worth recording
-- Fragments count - write them
-- Review journal before sleep
-- Patterns will emerge
-- Patience improves recall"""
-        },
-        {
-            "id": 3,
-            "title": "Dream Interpretation",
-            "content": """Learn to decode the symbolic language of dreams.
-
-**Interpretation Principles:**
-- You are the best interpreter
-- Symbols are personal AND universal
-- Emotions are key clues
-- Context matters
-
-**Common Dream Symbols:**
-- **Water**: Emotions, subconscious
-- **Flying**: Freedom, rising above
-- **Falling**: Loss of control, letting go
-- **Teeth falling out**: Change, anxiety
-- **Being chased**: Avoiding something
-- **Death**: Transformation, endings
-- **Houses**: Self, psyche
-- **Cars**: Life direction, control
-
-**Interpretation Method:**
-1. Write dream in present tense
-2. List main elements
-3. Note emotions felt
-4. Ask what each symbol means to you
-5. Look for life connections
-6. Summarize message
-
-**Questions to Ask:**
-- What does this remind me of?
-- How did I feel in the dream?
-- What situation in my life is similar?
-- What is my subconscious telling me?"""
-        },
-        {
-            "id": 4,
-            "title": "Lucid Dreaming Basics",
-            "content": """Lucid dreaming is knowing you're dreaming while in the dream.
-
-**Benefits of Lucid Dreaming:**
-- Explore your subconscious
-- Practice psychic skills
-- Face fears safely
-- Receive direct guidance
-- Experience unlimited possibilities
-
-**Reality Checks:**
-Throughout the day, ask: "Am I dreaming?"
-- Look at hands (they change in dreams)
-- Check time (clocks are unstable)
-- Try to push finger through palm
-- Attempt to fly
-- Read text twice (changes in dreams)
-
-**MILD Technique:**
-(Mnemonic Induction of Lucid Dreams)
-1. Wake after 5 hours sleep
-2. Stay awake 30-60 minutes
-3. Think about lucid dreaming
-4. Return to sleep repeating:
-   "I will know I'm dreaming"
-5. Visualize becoming lucid
-
-**Signs You're Dreaming:**
-- Impossible events
-- Strange logic accepted
-- People acting unusual
-- Locations morphing
-- Abilities you don't have"""
-        },
-        {
-            "id": 5,
-            "title": "Staying Lucid",
-            "content": """Once lucid, staying in the dream takes practice.
-
-**Common Problems:**
-- Waking up from excitement
-- Dream becoming unstable
-- Losing lucidity
-- Dream fading to black
-
-**Stabilization Techniques:**
-
-**Rub Your Hands:**
-- Creates sensation
-- Grounds you in dream
-- Stabilizes visuals
-
-**Spin in Circles:**
-- Engages dream body
-- Refreshes dream scene
-- Prevents waking
-
-**Touch Surroundings:**
-- Feel textures
-- Engage senses
-- Increase reality
-
-**Verbal Commands:**
-- "Clarity now!"
-- "Increase lucidity!"
-- "Stabilize!"
-
-**Stay Calm:**
-- Control excitement
-- Remember it's normal
-- Breathe in the dream
-- Focus on one thing"""
-        },
-        {
-            "id": 6,
-            "title": "Using Dreams for Guidance",
-            "content": """Program your dreams to receive answers and guidance.
-
-**Dream Incubation:**
-1. Clear your mind before sleep
-2. Focus on your question
-3. Write question and place under pillow
-4. Repeat question as you drift off
-5. Expect an answer
-6. Record dreams immediately
-
-**Asking for Guidance:**
-- "Show me my next step"
-- "What do I need to know about...?"
-- "Help me understand..."
-- "What is blocking me?"
-
-**Meeting Guides in Dreams:**
-- Ask to meet your guide
-- Set intention clearly
-- Be open to any form
-- Ask their name
-- Request ongoing relationship
-
-**Problem-Solving Dreams:**
-- Focus on problem before sleep
-- Ask for creative solutions
-- Trust the process
-- Many inventions came from dreams
-
-**Dream Skills:**
-- Practice psychic abilities in dreams
-- Test remote viewing
-- Practice telepathy
-- Experience astral travel
-- All skills transfer to waking life"""
-        },
-        {
-            "id": 7,
-            "title": "Advanced Dream Practices",
-            "content": """Take your dream work to deeper levels.
-
-**Shared Dreaming:**
-- Agree to meet someone in dreams
-- Set same intention
-- Compare dream reports
-- Note overlapping elements
-
-**Past Life Dreams:**
-- Ask to see past lives
-- Note historical details
-- Research when awake
-- Look for patterns
-
-**Healing in Dreams:**
-- Ask for healing during sleep
-- Meet healing guides
-- Release old wounds
-- Wake feeling lighter
-
-**Prophetic Dreams:**
-- Ask to see future
-- Note specific details
-- Record and date
-- Check accuracy later
-
-**Dream Journaling Advanced:**
-- Use colors and symbols
-- Create dream dictionary
-- Map recurring themes
-- Track long-term patterns
-- Share with dream group
-
-**Building Dream Life:**
-- Regular practice
-- Dream community
-- Ongoing study
-- Integration with waking life
-- Honor the dream world"""
-        }
-    ],
-    "advanced-1": [
-        {
-            "id": 1,
-            "title": "Introduction to Astral Projection",
-            "content": """Astral projection is the conscious separation of your astral body from your physical body.
-
-**What is the Astral Body?**
-- Your energy body or soul
-- Exists independently of physical form
-- Connected by silver cord
-- Can travel anywhere instantly
-
-**Benefits of Astral Projection:**
-- Explore other dimensions
-- Meet guides and teachers
-- Visit any location
-- Overcome fear of death
-- Accelerate spiritual growth
-
-**Natural Astral Experiences:**
-- Happens naturally during sleep
-- Near-death experiences
-- Spontaneous out-of-body moments
-- Deep meditation states
-
-**Safety:**
-- Silver cord keeps you connected
-- You cannot get lost
-- Physical body is protected
-- Return is always possible
-- Negative entities can be avoided"""
-        },
-        {
-            "id": 2,
-            "title": "Preparing for Projection",
-            "content": """Successful astral projection requires proper preparation.
-
-**Physical Preparation:**
-- Empty stomach (don't project after eating)
-- Comfortable clothing
-- Dark, quiet room
-- Comfortable temperature
-- No interruptions
-
-**Mental Preparation:**
-- Regular meditation practice
-- Cleared emotional issues
-- Released fears
-- Strong intention
-- Positive expectation
-
-**Energy Preparation:**
-- Daily energy work
-- Activated chakras
-- Strong vital energy
-- Clean aura
-- Grounded foundation
-
-**Optimal Timing:**
-- Early morning (4-6 AM)
-- After waking naturally
-- During naps
-- Deep relaxation states
-- Full moon energy helps"""
-        },
-        {
-            "id": 3,
-            "title": "Relaxation and Vibrational State",
-            "content": """The vibrational state is the gateway to astral projection.
-
-**Deep Relaxation:**
-1. Lie on back, arms at sides
-2. Close eyes
-3. Progressive relaxation from toes to head
-4. Release all muscle tension
-5. Let body feel heavy
-6. Mind stays alert while body sleeps
-
-**Reaching Vibrational State:**
-- As body paralyzes, vibrations begin
-- Feel buzzing, humming, electricity
-- May hear loud sounds
-- Don't fear - this is normal
-- Let vibrations increase
-
-**Symptoms to Expect:**
-- Body paralysis (normal)
-- Vibrations or tingling
-- Loud noises or voices
-- Feeling of pressure
-- Sense of movement
-- Seeing through closed eyes
-
-**Staying Calm:**
-- Fear will end the experience
-- Remember you are safe
-- Focus on sensations
-- Allow the process
-- Trust your preparation"""
-        },
-        {
-            "id": 4,
-            "title": "Exit Techniques",
-            "content": """Various methods to separate from your physical body.
-
-**The Roll-Out Method:**
-- During vibrational state
-- Simply roll out of body
-- Like rolling out of bed
-- Feel yourself floating
-- Don't use physical muscles
-
-**The Rope Technique:**
-- Visualize rope above you
-- See your astral arms reaching
-- Climb the rope with intention
-- Pull yourself out
-- Feel the separation
-
-**The Float Method:**
-- Command yourself to rise
-- Feel lightness
-- Float upward slowly
-- Let gravity release
-- Drift out naturally
-
-**The Target Method:**
-- Focus on location you want to visit
-- See it clearly
-- Feel yourself there
-- Teleport instantly
-- Good for experienced projectors
-
-**Tips for Success:**
-- Don't try too hard
-- Stay completely passive
-- Let it happen
-- First time may be brief
-- Practice increases duration"""
-        },
-        {
-            "id": 5,
-            "title": "Navigating the Astral Realm",
-            "content": """Once out of body, learn to move and explore.
-
-**Movement in Astral:**
-- Thought = movement
-- Think of location = you're there
-- Flying is natural
-- Walking is optional
-- Time and space are different
-
-**What You May Encounter:**
-- Your bedroom (start point)
-- Physical world (slightly different)
-- Astral planes (various levels)
-- Other beings
-- Guides and helpers
-
-**The Astral Environment:**
-- Colors are more vivid
-- Objects may glow
-- You can pass through walls
-- Thoughts manifest quickly
-- Reality is malleable
-
-**Maintaining Clarity:**
-- Demand "Clarity now!"
-- Look at your hands
-- Touch surroundings
-- Stay focused
-- Avoid negative thoughts
-
-**Exploring Safely:**
-- Stay near body at first
-- Explore familiar areas
-- Call for your guide
-- Return if uncomfortable
-- Build confidence gradually"""
-        },
-        {
-            "id": 6,
-            "title": "Meeting Guides and Beings",
-            "content": """The astral realm is populated with many beings.
-
-**Types of Beings:**
-- Spirit guides
-- Angels
-- Deceased loved ones
-- Other projectors
-- Thought forms
-- Teachers and masters
-
-**Connecting with Your Guide:**
-1. Project successfully
-2. Call out for your guide
-3. State intention to meet
-4. Wait with openness
-5. Notice who appears
-6. Communicate telepathically
-
-**Communication in Astral:**
-- Telepathic naturally
-- Thoughts transfer instantly
-- Ask questions directly
-- Receive knowledge
-- Emotions are clear
-
-**Protection from Negative Entities:**
-- Surround yourself in white light
-- State your divine protection
-- Command them to leave
-- Return to body if needed
-- Raise your vibration with love
-
-**Receiving Teaching:**
-- Ask for specific knowledge
-- Visit astral libraries
-- Attend classes
-- Receive healing
-- Access akashic records"""
-        },
-        {
-            "id": 7,
-            "title": "Returning and Integration",
-            "content": """Safe return and making the most of your experiences.
-
-**Returning to Body:**
-- Think of your body
-- Feel the pull back
-- Instant return usually
-- May feel heavy entering body
-- Wiggle fingers and toes first
-
-**Immediate After Care:**
-- Stay still briefly
-- Review experience
-- Ground yourself
-- Record everything
-- Eat something light
-
-**Keeping a Projection Journal:**
-- Date and time
-- Length of projection
-- Exit technique used
-- Where you went
-- Who you met
-- What you learned
-- How you returned
-
-**Integration:**
-- Apply astral insights
-- Notice life changes
-- Share experiences carefully
-- Continue practicing
-- Join communities
-
-**Troubleshooting:**
-- Can't project: More relaxation needed
-- Fear blocks you: Work through fears
-- Experiences too short: Practice more
-- Can't remember: Record immediately
-- Vibrations but no exit: Try different technique"""
-        },
-        {
-            "id": 8,
-            "title": "Advanced Projection Practices",
-            "content": """Take your astral abilities to higher levels.
-
-**Visiting Real Locations:**
-- Project to friend's house
-- Note specific details
-- Verify later
-- Increase accuracy
-
-**Time Travel:**
-- Access past events
-- View possible futures
-- Visit significant moments
-- Record and verify
-
-**Dimensional Exploration:**
-- Higher astral planes
-- Different reality systems
-- Other worlds
-- Increased consciousness
-
-**Healing Work:**
-- Heal yourself astrally
-- Send healing to others (with permission)
-- Clear energy blocks
-- Repair astral body
-
-**Group Projection:**
-- Coordinate with others
-- Meet at planned locations
-- Compare experiences
-- Validate together
-
-**Maintaining Practice:**
-- Regular sessions
-- Varied techniques
-- Ongoing learning
-- Balance with physical life
-- Integration of experiences"""
-        },
-        {
-            "id": 9,
-            "title": "The Philosophy of Astral Travel",
-            "content": """Understanding the deeper meaning of out-of-body experiences.
-
-**What Astral Projection Teaches:**
-- You are more than your body
-- Consciousness is primary
-- Death is a transition
-- Reality is multidimensional
-- Connection to all that is
-
-**Spiritual Growth:**
-- Each projection expands awareness
-- Fear of death dissolves
-- Compassion increases
-- Wisdom develops
-- Purpose becomes clear
-
-**Responsibility:**
-- Use abilities wisely
-- Help others when possible
-- Share knowledge carefully
-- Stay grounded
-- Maintain balance
-
-**Continued Development:**
-- Combine with meditation
-- Develop all psychic abilities
-- Serve others
-- Teach when ready
-- Never stop learning
-
-**The Ultimate Goal:**
-- Conscious existence
-- Full awakening
-- Service to humanity
-- Union with divine
-- Complete freedom"""
-        },
-        {
-            "id": 10,
-            "title": "Mastering Astral Projection",
-            "content": """Achieving consistent, controlled astral travel.
-
-**Signs of Mastery:**
-- Project at will
-- Stay out for extended periods
-- Travel anywhere instantly
-- Complete control of experience
-- Deep wisdom gained
-
-**Daily Practice Schedule:**
-- Morning: Meditation
-- Afternoon: Energy work
-- Evening: Projection attempt
-- Night: Dream awareness
-- Record everything
-
-**Advanced Techniques:**
-- Phase method
-- Wake-initiated lucid dream to OBE
-- Direct entry from meditation
-- Spontaneous projection
-
-**Teaching Others:**
-- Share when called
-- Guide with compassion
-- Respect each person's path
-- Provide safe space
-- Encourage practice
-
-**Living as a Projector:**
-- Integrate two worlds
-- Maintain physical health
-- Stay socially connected
-- Continue growing
-- Serve with your gifts
-
-**The Journey Continues:**
-- Mastery is ongoing
-- New realms to explore
-- Deeper truths to discover
-- Endless possibilities
-- Trust the process"""
-        }
-    ],
-    "advanced-2": [
-        {
-            "id": 1,
-            "title": "What is Remote Viewing?",
-            "content": """Remote viewing is the ability to perceive information about distant locations, objects, or events using only the mind.
-
-**History of Remote Viewing:**
-- Developed by Stanford Research Institute
-- Used by CIA in Stargate Project
-- Scientifically tested and validated
-- Declassified in 1995
-- Now taught worldwide
-
-**How It Differs from Clairvoyance:**
-- Structured protocol
-- Blind targets (no prior knowledge)
-- Can be learned by anyone
-- Uses specific methodology
-- Produces measurable results
-
-**Applications:**
-- Locating missing objects/people
-- Accessing hidden information
-- Predicting future events
-- Archaeological discoveries
-- Business intelligence
-
-**What Makes It Work:**
-- Consciousness is non-local
-- Information exists in unified field
-- Mind can access any point
-- Training improves accuracy
-- Practice develops skill"""
-        },
-        {
-            "id": 2,
-            "title": "Remote Viewing Protocol",
-            "content": """Following proper protocol ensures accurate results.
-
-**Session Structure:**
-1. **Target**: Coordinates or reference number
-2. **Viewer**: Person doing remote viewing
-3. **Monitor**: Person guiding session (optional)
-4. **Blind**: Viewer doesn't know target
-
-**Basic Protocol Steps:**
-1. Receive target coordinates
-2. Enter relaxed state
-3. Contact target
-4. Describe impressions
-5. Sketch what you perceive
-6. Close session
-7. Reveal and compare
-
-**Rules for Viewing:**
-- Don't guess or analyze
-- Report only perceptions
-- Use sensory descriptions
-- Avoid naming things
-- Stay in perception mode
-
-**Recording Data:**
-- Sketch before words
-- Use descriptive language
-- Note all impressions
-- Include emotional data
-- Be specific"""
-        },
-        {
-            "id": 3,
-            "title": "Ideograms and Stage 1",
-            "content": """Stage 1 focuses on the initial ideogram - your first contact with target.
-
-**What is an Ideogram?**
-- First spontaneous mark on paper
-- Contains compressed data
-- Represents target essence
-- Comes from subconscious
-
-**Producing Ideograms:**
-1. Write coordinates on paper
-2. Clear your mind
-3. Let pen move spontaneously
-4. Don't think - just mark
-5. Analyze the ideogram
-
-**Decoding:**
-- Motion of pen (slow, fast, curved)
-- Feeling while drawing
-- What does shape suggest?
-- Size and pressure
-
-**Basic Categories:**
-- Land (horizontal, solid)
-- Water (wavy, flowing)
-- Structure (angular, contained)
-- Life form (curved, organic)
-- Energy (jagged, scattered)
-
-**Practice:**
-- Have targets assigned
-- Don't know what they are
-- Produce ideograms
-- Decode and verify
-- Track accuracy"""
-        },
-        {
-            "id": 4,
-            "title": "Sensory Impressions - Stage 2",
-            "content": """Stage 2 develops fuller sensory impressions of the target.
-
-**Sensory Data:**
-- Colors
-- Textures
-- Temperatures
-- Sounds
-- Smells
-- Tastes
-- Dimensions
-
-**Collecting Impressions:**
-1. Probe your ideogram
-2. Ask: "What does this feel like?"
-3. Note colors perceived
-4. Describe textures
-5. Sense temperature
-6. Listen for sounds
-7. Note smells
-
-**Words to Use:**
-Instead of "mountain" say:
-- Tall, solid, rough
-- Gray, massive, cold
-- Natural, ancient, rocky
-
-This keeps you from guessing.
-
-**Practice:**
-- Work from ideogram
-- List all sensory data
-- Don't conclude
-- Stay in perception
-- Verify and learn"""
-        },
-        {
-            "id": 5,
-            "title": "Sketching and Stage 3",
-            "content": """Stage 3 involves producing sketches of the target.
-
-**Why Sketching Works:**
-- Bypasses analytical mind
-- Captures impressions directly
-- Shows spatial relationships
-- Reveals unexpected details
-
-**Sketching Rules:**
-- Don't try to draw well
-- Let hand move freely
-- Include all impressions
-- Label parts
-- Multiple sketches OK
-
-**What to Sketch:**
-- Overall shapes
-- Relationships of elements
-- Dimensional impressions
-- Unusual features
-- Movement patterns
-
-**Technique:**
-1. Close eyes briefly
-2. See the target
-3. Open eyes, draw immediately
-4. Don't edit
-5. Label features
-
-**Analyzing Sketches:**
-- Compare to target
-- Note accurate elements
-- See where you went wrong
-- Learn from patterns
-- Improve over time"""
-        },
-        {
-            "id": 6,
-            "title": "Dimensional and Emotional Data",
-            "content": """Advanced stages include dimensionals and emotional impressions.
-
-**Dimensional Data:**
-- Size relationships
-- Distance
-- Height and width
-- Position in space
-- Movement direction
-
-**Recording Dimensionals:**
-- "Large to small"
-- "High above ground"
-- "Enclosed feeling"
-- "Vast open space"
-- "Narrow passage"
-
-**Emotional/Aesthetic Impressions:**
-- How target feels
-- Purpose or function
-- Historical significance
-- Emotional residue
-- Human connection
-
-**AI (Aesthetic Impact):**
-What emotion does target evoke?
-- Peaceful, chaotic
-- Important, mundane
-- Beautiful, disturbing
-- Sacred, ordinary
-
-**Practice:**
-- Include all categories
-- Note everything
-- Trust impressions
-- Verify results
-- Build confidence"""
-        },
-        {
-            "id": 7,
-            "title": "Intangibles and Stage 4",
-            "content": """Stage 4 accesses deeper information about the target.
-
-**Intangible Data:**
-- Purpose of target
-- History
-- Significance
-- Function
-- Relationships
-
-**Matrix Work:**
-Create columns for:
-- Physical (sensory data)
-- Dimensional (size, space)
-- Emotional (feelings)
-- Intangible (meaning)
-
-**Probing Questions:**
-- "What is this for?"
-- "What happened here?"
-- "Who is connected?"
-- "Why is this significant?"
-- "What's the story?"
-
-**Avoiding Analysis:**
-- Stay in perception
-- Don't conclude
-- If naming, move on
-- Return to sensory
-- Trust the process
-
-**Advanced Probing:**
-- Ask for specific information
-- Time-related data
-- People involved
-- Future events
-- Deeper layers"""
-        },
-        {
-            "id": 8,
-            "title": "Practice Targets",
-            "content": """Structured practice develops accuracy.
-
-**Types of Practice Targets:**
-- Photographs
-- Locations
-- Events
-- People
-- Objects
-
-**Setting Up Practice:**
-1. Have someone choose targets
-2. Assign random coordinates
-3. Stay completely blind
-4. Do session
-5. Reveal and compare
-
-**Self-Practice:**
-- Use target pools online
-- Random number generators
-- Pre-packaged target sets
-- Join viewing communities
-
-**Feedback:**
-- Essential for learning
-- Compare every session
-- Note accurate elements
-- Identify error patterns
-- Adjust technique
-
-**Tracking Progress:**
-- Keep detailed records
-- Calculate hit rate
-- Note improvement
-- Identify strengths
-- Build on success"""
-        },
-        {
-            "id": 9,
-            "title": "Real-World Applications",
-            "content": """Using remote viewing for practical purposes.
-
-**Finding Lost Items:**
-- Focus on object
-- View its surroundings
-- Sketch location clues
-- Note any words or numbers
-- Search based on data
-
-**Missing Persons:**
-- (Work with authorities)
-- View current location
-- Describe environment
-- Note health condition
-- Provide coordinates
-
-**Future Events:**
-- View specific future time
-- Describe what's happening
-- Note changes possible
-- Record and verify
-- Use ethically
-
-**Business Applications:**
-- Market predictions
-- Competition analysis
-- Product development
-- Risk assessment
-- Strategic planning
-
-**Archaeological:**
-- Locate sites
-- Describe artifacts
-- View historical events
-- Guide excavations
-- Recover lost knowledge"""
-        }
-    ],
-    "advanced-3": [
-        {
-            "id": 1,
-            "title": "Understanding Psychic Protection",
-            "content": """Psychic protection is essential for anyone developing their abilities.
-
-**Why Protection Matters:**
-- Opening psychically makes you sensitive
-- Negative energies can affect you
-- Other people's emotions can impact you
-- Entities may be attracted to your light
-- Protection maintains your wellbeing
-
-**Types of Psychic Threats:**
-- Energy vampires (people who drain you)
-- Negative thought forms
-- Psychic attack (intentional negative sending)
-- Earthbound spirits
-- Lower astral entities
-
-**Signs You Need Protection:**
-- Sudden fatigue after being with certain people
-- Nightmares or disturbed sleep
-- Feeling watched
-- Unexplained negative emotions
-- Physical symptoms with no medical cause
-
-**Foundation of Protection:**
-- Strong energy field
-- Clear intentions
-- High vibration
-- Connection to Source
-- Regular practice"""
-        },
-        {
-            "id": 2,
-            "title": "Building Your Shield",
-            "content": """Creating an energetic shield is your first line of defense.
-
-**White Light Shield:**
-1. Sit quietly and close eyes
-2. Visualize white light from above
-3. See it flowing down around you
-4. Form a protective cocoon
-5. Set intention it blocks negativity
-6. Make it solid and complete
-7. Practice until automatic
-
-**Golden Shield:**
-- Gold represents divine protection
-- Visualize golden egg around you
-- Nothing can penetrate
-- Reflects negativity back
-- Maintains your light
-
-**Mirror Shield:**
-- Visualize mirrored surface around you
-- Reflects all energy back to sender
-- Particularly good for psychic attack
-- Protects without absorbing
-
-**Strengthening Shields:**
-- Practice daily
-- Refresh throughout day
-- Especially before difficult situations
-- Upon waking and before sleep
-- During meditation"""
-        },
-        {
-            "id": 3,
-            "title": "Grounding and Centering",
-            "content": """Grounding keeps you stable and protected; centering keeps your power.
-
-**Why Ground:**
-- Connects you to earth energy
-- Provides stability
-- Releases excess energy
-- Prevents overwhelm
-- Maintains clarity
-
-**Grounding Techniques:**
-
-**Tree Roots:**
-- Stand or sit with feet flat
-- Visualize roots from feet
-- See them growing into earth
-- Feel stability and security
-- Draw earth energy up
-
-**Earth Connection:**
-- Walk barefoot when possible
-- Sit against a tree
-- Hold grounding crystals
-- Eat root vegetables
-- Spend time in nature
-
-**Centering:**
-- Focus on your core
-- Gather your energy inward
-- Feel your center of power
-- Nothing can disturb this center
-- Return here when shaken"""
-        },
-        {
-            "id": 4,
-            "title": "Clearing Negative Energy",
-            "content": """Regular clearing removes accumulated negative energy.
-
-**Signs You Need Clearing:**
-- Feeling heavy or tired
-- Negative thoughts increasing
-- Uncharacteristic emotions
-- Physical tightness
-- Sense of cloudiness
-
-**Personal Clearing:**
-
-**Salt Bath:**
-- Cup of sea salt in bath
-- Soak for 20 minutes
-- Visualize darkness releasing
-- Shower off the salt
-- Feel clean and light
-
-**Smudging:**
-- Light sage or palo santo
-- Move smoke around body
-- Set intention to clear
-- Open windows to release
-
-**Visualization:**
-- See yourself under waterfall
-- Light washing through you
-- All darkness leaving
-- Filling with pure light
-
-**Space Clearing:**
-- Clear your home regularly
-- Open all windows
-- Smudge room by room
-- Ring bells in corners
-- Set protective intention"""
-        },
-        {
-            "id": 5,
-            "title": "Protecting Against Energy Vampires",
-            "content": """Some people drain energy unconsciously or deliberately.
-
-**Identifying Energy Vampires:**
-- You feel exhausted after being with them
-- They dominate conversations
-- Everything is about their problems
-- They leave you feeling negative
-- Your energy drops around them
-
-**Protection Strategies:**
-
-**Cord Cutting:**
-- Visualize cords connecting you
-- See them clearly
-- Cut with golden scissors
-- Seal the cut ends with light
-- Do regularly
-
-**Bubble Shield:**
-- Before interaction
-- Create strong bubble
-- Set it to allow only love
-- Maintain throughout contact
-- Refresh as needed
-
-**Time Limits:**
-- Set boundaries
-- Limit interaction time
-- Have escape plan
-- Take breaks
-- Honor your needs
-
-**Long-term Solutions:**
-- Reduce contact if possible
-- Have honest conversation
-- Seek help if relationship important
-- Prioritize your wellbeing"""
+Open your eyes. Take time to process what you've received."""
+            }
         }
     ]
 }
-
 # Models
 class OracleReading(BaseModel):
     card: dict
