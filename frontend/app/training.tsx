@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { Paywall } from '../components/Paywall';
+import { AudioPlayerManager } from '../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -42,9 +43,20 @@ export default function Training() {
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [loadingLessons, setLoadingLessons] = useState(false);
 
+  // TTS Meditation state
+  const [isPlayingMeditation, setIsPlayingMeditation] = useState(false);
+  const [isGeneratingTTS, setIsGeneratingTTS] = useState(false);
+  const [ttsProgress, setTtsProgress] = useState('');
+  const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
+
   useEffect(() => {
     loadTrainingData();
     loadProgress();
+    
+    // Cleanup audio on unmount
+    return () => {
+      stopMeditation();
+    };
   }, []);
 
   const loadTrainingData = async () => {
@@ -77,6 +89,110 @@ export default function Training() {
       await AsyncStorage.setItem('completed_lessons', JSON.stringify(updated));
     } catch (error) {
       console.error('Error saving progress:', error);
+    }
+  };
+
+  // TTS Meditation Functions
+  const stopMeditation = async () => {
+    try {
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.unload();
+        audioPlayerRef.current = null;
+      }
+    } catch (e) {
+      console.log('Error stopping meditation:', e);
+    }
+    setIsPlayingMeditation(false);
+    setIsGeneratingTTS(false);
+  };
+
+  const playMeditation = async () => {
+    if (!currentLesson?.meditation) return;
+
+    // Stop any existing playback
+    await stopMeditation();
+    
+    setIsGeneratingTTS(true);
+    setTtsProgress('Preparing meditation audio...');
+
+    try {
+      const script = currentLesson.meditation.script;
+      
+      // Clean the script - remove [pause] instructions for TTS
+      // We'll process pauses separately
+      const cleanScript = script
+        .replace(/\[pause for \d+ seconds?\]/gi, '...')
+        .replace(/\[pause\]/gi, '...');
+
+      // Split into chunks if needed (TTS has character limits)
+      const maxChunkSize = 4000;
+      const chunks: string[] = [];
+      
+      if (cleanScript.length <= maxChunkSize) {
+        chunks.push(cleanScript);
+      } else {
+        // Split by paragraphs
+        const paragraphs = cleanScript.split('\n\n');
+        let currentChunk = '';
+        
+        for (const para of paragraphs) {
+          if ((currentChunk + '\n\n' + para).length > maxChunkSize) {
+            if (currentChunk) chunks.push(currentChunk);
+            currentChunk = para;
+          } else {
+            currentChunk = currentChunk ? currentChunk + '\n\n' + para : para;
+          }
+        }
+        if (currentChunk) chunks.push(currentChunk);
+      }
+
+      setTtsProgress(`Generating audio (${chunks.length} segments)...`);
+
+      // Generate and play audio chunks sequentially
+      setIsPlayingMeditation(true);
+      setIsGeneratingTTS(false);
+
+      for (let i = 0; i < chunks.length; i++) {
+        if (!isPlayingMeditation) break;
+
+        setTtsProgress(`Playing segment ${i + 1} of ${chunks.length}...`);
+
+        const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: chunks[i],
+            voice: 'nova'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate audio');
+        }
+
+        const data = await response.json();
+        
+        if (data.audio_base64) {
+          const player = new AudioPlayerManager();
+          await player.loadAndPlay(`data:audio/mp3;base64,${data.audio_base64}`, { volume: 1.0 });
+          audioPlayerRef.current = player;
+          
+          // Wait for this chunk to finish
+          await player.waitForCompletion(180000);
+          await player.unload();
+        }
+      }
+
+      setTtsProgress('');
+      setIsPlayingMeditation(false);
+      Alert.alert('Meditation Complete', 'Take a moment to return to awareness.');
+
+    } catch (error) {
+      console.error('Error playing meditation:', error);
+      Alert.alert('Error', 'Failed to play meditation audio. Please try again.');
+      setIsGeneratingTTS(false);
+      setIsPlayingMeditation(false);
+      setTtsProgress('');
     }
   };
 
@@ -299,6 +415,27 @@ export default function Training() {
                     {currentLesson.meditation.duration} minutes
                   </Text>
                 </View>
+              </View>
+
+              {/* TTS Play Button */}
+              <View style={styles.meditationControls}>
+                {isGeneratingTTS ? (
+                  <View style={styles.generatingContainer}>
+                    <ActivityIndicator size="small" color="#a855f7" />
+                    <Text style={styles.generatingText}>{ttsProgress}</Text>
+                  </View>
+                ) : isPlayingMeditation ? (
+                  <TouchableOpacity style={styles.stopMeditationButton} onPress={stopMeditation}>
+                    <Ionicons name="stop-circle" size={24} color="#ef4444" />
+                    <Text style={styles.stopMeditationText}>Stop Meditation</Text>
+                    {ttsProgress ? <Text style={styles.progressText}>{ttsProgress}</Text> : null}
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.playMeditationButton} onPress={playMeditation}>
+                    <Ionicons name="play-circle" size={24} color="#0f0321" />
+                    <Text style={styles.playMeditationText}>Play Guided Meditation</Text>
+                  </TouchableOpacity>
+                )}
               </View>
               
               <View style={styles.meditationScriptBox}>
@@ -727,5 +864,55 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9f7aea',
     lineHeight: 18,
+  },
+  // TTS Meditation Controls
+  meditationControls: {
+    marginBottom: 16,
+  },
+  playMeditationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#a855f7',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 10,
+  },
+  playMeditationText: {
+    color: '#0f0321',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  stopMeditationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+  },
+  stopMeditationText: {
+    color: '#ef4444',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  progressText: {
+    color: '#9f7aea',
+    fontSize: 12,
+    marginLeft: 8,
+  },
+  generatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 10,
+  },
+  generatingText: {
+    color: '#c4b5fd',
+    fontSize: 14,
   },
 });
