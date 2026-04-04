@@ -164,11 +164,11 @@ export default function ChakraMeditation() {
         }
       }
 
-      // Load chakra tone
+      // Load chakra tone - request short segment that loops
       setLoadingStage('Loading chakra frequency tone...');
-      console.log('Loading tone for chakra:', chakra.id, 'duration:', durationSeconds);
+      console.log('Loading tone for chakra:', chakra.id);
       const toneResponse = await fetch(
-        `${BACKEND_URL}/api/meditation/chakra/tone/${chakra.id}?duration=${durationSeconds}`
+        `${BACKEND_URL}/api/meditation/chakra/tone/${chakra.id}?duration=30`
       );
       
       if (!toneResponse.ok) {
@@ -235,11 +235,11 @@ export default function ChakraMeditation() {
         }
       }
 
-      // Load morphing chakra tone
+      // Load morphing chakra tone - short loopable segment
       setLoadingStage('Loading chakra frequency progression...');
-      console.log('Loading realign tone, duration:', durationSeconds);
+      console.log('Loading realign tone...');
       const toneResponse = await fetch(
-        `${BACKEND_URL}/api/meditation/chakra/realign-tone?duration=${durationSeconds}`
+        `${BACKEND_URL}/api/meditation/chakra/realign-tone?duration=60`
       );
       
       if (!toneResponse.ok) {

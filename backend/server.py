@@ -1049,7 +1049,7 @@ async def get_chakras():
 
 @api_router.get("/meditation/chakra/tone/{chakra_id}")
 async def generate_chakra_tone(chakra_id: str, duration: int = 60):
-    """Generate a pure chakra frequency tone"""
+    """Generate a pure chakra frequency tone - optimized for mobile with loopable segments"""
     import numpy as np
     from scipy.io import wavfile
     
@@ -1059,11 +1059,13 @@ async def generate_chakra_tone(chakra_id: str, duration: int = 60):
     chakra = CHAKRA_DATA[chakra_id]
     frequency = chakra["frequency"]
     
-    sample_rate = 44100
-    duration_seconds = min(duration, 300)
-    num_samples = int(sample_rate * duration_seconds)
+    # Use lower sample rate and generate short loopable segment (30 seconds max)
+    sample_rate = 22050  # Lower sample rate for smaller file
+    # Generate a short loopable segment - frontend will loop it
+    segment_duration = min(duration, 30)  # Max 30 second segments for mobile
+    num_samples = int(sample_rate * segment_duration)
     
-    t = np.linspace(0, duration_seconds, num_samples, dtype=np.float32)
+    t = np.linspace(0, segment_duration, num_samples, dtype=np.float32)
     
     # Generate main frequency with harmonics for richer sound
     audio = np.sin(2 * np.pi * frequency * t) * 0.5
@@ -1074,8 +1076,8 @@ async def generate_chakra_tone(chakra_id: str, duration: int = 60):
     mod = 1 + 0.1 * np.sin(2 * np.pi * 0.2 * t)
     audio = audio * mod
     
-    # Fade in/out
-    fade_samples = int(sample_rate * 2)
+    # Smooth fade at start/end for seamless loop
+    fade_samples = int(sample_rate * 0.5)  # 0.5 second fade
     fade_in = np.linspace(0, 1, fade_samples, dtype=np.float32)
     fade_out = np.linspace(1, 0, fade_samples, dtype=np.float32)
     audio[:fade_samples] *= fade_in
@@ -1095,19 +1097,21 @@ async def generate_chakra_tone(chakra_id: str, duration: int = 60):
         "chakra_id": chakra_id,
         "chakra_name": chakra["name"],
         "frequency": frequency,
-        "duration_seconds": duration_seconds,
+        "duration_seconds": segment_duration,
         "audio_base64": audio_base64,
-        "format": "wav"
+        "format": "wav",
+        "loopable": True
     }
 
 @api_router.get("/meditation/chakra/realign-tone")
 async def generate_realign_all_tone(duration: int = 300):
-    """Generate a morphing tone that transitions through all chakras"""
+    """Generate a morphing tone that transitions through all chakras - optimized for mobile"""
     import numpy as np
     from scipy.io import wavfile
     
-    sample_rate = 44100
-    duration_seconds = min(duration, 600)  # Max 10 minutes
+    # Lower sample rate and max 60 seconds for mobile compatibility
+    sample_rate = 22050
+    duration_seconds = min(duration, 60)  # Max 60 seconds, loops on frontend
     num_samples = int(sample_rate * duration_seconds)
     
     # Chakra order from root to crown
@@ -1144,7 +1148,7 @@ async def generate_realign_all_tone(duration: int = 300):
                 audio[j] += envelope * 0.15 * np.sin(2 * np.pi * freq * 2 * current_time)
     
     # Global fade in/out
-    fade_samples = int(sample_rate * 3)
+    fade_samples = int(sample_rate * 1)
     audio[:fade_samples] *= np.linspace(0, 1, fade_samples, dtype=np.float32)
     audio[-fade_samples:] *= np.linspace(1, 0, fade_samples, dtype=np.float32)
     
@@ -1163,7 +1167,8 @@ async def generate_realign_all_tone(duration: int = 300):
         "duration_seconds": duration_seconds,
         "chakra_order": chakra_order,
         "audio_base64": audio_base64,
-        "format": "wav"
+        "format": "wav",
+        "loopable": True
     }
 
 @api_router.post("/meditation/chakra/generate-guided/{chakra_id}")
