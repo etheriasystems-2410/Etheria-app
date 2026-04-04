@@ -48,6 +48,7 @@ export default function Training() {
   const [isGeneratingTTS, setIsGeneratingTTS] = useState(false);
   const [ttsProgress, setTtsProgress] = useState('');
   const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
+  const isPlayingRef = useRef(false);
 
   useEffect(() => {
     loadTrainingData();
@@ -94,6 +95,7 @@ export default function Training() {
 
   // TTS Meditation Functions
   const stopMeditation = async () => {
+    isPlayingRef.current = false;
     try {
       if (audioPlayerRef.current) {
         await audioPlayerRef.current.unload();
@@ -104,6 +106,7 @@ export default function Training() {
     }
     setIsPlayingMeditation(false);
     setIsGeneratingTTS(false);
+    setTtsProgress('');
   };
 
   const playMeditation = async () => {
@@ -119,7 +122,6 @@ export default function Training() {
       const script = currentLesson.meditation.script;
       
       // Clean the script - remove [pause] instructions for TTS
-      // We'll process pauses separately
       const cleanScript = script
         .replace(/\[pause for \d+ seconds?\]/gi, '...')
         .replace(/\[pause\]/gi, '...');
@@ -146,16 +148,23 @@ export default function Training() {
         if (currentChunk) chunks.push(currentChunk);
       }
 
-      setTtsProgress(`Generating audio (${chunks.length} segments)...`);
-
-      // Generate and play audio chunks sequentially
+      console.log(`Starting meditation with ${chunks.length} chunks`);
+      
+      // Set playing state
+      isPlayingRef.current = true;
       setIsPlayingMeditation(true);
       setIsGeneratingTTS(false);
 
+      // Generate and play audio chunks sequentially
       for (let i = 0; i < chunks.length; i++) {
-        if (!isPlayingMeditation) break;
+        // Check ref for stop signal
+        if (!isPlayingRef.current) {
+          console.log('Meditation stopped by user');
+          break;
+        }
 
         setTtsProgress(`Playing segment ${i + 1} of ${chunks.length}...`);
+        console.log(`Generating TTS for chunk ${i + 1}/${chunks.length}`);
 
         const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
           method: 'POST',
@@ -172,24 +181,36 @@ export default function Training() {
 
         const data = await response.json();
         
-        if (data.audio_base64) {
+        if (data.audio_base64 && isPlayingRef.current) {
+          console.log(`Playing chunk ${i + 1}`);
           const player = new AudioPlayerManager();
-          await player.loadAndPlay(`data:audio/mp3;base64,${data.audio_base64}`, { volume: 1.0 });
+          const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
+          await player.loadAndPlay(audioUri, { volume: 1.0 });
           audioPlayerRef.current = player;
           
           // Wait for this chunk to finish
           await player.waitForCompletion(180000);
-          await player.unload();
+          
+          // Cleanup before next chunk
+          if (audioPlayerRef.current) {
+            await audioPlayerRef.current.unload();
+            audioPlayerRef.current = null;
+          }
         }
       }
 
-      setTtsProgress('');
-      setIsPlayingMeditation(false);
-      Alert.alert('Meditation Complete', 'Take a moment to return to awareness.');
+      // Check if we completed naturally (not stopped by user)
+      if (isPlayingRef.current) {
+        setTtsProgress('');
+        setIsPlayingMeditation(false);
+        isPlayingRef.current = false;
+        Alert.alert('Meditation Complete', 'Take a moment to return to awareness.');
+      }
 
     } catch (error) {
       console.error('Error playing meditation:', error);
       Alert.alert('Error', 'Failed to play meditation audio. Please try again.');
+      isPlayingRef.current = false;
       setIsGeneratingTTS(false);
       setIsPlayingMeditation(false);
       setTtsProgress('');
