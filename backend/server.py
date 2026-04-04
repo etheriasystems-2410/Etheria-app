@@ -255,6 +255,9 @@ class SpiritGuideMessage(BaseModel):
 
 class SpiritGuideResponse(BaseModel):
     response: str
+    audio_base64: Optional[str] = None
+    voice: Optional[str] = None
+    success: bool = True
 
 # Auth Models
 class SignupRequest(BaseModel):
@@ -497,9 +500,9 @@ async def get_saved_readings(request: Request, limit: int = 20):
 
 @api_router.post("/spirit-guides/chat", response_model=SpiritGuideResponse)
 async def chat_with_spirit_guide(message: SpiritGuideMessage):
-    """Chat with a spirit guide"""
+    """Chat with a spirit guide - returns text and TTS audio"""
     
-    # Define guide personalities
+    # Define guide personalities with no-markdown instructions
     guide_personalities = {
         "Ignis": "You are Ignis, the Fire spirit guide. You are passionate, direct, and transformative. You encourage action, courage, and embracing change. Your wisdom comes through powerful metaphors of flame, transformation, and rebirth. You speak with energy and conviction.",
         "Aqua": "You are Aqua, the Water spirit guide. You are intuitive, healing, and emotionally wise. You help people understand their feelings and navigate emotional depths. Your wisdom flows like water - gentle yet powerful. You speak with compassion and empathy.",
@@ -508,7 +511,9 @@ async def chat_with_spirit_guide(message: SpiritGuideMessage):
     }
     
     system_message = guide_personalities.get(message.guide, guide_personalities["Aether"])
-    system_message += " Keep responses under 150 words. Be warm, wise, and helpful."
+    system_message += """ Keep responses under 150 words. Be warm, wise, and helpful.
+
+IMPORTANT: DO NOT use any markdown formatting in your response - no asterisks (*), no hash symbols (#), no bullet points, no bold or italic markers. Write in plain flowing prose that sounds natural when spoken aloud, as your response will be read by text-to-speech."""
     
     try:
         chat = LlmChat(
@@ -518,13 +523,52 @@ async def chat_with_spirit_guide(message: SpiritGuideMessage):
         ).with_model("gemini", "gemini-2.5-pro")
         
         user_message = UserMessage(text=message.message)
-        response = await chat.send_message(user_message)
+        response_text = await chat.send_message(user_message)
         
-        return SpiritGuideResponse(response=response)
+        # Clean any markdown that might have slipped through
+        import re
+        lines = response_text.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('*') or stripped.startswith('#'):
+                continue
+            cleaned_line = re.sub(r'\*+', '', line)
+            cleaned_line = re.sub(r'#+\s*', '', cleaned_line)
+            if cleaned_line.strip():
+                cleaned_lines.append(cleaned_line)
+        
+        cleaned_response = ' '.join(cleaned_lines)
+        
+        # Generate TTS audio for the response
+        audio_base64 = None
+        voice = SPIRIT_GUIDE_VOICES.get(message.guide, SPIRIT_GUIDE_VOICES["Aether"])["voice"]
+        
+        try:
+            if EMERGENT_LLM_KEY and cleaned_response.strip():
+                audio_base64 = await openai_tts.generate_speech_base64(
+                    text=cleaned_response,
+                    voice=voice,
+                    model="tts-1",
+                    response_format="mp3"
+                )
+        except Exception as tts_error:
+            logging.error(f"Error generating TTS for spirit guide: {tts_error}")
+            # Continue without audio - text response is still valid
+        
+        return SpiritGuideResponse(
+            response=cleaned_response,
+            audio_base64=audio_base64,
+            voice=voice,
+            success=True
+        )
     except Exception as e:
         logging.error(f"Error in spirit guide chat: {e}")
         return SpiritGuideResponse(
-            response=f"I sense a disturbance in our connection. Let us try again, dear seeker."
+            response=f"I sense a disturbance in our connection. Let us try again, dear seeker.",
+            audio_base64=None,
+            voice=None,
+            success=False
         )
 
 @api_router.post("/meditation/generate-guided")

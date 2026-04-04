@@ -304,13 +304,17 @@ export default function SpiritGuides() {
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.response,
+        hasAudio: !!data.audio_base64,
+        audioBase64: data.audio_base64,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Auto-generate and play audio for response
-      const newMessageIndex = messages.length + 1;
-      generateAndPlayAudio(data.response, selectedGuide.name, newMessageIndex);
+      // Auto-play the audio that came with the response if not muted
+      if (!isMuted && data.audio_base64) {
+        const newMessageIndex = messages.length + 1;
+        playAudio(data.audio_base64, newMessageIndex);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
