@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Animated,
+  Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -53,6 +55,14 @@ export default function ChakraMeditation() {
   
   const tonePlayerRef = useRef<AudioPlayerManager | null>(null);
   const isPlayingRef = useRef(false);
+  
+  // Animation refs for chakra visualization
+  const spinAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const ring1Anim = useRef(new Animated.Value(0)).current;
+  const ring2Anim = useRef(new Animated.Value(0)).current;
+  const ring3Anim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
     fetchChakras();
@@ -63,6 +73,111 @@ export default function ChakraMeditation() {
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
+  // Chakra animations effect
+  useEffect(() => {
+    if (isPlaying) {
+      // Start all animations
+      // Slow rotation
+      const spinAnimation = Animated.loop(
+        Animated.timing(spinAnim, {
+          toValue: 1,
+          duration: 8000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+      
+      // Pulsing effect
+      const pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.15,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      
+      // Expanding rings
+      const ring1Animation = Animated.loop(
+        Animated.timing(ring1Anim, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        })
+      );
+      
+      const ring2Animation = Animated.loop(
+        Animated.timing(ring2Anim, {
+          toValue: 1,
+          duration: 3000,
+          delay: 1000,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        })
+      );
+      
+      const ring3Animation = Animated.loop(
+        Animated.timing(ring3Anim, {
+          toValue: 1,
+          duration: 3000,
+          delay: 2000,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        })
+      );
+      
+      // Glow animation
+      const glowAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0.5,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      
+      spinAnimation.start();
+      pulseAnimation.start();
+      ring1Animation.start();
+      ring2Animation.start();
+      ring3Animation.start();
+      glowAnimation.start();
+      
+      return () => {
+        spinAnimation.stop();
+        pulseAnimation.stop();
+        ring1Animation.stop();
+        ring2Animation.stop();
+        ring3Animation.stop();
+        glowAnimation.stop();
+        // Reset animations
+        spinAnim.setValue(0);
+        pulseAnim.setValue(1);
+        ring1Anim.setValue(0);
+        ring2Anim.setValue(0);
+        ring3Anim.setValue(0);
+        glowAnim.setValue(0.5);
+      };
+    }
   }, [isPlaying]);
 
   const fetchChakras = async () => {
@@ -371,22 +486,124 @@ export default function ChakraMeditation() {
             </View>
           ) : (
             <>
-              {/* Chakra Visualization */}
+              {/* Animated Chakra Visualization */}
               <View style={styles.visualization}>
                 {isRealignAll ? (
                   <View style={styles.allChakrasVis}>
-                    {chakras.map((c) => (
-                      <View
+                    {chakras.map((c, index) => (
+                      <Animated.View
                         key={c.id}
-                        style={[styles.chakraOrb, { backgroundColor: c.color }]}
+                        style={[
+                          styles.chakraOrb, 
+                          { 
+                            backgroundColor: c.color,
+                            transform: [
+                              { scale: pulseAnim },
+                            ],
+                            opacity: glowAnim,
+                          }
+                        ]}
                       />
                     ))}
                   </View>
                 ) : (
-                  <View
-                    style={[styles.singleChakraOrb, { backgroundColor: selectedChakra?.color }]}
-                  >
-                    <Text style={styles.orbFrequency}>{selectedChakra?.frequency} Hz</Text>
+                  <View style={styles.animatedChakraContainer}>
+                    {/* Expanding energy rings */}
+                    <Animated.View
+                      style={[
+                        styles.energyRing,
+                        {
+                          borderColor: selectedChakra?.color,
+                          transform: [
+                            { scale: ring1Anim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [1, 2.5],
+                            })},
+                          ],
+                          opacity: ring1Anim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.6, 0],
+                          }),
+                        }
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.energyRing,
+                        {
+                          borderColor: selectedChakra?.color,
+                          transform: [
+                            { scale: ring2Anim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [1, 2.5],
+                            })},
+                          ],
+                          opacity: ring2Anim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.6, 0],
+                          }),
+                        }
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.energyRing,
+                        {
+                          borderColor: selectedChakra?.color,
+                          transform: [
+                            { scale: ring3Anim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [1, 2.5],
+                            })},
+                          ],
+                          opacity: ring3Anim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.6, 0],
+                          }),
+                        }
+                      ]}
+                    />
+                    
+                    {/* Outer glow */}
+                    <Animated.View
+                      style={[
+                        styles.outerGlow,
+                        { 
+                          backgroundColor: selectedChakra?.color,
+                          opacity: glowAnim.interpolate({
+                            inputRange: [0.5, 1],
+                            outputRange: [0.15, 0.3],
+                          }),
+                          transform: [{ scale: pulseAnim }],
+                        }
+                      ]}
+                    />
+                    
+                    {/* Main chakra orb with rotation */}
+                    <Animated.View
+                      style={[
+                        styles.singleChakraOrb, 
+                        { 
+                          backgroundColor: selectedChakra?.color,
+                          transform: [
+                            { scale: pulseAnim },
+                            { rotate: spinAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ['0deg', '360deg'],
+                            })},
+                          ],
+                        }
+                      ]}
+                    >
+                      {/* Chakra symbol pattern */}
+                      <View style={styles.chakraSymbol}>
+                        <View style={[styles.symbolLine, styles.symbolLineHorizontal]} />
+                        <View style={[styles.symbolLine, styles.symbolLineVertical]} />
+                        <View style={[styles.symbolLine, styles.symbolLineDiag1]} />
+                        <View style={[styles.symbolLine, styles.symbolLineDiag2]} />
+                      </View>
+                      <Text style={styles.orbFrequency}>{selectedChakra?.frequency} Hz</Text>
+                    </Animated.View>
                   </View>
                 )}
               </View>
@@ -750,5 +967,54 @@ const styles = StyleSheet.create({
   cancelText: {
     color: '#9f7aea',
     fontSize: 16,
+  },
+  // Animation styles
+  animatedChakraContainer: {
+    width: 250,
+    height: 250,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  energyRing: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 2,
+  },
+  outerGlow: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+  },
+  chakraSymbol: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  symbolLine: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  symbolLineHorizontal: {
+    width: '80%',
+    height: 2,
+  },
+  symbolLineVertical: {
+    width: 2,
+    height: '80%',
+  },
+  symbolLineDiag1: {
+    width: 2,
+    height: '80%',
+    transform: [{ rotate: '45deg' }],
+  },
+  symbolLineDiag2: {
+    width: 2,
+    height: '80%',
+    transform: [{ rotate: '-45deg' }],
   },
 });
