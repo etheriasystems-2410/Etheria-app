@@ -3337,7 +3337,7 @@ Open your eyes and carry these techniques into your next lucid dream."""
 - "Show me my next step"
 - "What do I need to know about...?"
 - "Help me understand..."
-- "What is blocking me?"""",
+- "What is blocking me?\"""",
             "meditation": {
                 "title": "Dream Incubation Practice",
                 "duration": 10,
@@ -4578,7 +4578,7 @@ Open your eyes. Record everything. Verify and learn."""
 - "What happened here?"
 - "Who is connected?"
 - "Why is this significant?"
-- "What's the story?"""",
+- "What's the story?\"""",
             "meditation": {
                 "title": "Deep Target Probing",
                 "duration": 15,
