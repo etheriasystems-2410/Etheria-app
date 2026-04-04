@@ -115,26 +115,18 @@ export default function BinauralMeditation() {
     setGeneratingAudio(true);
     
     try {
-      // Generate binaural beat audio from backend
-      const response = await fetch(
-        `${BACKEND_URL}/api/meditation/binaural/generate/${selectedProgram.id}?duration=120`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate audio');
-      }
-      
-      const data = await response.json();
+      // Use streaming URL for native audio playback
+      const streamingUrl = `${BACKEND_URL}/api/meditation/binaural/stream/${selectedProgram.id}?duration=30`;
+      console.log('Binaural streaming URL:', streamingUrl);
       
       // Unload previous player
       if (audioPlayerRef.current) {
         await audioPlayerRef.current.unload();
       }
       
-      // Create new audio player and play
+      // Create new audio player and play using streaming URL
       const player = new AudioPlayerManager();
-      const audioUri = `data:audio/wav;base64,${data.audio_base64}`;
-      await player.loadAndPlay(audioUri, {
+      await player.loadAndPlay(streamingUrl, {
         loop: true,
         volume: 0.8,
       });
@@ -143,6 +135,7 @@ export default function BinauralMeditation() {
       setIsPlaying(true);
       setSessionStartTime(Date.now());
       setSessionDuration(0);
+      console.log('Binaural beat playing from stream');
       
     } catch (error) {
       console.error('Error starting session:', error);

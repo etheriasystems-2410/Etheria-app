@@ -164,32 +164,19 @@ export default function ChakraMeditation() {
         }
       }
 
-      // Load chakra tone - request short segment that loops
+      // Load chakra tone - use streaming URL for native playback
       setLoadingStage('Loading chakra frequency tone...');
-      console.log('Loading tone for chakra:', chakra.id);
-      const toneResponse = await fetch(
-        `${BACKEND_URL}/api/meditation/chakra/tone/${chakra.id}?duration=30`
-      );
+      console.log('Loading streaming tone for chakra:', chakra.id);
       
-      if (!toneResponse.ok) {
-        throw new Error('Failed to load chakra tone');
-      }
+      // Use streaming URL instead of base64 for native audio playback
+      const streamingUrl = `${BACKEND_URL}/api/meditation/chakra/stream/${chakra.id}?duration=30`;
+      console.log('Streaming URL:', streamingUrl);
       
-      const toneData = await toneResponse.json();
-      if (!toneData.audio_base64) {
-        throw new Error('No tone audio data received');
-      }
-      
-      console.log('Tone data received, length:', toneData.audio_base64.length);
-      
-      // Create and play the tone
+      // Create and play the tone using streaming URL
       const tonePlayer = new AudioPlayerManager();
-      const audioUri = `data:audio/wav;base64,${toneData.audio_base64}`;
-      console.log('Loading audio player with URI length:', audioUri.length);
-      
-      await tonePlayer.loadAndPlay(audioUri, { loop: true, volume: 0.8 });
+      await tonePlayer.loadAndPlay(streamingUrl, { loop: true, volume: 0.8 });
       tonePlayerRef.current = tonePlayer;
-      console.log('Tone player loaded and playing');
+      console.log('Tone player loaded and playing from stream');
 
       // Set playing state
       setIsPlaying(true);
@@ -235,31 +222,19 @@ export default function ChakraMeditation() {
         }
       }
 
-      // Load morphing chakra tone - short loopable segment
+      // Load morphing chakra tone - use streaming URL for native playback
       setLoadingStage('Loading chakra frequency progression...');
-      console.log('Loading realign tone...');
-      const toneResponse = await fetch(
-        `${BACKEND_URL}/api/meditation/chakra/realign-tone?duration=60`
-      );
+      console.log('Loading realign tone stream...');
       
-      if (!toneResponse.ok) {
-        throw new Error('Failed to load realignment tone');
-      }
+      // Use streaming URL instead of base64
+      const streamingUrl = `${BACKEND_URL}/api/meditation/chakra/stream-realign?duration=60`;
+      console.log('Realign streaming URL:', streamingUrl);
       
-      const toneData = await toneResponse.json();
-      if (!toneData.audio_base64) {
-        throw new Error('No tone audio data received');
-      }
-      
-      console.log('Realign tone data received, length:', toneData.audio_base64.length);
-      
-      // Create and play the tone
+      // Create and play the tone using streaming URL
       const tonePlayer = new AudioPlayerManager();
-      const audioUri = `data:audio/wav;base64,${toneData.audio_base64}`;
-      
-      await tonePlayer.loadAndPlay(audioUri, { loop: true, volume: 0.8 });
+      await tonePlayer.loadAndPlay(streamingUrl, { loop: true, volume: 0.8 });
       tonePlayerRef.current = tonePlayer;
-      console.log('Realign tone player loaded and playing');
+      console.log('Realign tone player loaded and playing from stream');
 
       // Set playing state
       setIsPlaying(true);
