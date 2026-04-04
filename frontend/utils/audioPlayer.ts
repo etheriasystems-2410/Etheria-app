@@ -115,10 +115,15 @@ export class AudioPlayerManager {
     }
   }
 
+  private hasEverPlayed: boolean = false;
+
   private startStatusPolling(): void {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
     }
+    
+    // Reset tracking
+    this.hasEverPlayed = false;
     
     this.pollInterval = setInterval(() => {
       if (!this.nativePlayer) {
@@ -131,9 +136,15 @@ export class AudioPlayerManager {
         const currentTime = this.nativePlayer.currentTime;
         const duration = this.nativePlayer.duration;
         
-        // Check if playback just finished
-        if (this.lastPlayingState && !isPlaying && duration > 0 && currentTime >= duration - 0.5) {
-          console.log('Audio playback finished');
+        // Track if playback has ever started
+        if (isPlaying || currentTime > 0.1) {
+          this.hasEverPlayed = true;
+        }
+        
+        // Only check for completion if playback has actually started
+        // Check if playback just finished: was playing, now not playing, at end of duration
+        if (this.hasEverPlayed && this.lastPlayingState && !isPlaying && duration > 0 && currentTime >= duration - 0.5) {
+          console.log(`Audio playback finished: currentTime=${currentTime.toFixed(1)}, duration=${duration.toFixed(1)}`);
           this.stopStatusPolling();
           if (this.statusCallback) {
             this.statusCallback({ isPlaying: false, didJustFinish: true });
@@ -179,6 +190,7 @@ export class AudioPlayerManager {
       }
 
       let resolved = false;
+      let hasStartedPlaying = false; // Track if playback ever started
       const startTime = Date.now();
 
       // Safety timeout
@@ -202,8 +214,11 @@ export class AudioPlayerManager {
         
         if (this.isWeb && this.webAudioElement) {
           // Web: check if ended or paused at end
-          if (this.webAudioElement.ended || 
-              (this.webAudioElement.paused && this.webAudioElement.currentTime >= this.webAudioElement.duration - 0.1)) {
+          if (this.webAudioElement.currentTime > 0) {
+            hasStartedPlaying = true;
+          }
+          if (hasStartedPlaying && (this.webAudioElement.ended || 
+              (this.webAudioElement.paused && this.webAudioElement.currentTime >= this.webAudioElement.duration - 0.1))) {
             console.log('waitForCompletion: Web audio ended');
             resolved = true;
             clearInterval(completionPoll);
@@ -216,27 +231,37 @@ export class AudioPlayerManager {
             const currentTime = this.nativePlayer.currentTime || 0;
             const duration = this.nativePlayer.duration || 0;
             
-            // Log status periodically for debugging
-            if (elapsed % 3000 < 300) {
-              console.log(`Audio status: playing=${isPlaying}, time=${currentTime.toFixed(1)}/${duration.toFixed(1)}`);
+            // Track if playback has started
+            if (isPlaying || currentTime > 0.1) {
+              hasStartedPlaying = true;
             }
             
-            // Check if finished: not playing AND (near end of duration OR duration is 0 meaning loaded but finished)
-            if (!isPlaying && duration > 0 && currentTime >= duration - 0.5) {
-              console.log(`waitForCompletion: Native audio finished (${currentTime}/${duration})`);
+            // Log status periodically for debugging
+            if (elapsed % 3000 < 300) {
+              console.log(`Audio status: playing=${isPlaying}, time=${currentTime.toFixed(1)}/${duration.toFixed(1)}, started=${hasStartedPlaying}`);
+            }
+            
+            // Only check for completion if playback has started
+            if (hasStartedPlaying && !isPlaying && duration > 0 && currentTime >= duration - 0.5) {
+              console.log(`waitForCompletion: Native audio finished (${currentTime.toFixed(1)}/${duration.toFixed(1)})`);
               resolved = true;
               clearInterval(completionPoll);
               clearTimeout(safetyTimeout);
               resolve();
-            } else if (!isPlaying && elapsed > 5000 && duration === 0) {
+            } else if (!hasStartedPlaying && elapsed > 10000) {
+              // If playback hasn't started after 10 seconds, there's a problem
+              console.log('waitForCompletion: Playback never started after 10s, resolving');
+              resolved = true;
+              clearInterval(completionPoll);
+              clearTimeout(safetyTimeout);
+              resolve();
+            } else if (hasStartedPlaying && !isPlaying && elapsed > 5000 && duration === 0) {
               // Wait longer (5 seconds) before giving up on duration
               console.log('waitForCompletion: Native audio not playing with no duration after 5s');
               resolved = true;
               clearInterval(completionPoll);
               clearTimeout(safetyTimeout);
               resolve();
-            } else if (isPlaying && currentTime > 0) {
-              // Audio is actively playing - good, keep waiting
             }
           } catch (e) {
             console.log('waitForCompletion poll error:', e);

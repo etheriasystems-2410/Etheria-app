@@ -354,27 +354,30 @@ export default function AIGuidedMeditation() {
           // Unload previous player
           if (audioPlayerRef.current) {
             await audioPlayerRef.current.unload();
+            audioPlayerRef.current = null;
           }
           
           // Play this segment and wait for it to finish
-          await new Promise<void>((resolve) => {
-            const player = new AudioPlayerManager();
-            const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
+          const player = new AudioPlayerManager();
+          const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
+          
+          try {
+            await player.loadAndPlay(audioUri, { volume: 1.0 });
+            audioPlayerRef.current = player;
+            setLoadingStage('playing-full');
             
-            player.onPlaybackStatusChange((status) => {
-              if (status.didJustFinish) {
-                resolve();
-              }
-            });
+            // Wait for audio to finish using the reliable waitForCompletion method
+            await player.waitForCompletion(180000); // 3 minute max per segment
             
-            player.loadAndPlay(audioUri, { volume: 1.0 }).then(() => {
-              audioPlayerRef.current = player;
-              setLoadingStage('playing-full');
-            }).catch((err) => {
-              console.error('Error playing segment:', err);
-              resolve(); // Continue even on error
-            });
-          });
+            // Cleanup after this segment
+            if (audioPlayerRef.current === player) {
+              await player.unload();
+              audioPlayerRef.current = null;
+            }
+          } catch (err) {
+            console.error('Error playing segment:', err);
+            // Continue to next segment on error
+          }
           
         } catch (error) {
           console.error('Error in segment playback:', error);
