@@ -116,85 +116,141 @@ export default function Training() {
     await stopMeditation();
     
     setIsGeneratingTTS(true);
-    setTtsProgress('Preparing meditation audio...');
+    setTtsProgress('Preparing meditation...');
 
     try {
       const script = currentLesson.meditation.script;
       
-      // Clean the script - remove [pause] instructions for TTS
-      const cleanScript = script
-        .replace(/\[pause for \d+ seconds?\]/gi, '...')
-        .replace(/\[pause\]/gi, '...');
-
-      // Split into chunks if needed (TTS has character limits)
-      const maxChunkSize = 4000;
-      const chunks: string[] = [];
+      // Parse the script into segments (text and pauses)
+      // Split by pause markers while capturing the pause duration
+      const pauseRegex = /\[pause(?:\s+for\s+(\d+)\s*seconds?)?\]/gi;
+      const segments: { type: 'text' | 'pause'; content: string; duration?: number }[] = [];
       
-      if (cleanScript.length <= maxChunkSize) {
-        chunks.push(cleanScript);
-      } else {
-        // Split by paragraphs
-        const paragraphs = cleanScript.split('\n\n');
-        let currentChunk = '';
-        
-        for (const para of paragraphs) {
-          if ((currentChunk + '\n\n' + para).length > maxChunkSize) {
-            if (currentChunk) chunks.push(currentChunk);
-            currentChunk = para;
-          } else {
-            currentChunk = currentChunk ? currentChunk + '\n\n' + para : para;
+      let lastIndex = 0;
+      let match;
+      
+      while ((match = pauseRegex.exec(script)) !== null) {
+        // Add text before this pause
+        if (match.index > lastIndex) {
+          const text = script.slice(lastIndex, match.index).trim();
+          if (text) {
+            segments.push({ type: 'text', content: text });
           }
         }
-        if (currentChunk) chunks.push(currentChunk);
+        
+        // Add the pause
+        const pauseDuration = match[1] ? parseInt(match[1]) : 5; // default 5 seconds
+        segments.push({ type: 'pause', content: '', duration: pauseDuration });
+        
+        lastIndex = match.index + match[0].length;
+      }
+      
+      // Add any remaining text after the last pause
+      if (lastIndex < script.length) {
+        const text = script.slice(lastIndex).trim();
+        if (text) {
+          segments.push({ type: 'text', content: text });
+        }
       }
 
-      console.log(`Starting meditation with ${chunks.length} chunks`);
+      console.log(`Meditation has ${segments.length} segments`);
       
       // Set playing state
       isPlayingRef.current = true;
       setIsPlayingMeditation(true);
       setIsGeneratingTTS(false);
 
-      // Generate and play audio chunks sequentially
-      for (let i = 0; i < chunks.length; i++) {
-        // Check ref for stop signal
+      // Process each segment
+      for (let i = 0; i < segments.length; i++) {
         if (!isPlayingRef.current) {
           console.log('Meditation stopped by user');
           break;
         }
 
-        setTtsProgress(`Playing segment ${i + 1} of ${chunks.length}...`);
-        console.log(`Generating TTS for chunk ${i + 1}/${chunks.length}`);
-
-        const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: chunks[i],
-            voice: 'nova'
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to generate audio');
-        }
-
-        const data = await response.json();
+        const segment = segments[i];
         
-        if (data.audio_base64 && isPlayingRef.current) {
-          console.log(`Playing chunk ${i + 1}`);
-          const player = new AudioPlayerManager();
-          const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
-          await player.loadAndPlay(audioUri, { volume: 1.0 });
-          audioPlayerRef.current = player;
+        if (segment.type === 'pause') {
+          // Handle pause
+          setTtsProgress(`Pause... (${segment.duration}s)`);
+          console.log(`Pausing for ${segment.duration} seconds`);
           
-          // Wait for this chunk to finish
-          await player.waitForCompletion(180000);
+          // Wait for the pause duration
+          await new Promise<void>((resolve) => {
+            const timeout = setTimeout(resolve, (segment.duration || 5) * 1000);
+            // Check periodically if stopped
+            const checkInterval = setInterval(() => {
+              if (!isPlayingRef.current) {
+                clearTimeout(timeout);
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 500);
+          });
           
-          // Cleanup before next chunk
-          if (audioPlayerRef.current) {
-            await audioPlayerRef.current.unload();
-            audioPlayerRef.current = null;
+        } else {
+          // Handle text - generate and play TTS
+          const textSegments = segments.filter(s => s.type === 'text');
+          const textIndex = textSegments.indexOf(segment) + 1;
+          const totalText = textSegments.length;
+          
+          setTtsProgress(`Speaking ${textIndex}/${totalText}...`);
+          console.log(`Generating TTS for segment ${i + 1}`);
+
+          // Split long text into chunks if needed
+          const maxChunkSize = 4000;
+          const text = segment.content;
+          const chunks: string[] = [];
+          
+          if (text.length <= maxChunkSize) {
+            chunks.push(text);
+          } else {
+            const paragraphs = text.split('\n\n');
+            let currentChunk = '';
+            for (const para of paragraphs) {
+              if ((currentChunk + '\n\n' + para).length > maxChunkSize) {
+                if (currentChunk) chunks.push(currentChunk);
+                currentChunk = para;
+              } else {
+                currentChunk = currentChunk ? currentChunk + '\n\n' + para : para;
+              }
+            }
+            if (currentChunk) chunks.push(currentChunk);
+          }
+
+          // Play each chunk
+          for (const chunk of chunks) {
+            if (!isPlayingRef.current) break;
+
+            const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: chunk,
+                voice: 'nova'
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to generate audio');
+            }
+
+            const data = await response.json();
+            
+            if (data.audio_base64 && isPlayingRef.current) {
+              const player = new AudioPlayerManager();
+              const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;
+              await player.loadAndPlay(audioUri, { volume: 1.0 });
+              audioPlayerRef.current = player;
+              
+              // Wait for audio to finish
+              await player.waitForCompletion(180000);
+              
+              // Cleanup
+              if (audioPlayerRef.current) {
+                await audioPlayerRef.current.unload();
+                audioPlayerRef.current = null;
+              }
+            }
           }
         }
       }
