@@ -233,6 +233,12 @@ export default function Training() {
 
             const data = await response.json();
             
+            // Check if TTS returned an error (no speakable text, etc.)
+            if (data.error || !data.audio_base64 || !data.success) {
+              console.log('TTS returned no audio for chunk, skipping:', data.error || 'no audio');
+              continue; // Skip this chunk but continue with next
+            }
+            
             if (data.audio_base64 && isPlayingRef.current) {
               const player = new AudioPlayerManager();
               const audioUri = `data:audio/mp3;base64,${data.audio_base64}`;

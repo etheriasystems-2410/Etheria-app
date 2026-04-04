@@ -341,7 +341,13 @@ export default function AIGuidedMeditation() {
             continue;
           }
           
-          if (!data.audio_base64 || isMutedRef.current) {
+          // Check for TTS error response (e.g., "No speakable text found")
+          if (data.error || !data.audio_base64 || !data.success) {
+            console.log('TTS returned no audio for segment, skipping:', data.error || 'no audio');
+            continue; // Skip this segment but continue with next
+          }
+          
+          if (isMutedRef.current) {
             continue;
           }
           
@@ -372,6 +378,7 @@ export default function AIGuidedMeditation() {
           
         } catch (error) {
           console.error('Error in segment playback:', error);
+          // Continue to next segment on error
         }
       }
     }

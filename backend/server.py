@@ -1657,8 +1657,35 @@ async def generate_tts(request: TTSRequest):
                 success=False
             )
         
+        # Clean the text - remove lines starting with * or # (markdown formatting)
+        import re
+        lines = request.text.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            stripped = line.strip()
+            # Skip lines that start with * or # (markdown bullets/headers)
+            if stripped.startswith('*') or stripped.startswith('#'):
+                continue
+            # Also remove inline asterisks used for bold/italic
+            cleaned_line = re.sub(r'\*+', '', line)
+            # Remove hash symbols
+            cleaned_line = re.sub(r'#+\s*', '', cleaned_line)
+            if cleaned_line.strip():
+                cleaned_lines.append(cleaned_line)
+        
+        text_to_speak = ' '.join(cleaned_lines)
+        
+        # If text is empty after cleaning, return error
+        if not text_to_speak.strip():
+            return TTSResponse(
+                audio_base64=None,
+                text=request.text,
+                guide_name=guide_name,
+                error="No speakable text found",
+                success=False
+            )
+        
         # Validate and truncate text if too long (OpenAI TTS limit is 4096 chars)
-        text_to_speak = request.text
         if len(text_to_speak) > 4000:
             # Truncate at sentence boundary to stay under limit
             truncated = text_to_speak[:4000]
