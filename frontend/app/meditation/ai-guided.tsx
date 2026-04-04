@@ -7,6 +7,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -69,10 +71,121 @@ export default function AIGuidedMeditation() {
   const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
   const isMutedRef = useRef(isMuted);
   
+  // Animation refs for breathing visualization
+  const breatheAnim = useRef(new Animated.Value(1)).current;
+  const ring1Anim = useRef(new Animated.Value(0.3)).current;
+  const ring2Anim = useRef(new Animated.Value(0.3)).current;
+  const ring3Anim = useRef(new Animated.Value(0.3)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  
   // Keep mute ref synced
   useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
+
+  // Breathing animation effect
+  useEffect(() => {
+    if (isPlaying && !isMuted) {
+      // Breathing pulse (4 seconds in, 4 seconds out)
+      const breatheAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(breatheAnim, {
+            toValue: 1.3,
+            duration: 4000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(breatheAnim, {
+            toValue: 1,
+            duration: 4000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      
+      // Expanding rings
+      const ring1Animation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(ring1Anim, {
+            toValue: 0.8,
+            duration: 3000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(ring1Anim, {
+            toValue: 0.3,
+            duration: 3000,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      
+      const ring2Animation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(ring2Anim, {
+            toValue: 0.6,
+            duration: 4000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(ring2Anim, {
+            toValue: 0.3,
+            duration: 4000,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      
+      const ring3Animation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(ring3Anim, {
+            toValue: 0.5,
+            duration: 5000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(ring3Anim, {
+            toValue: 0.3,
+            duration: 5000,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      
+      // Slow rotation
+      const rotateAnimation = Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 20000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+      
+      breatheAnimation.start();
+      ring1Animation.start();
+      ring2Animation.start();
+      ring3Animation.start();
+      rotateAnimation.start();
+      
+      return () => {
+        breatheAnimation.stop();
+        ring1Animation.stop();
+        ring2Animation.stop();
+        ring3Animation.stop();
+        rotateAnimation.stop();
+        breatheAnim.setValue(1);
+        ring1Anim.setValue(0.3);
+        ring2Anim.setValue(0.3);
+        ring3Anim.setValue(0.3);
+        rotateAnim.setValue(0);
+      };
+    }
+  }, [isPlaying, isMuted]);
 
   // Check premium access on mount
   React.useEffect(() => {
@@ -585,6 +698,81 @@ export default function AIGuidedMeditation() {
         </View>
 
         <ScrollView style={styles.scriptContainer} contentContainerStyle={styles.scriptContent}>
+          {/* Animated Breathing Visualization */}
+          {isPlaying && !isMuted && (
+            <View style={styles.breathingContainer}>
+              <View style={styles.breathingCircleWrapper}>
+                {/* Outer expanding rings */}
+                <Animated.View
+                  style={[
+                    styles.breathingRing,
+                    styles.breathingRing3,
+                    {
+                      opacity: ring3Anim,
+                      transform: [
+                        { scale: ring3Anim.interpolate({
+                          inputRange: [0.3, 0.5],
+                          outputRange: [1.5, 2.2],
+                        })},
+                      ],
+                    }
+                  ]}
+                />
+                <Animated.View
+                  style={[
+                    styles.breathingRing,
+                    styles.breathingRing2,
+                    {
+                      opacity: ring2Anim,
+                      transform: [
+                        { scale: ring2Anim.interpolate({
+                          inputRange: [0.3, 0.6],
+                          outputRange: [1.3, 1.8],
+                        })},
+                      ],
+                    }
+                  ]}
+                />
+                <Animated.View
+                  style={[
+                    styles.breathingRing,
+                    styles.breathingRing1,
+                    {
+                      opacity: ring1Anim,
+                      transform: [
+                        { scale: ring1Anim.interpolate({
+                          inputRange: [0.3, 0.8],
+                          outputRange: [1.1, 1.5],
+                        })},
+                      ],
+                    }
+                  ]}
+                />
+                
+                {/* Main breathing circle */}
+                <Animated.View
+                  style={[
+                    styles.breathingCircle,
+                    {
+                      transform: [
+                        { scale: breatheAnim },
+                        { rotate: rotateAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '360deg'],
+                        })},
+                      ],
+                    }
+                  ]}
+                >
+                  <View style={styles.breathingInner}>
+                    <Ionicons name="leaf" size={40} color="rgba(168, 85, 247, 0.8)" />
+                  </View>
+                </Animated.View>
+              </View>
+              <Text style={styles.breathingText}>Breathe with the rhythm...</Text>
+            </View>
+          )}
+
           {/* Enhanced Loading Progress Indicator */}
           {(generatingAudio || loadingStage === 'loading-continuation') && (
             <View style={styles.loadingContainer}>
@@ -1045,5 +1233,62 @@ const styles = StyleSheet.create({
     color: '#9f7aea',
     fontSize: 13,
     textAlign: 'center',
+  },
+  // Breathing visualization styles
+  breathingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+    marginBottom: 20,
+  },
+  breathingCircleWrapper: {
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  breathingRing: {
+    position: 'absolute',
+    borderRadius: 100,
+    borderWidth: 1,
+  },
+  breathingRing1: {
+    width: 140,
+    height: 140,
+    borderColor: 'rgba(168, 85, 247, 0.5)',
+  },
+  breathingRing2: {
+    width: 160,
+    height: 160,
+    borderColor: 'rgba(139, 92, 246, 0.4)',
+  },
+  breathingRing3: {
+    width: 180,
+    height: 180,
+    borderColor: 'rgba(124, 58, 237, 0.3)',
+  },
+  breathingCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    borderWidth: 2,
+    borderColor: 'rgba(168, 85, 247, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  breathingInner: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  breathingText: {
+    color: '#c4b5fd',
+    fontSize: 14,
+    marginTop: 16,
+    fontStyle: 'italic',
   },
 });
