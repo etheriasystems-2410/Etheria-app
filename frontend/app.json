@@ -21,7 +21,9 @@
         "NSMicrophoneUsageDescription": "Record voice memos for your spiritual journal",
         "NSCameraUsageDescription": "Capture moments for your spiritual journey",
         "NSPhotoLibraryUsageDescription": "Save and share your oracle readings",
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -35,7 +37,11 @@
       "permissions": [
         "INTERNET",
         "RECORD_AUDIO",
-        "VIBRATE"
+        "VIBRATE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "web": {
@@ -64,11 +70,12 @@
     "experiments": {
       "typedRoutes": true
     },
+    "owner": "etheriasystems",
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "etheria-app"
+        "projectId": "b24fb307-103f-469c-87a8-149222352069"
       }
-    },
-    "owner": "etheriasystems"
+    }
   }
 }
