@@ -432,7 +432,7 @@ export default function Settings() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Support</Text>
+        <Text style={styles.sectionTitle}>Contact</Text>
         
         <TouchableOpacity 
           style={styles.settingItem}
@@ -443,22 +443,70 @@ export default function Settings() {
           <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingItem}>
-          <Ionicons name="help-circle" size={24} color="#b794f6" />
-          <Text style={styles.settingText}>Help & Support</Text>
-          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => Linking.openURL('mailto:etheriasystems@gmail.com')}
+        >
+          <Ionicons name="mail" size={24} color="#b794f6" />
+          <View style={styles.settingTextContainer}>
+            <Text style={styles.settingText}>Email Us</Text>
+            <Text style={styles.settingSubtext}>etheriasystems@gmail.com</Text>
+          </View>
+          <Ionicons name="open-outline" size={20} color="#9f7aea" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingItem}>
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => Linking.openURL('https://www.etheriasystems.online')}
+        >
+          <Ionicons name="globe" size={24} color="#b794f6" />
+          <View style={styles.settingTextContainer}>
+            <Text style={styles.settingText}>Visit Our Website</Text>
+            <Text style={styles.settingSubtext}>www.etheriasystems.online</Text>
+          </View>
+          <Ionicons name="open-outline" size={20} color="#9f7aea" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => Linking.openURL('https://wa.me/16152603626')}
+        >
+          <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
+          <View style={styles.settingTextContainer}>
+            <Text style={styles.settingText}>WhatsApp Support</Text>
+            <Text style={styles.settingSubtext}>Chat with us directly</Text>
+          </View>
+          <Ionicons name="open-outline" size={20} color="#9f7aea" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => Linking.openURL('https://www.facebook.com/share/1SD7PKBJQ3/')}
+        >
+          <Ionicons name="logo-facebook" size={24} color="#1877F2" />
+          <View style={styles.settingTextContainer}>
+            <Text style={styles.settingText}>Follow on Facebook</Text>
+            <Text style={styles.settingSubtext}>@EtheriaSystems</Text>
+          </View>
+          <Ionicons name="open-outline" size={20} color="#9f7aea" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => Linking.openURL('https://www.etheriasystems.online/privacy')}
+        >
           <Ionicons name="shield-checkmark" size={24} color="#b794f6" />
           <Text style={styles.settingText}>Privacy Policy</Text>
-          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
+          <Ionicons name="open-outline" size={20} color="#9f7aea" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingItem}>
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => Linking.openURL('https://www.etheriasystems.online/terms')}
+        >
           <Ionicons name="document-text" size={24} color="#b794f6" />
           <Text style={styles.settingText}>Terms of Service</Text>
-          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
+          <Ionicons name="open-outline" size={20} color="#9f7aea" />
         </TouchableOpacity>
       </View>
 
@@ -751,6 +799,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#e9d5ff',
     marginLeft: 12,
+  },
+  settingTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  settingSubtext: {
+    fontSize: 12,
+    color: '#9f7aea',
+    marginTop: 2,
   },
   logoutButton: {
     flexDirection: 'row',
