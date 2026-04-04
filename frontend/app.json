@@ -4,12 +4,12 @@
     "slug": "etheria",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/etheria-icon.jpg",
+    "icon": "./assets/images/etheria-icon.png",
     "scheme": "etheria",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/etheria-icon.jpg",
+      "image": "./assets/images/etheria-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0f0321"
     },
@@ -28,7 +28,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/etheria-icon.jpg",
+        "foregroundImage": "./assets/images/etheria-icon.png",
         "backgroundColor": "#0f0321"
       },
       "package": "com.etheriasystems.etheria",
@@ -47,14 +47,14 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/etheria-icon.jpg"
+      "favicon": "./assets/images/etheria-icon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/etheria-icon.jpg",
+          "image": "./assets/images/etheria-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#0f0321"
@@ -62,10 +62,7 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-audio",
-      "expo-asset",
-      "expo-video",
-      "expo-image"
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true
