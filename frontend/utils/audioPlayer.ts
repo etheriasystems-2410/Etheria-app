@@ -6,6 +6,13 @@
 import { Platform } from 'react-native';
 import { createAudioPlayer } from 'expo-audio';
 
+// Setup audio mode - no-op for SDK 55 as it handles this automatically
+export const setupAudioMode = async (): Promise<void> => {
+  // expo-audio SDK 55 handles audio mode automatically
+  // This function exists for backward compatibility
+  console.log('Audio mode setup (SDK 55 handles automatically)');
+};
+
 // Audio player manager class for SDK 55
 export class AudioPlayerManager {
   private nativePlayer: any = null;
