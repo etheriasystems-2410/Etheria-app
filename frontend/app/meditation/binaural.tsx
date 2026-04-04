@@ -43,6 +43,8 @@ export default function BinauralMeditation() {
   
   const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [isPaused, setIsPaused] = useState(false);
+  const [volume, setVolume] = useState(0.8);
 
   useEffect(() => {
     loadPrograms();
@@ -186,8 +188,32 @@ export default function BinauralMeditation() {
       console.error('Error stopping session:', error);
     } finally {
       setIsPlaying(false);
+      setIsPaused(false);
       setSessionStartTime(null);
       setSessionDuration(0);
+    }
+  };
+
+  const togglePause = async () => {
+    if (!audioPlayerRef.current) return;
+    
+    try {
+      if (isPaused) {
+        await audioPlayerRef.current.play();
+        setIsPaused(false);
+      } else {
+        await audioPlayerRef.current.pause();
+        setIsPaused(true);
+      }
+    } catch (error) {
+      console.error('Error toggling pause:', error);
+    }
+  };
+
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.setVolume(newVolume);
     }
   };
 
@@ -214,19 +240,21 @@ export default function BinauralMeditation() {
             <Animated.View 
               style={[
                 styles.pulsingOrb,
-                { transform: [{ scale: pulseAnim }] }
+                { transform: [{ scale: isPaused ? 1 : pulseAnim }] }
               ]}
             >
-              <View style={[styles.orbOuter, { backgroundColor: selectedProgram.color }]} />
-              <View style={[styles.orbMiddle, { backgroundColor: selectedProgram.color }]} />
-              <View style={[styles.orbInner, { backgroundColor: selectedProgram.color }]} />
+              <View style={[styles.orbOuter, { backgroundColor: selectedProgram.color, opacity: isPaused ? 0.1 : 0.15 }]} />
+              <View style={[styles.orbMiddle, { backgroundColor: selectedProgram.color, opacity: isPaused ? 0.15 : 0.25 }]} />
+              <View style={[styles.orbInner, { backgroundColor: selectedProgram.color, opacity: isPaused ? 0.25 : 0.4 }]} />
             </Animated.View>
           </View>
 
           <View style={styles.sessionOverlay}>
             <View style={styles.sessionHeader}>
               <Ionicons name="headset" size={32} color="#b794f6" />
-              <Text style={styles.headphonesReminder}>Headphones Active</Text>
+              <Text style={styles.headphonesReminder}>
+                {isPaused ? 'Paused' : 'Headphones Active'}
+              </Text>
             </View>
             
             <Text style={styles.sessionTitle}>{selectedProgram.name}</Text>
@@ -239,6 +267,7 @@ export default function BinauralMeditation() {
               <Text style={styles.durationLabel}>meditation time</Text>
             </View>
 
+            {/* Waveform visualization - static when paused */}
             <View style={styles.waveformContainer}>
               <View style={styles.waveform}>
                 {[...Array(20)].map((_, i) => (
@@ -247,14 +276,59 @@ export default function BinauralMeditation() {
                     style={[
                       styles.wavebar,
                       {
-                        height: 15 + Math.abs(Math.sin((Date.now() / 300) + i * 0.5)) * 40,
+                        height: isPaused ? 20 : 15 + Math.abs(Math.sin((Date.now() / 300) + i * 0.5)) * 40,
                         backgroundColor: selectedProgram.color,
-                        opacity: 0.4 + Math.abs(Math.sin((Date.now() / 300) + i * 0.5)) * 0.6,
+                        opacity: isPaused ? 0.3 : 0.4 + Math.abs(Math.sin((Date.now() / 300) + i * 0.5)) * 0.6,
                       },
                     ]}
                   />
                 ))}
               </View>
+            </View>
+
+            {/* Media Player Controls */}
+            <View style={styles.mediaPlayerControls}>
+              {/* Play/Pause Button */}
+              <TouchableOpacity 
+                style={[styles.playPauseButton, { backgroundColor: selectedProgram.color }]} 
+                onPress={togglePause}
+              >
+                <Ionicons 
+                  name={isPaused ? 'play' : 'pause'} 
+                  size={40} 
+                  color="#fff" 
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Volume Control */}
+            <View style={styles.volumeContainer}>
+              <Ionicons name="volume-low" size={20} color="#9f7aea" />
+              <View style={styles.volumeSliderContainer}>
+                <View style={styles.volumeTrack}>
+                  <View 
+                    style={[
+                      styles.volumeFill, 
+                      { width: `${volume * 100}%`, backgroundColor: selectedProgram.color }
+                    ]} 
+                  />
+                </View>
+                <View style={styles.volumeButtonsContainer}>
+                  {[0.2, 0.4, 0.6, 0.8, 1.0].map((v) => (
+                    <TouchableOpacity
+                      key={v}
+                      style={[
+                        styles.volumeButton,
+                        volume >= v && { backgroundColor: selectedProgram.color + '40' }
+                      ]}
+                      onPress={() => handleVolumeChange(v)}
+                    >
+                      <View style={styles.volumeDot} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <Ionicons name="volume-high" size={20} color="#9f7aea" />
             </View>
 
             <View style={styles.frequencyInfo}>
@@ -270,7 +344,7 @@ export default function BinauralMeditation() {
             </View>
 
             <TouchableOpacity style={styles.stopButton} onPress={stopSession}>
-              <Ionicons name="stop" size={32} color="#fff" />
+              <Ionicons name="stop" size={24} color="#fff" />
               <Text style={styles.stopButtonText}>End Session</Text>
             </TouchableOpacity>
           </View>
@@ -728,5 +802,67 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
+  },
+  mediaPlayerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    gap: 20,
+  },
+  playPauseButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  volumeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 16,
+    marginBottom: 24,
+    gap: 12,
+  },
+  volumeSliderContainer: {
+    flex: 1,
+    height: 40,
+    justifyContent: 'center',
+  },
+  volumeTrack: {
+    height: 6,
+    backgroundColor: 'rgba(45, 27, 78, 0.8)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  volumeFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  volumeButtonsContainer: {
+    position: 'absolute',
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  volumeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  volumeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'transparent',
   },
 });
