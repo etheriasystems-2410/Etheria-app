@@ -541,7 +541,10 @@ IMPORTANT FORMATTING RULES:
 2. Insert pauses after breathing instructions, between sections, and during reflection moments
 3. Example: "Take a deep breath in... [pause for 5 seconds] ...and slowly exhale."
 4. Use multiple pauses throughout to create a natural meditation rhythm
-5. Include at least one pause every 2-3 sentences during breathing and visualization sections"""
+5. Include at least one pause every 2-3 sentences during breathing and visualization sections
+6. DO NOT use any markdown formatting - no asterisks (*), no hash symbols (#), no bullet points
+7. Write in plain flowing prose that sounds natural when spoken aloud
+8. Avoid headers, lists, or any formatting that isn't meant to be read aloud"""
         ).with_model("gemini", "gemini-2.5-pro")
         
         prompt = f"""Create a complete {duration_minutes}-minute guided meditation script for {focus}. 
@@ -553,7 +556,8 @@ Structure:
 4. Main meditation practice (with reflective pauses)
 5. Gentle closing and return to awareness (with pauses)
 
-Remember to use [pause for X seconds] format for all pauses."""
+Remember to use [pause for X seconds] format for all pauses.
+Write in plain prose without any markdown formatting - this will be read aloud."""
         
         user_message = UserMessage(text=prompt)
         script = await chat.send_message(user_message)
@@ -1321,7 +1325,9 @@ IMPORTANT FORMATTING RULES:
 3. Include the affirmation: "{chakra['affirmation']}"
 4. Reference the {chakra['element']} element
 5. Include visualization of the chakra's color energy
-6. Keep language calm, soothing, and spiritually uplifting"""
+6. Keep language calm, soothing, and spiritually uplifting
+7. DO NOT use any markdown formatting - no asterisks (*), no hash symbols (#), no bullet points
+8. Write in plain flowing prose that sounds natural when spoken aloud"""
         ).with_model("gemini", "gemini-2.5-pro")
         
         prompt = f"""Create a complete {duration_minutes}-minute chakra meditation for the {chakra['name']} located at the {chakra['location']}.
@@ -1335,7 +1341,8 @@ Include:
 6. Benefits focus: {', '.join(chakra['benefits'])}
 7. Gentle closing
 
-Use [pause for X seconds] format for all pauses."""
+Use [pause for X seconds] format for all pauses.
+Write in plain prose without any markdown formatting - this will be read aloud."""
         
         user_message = UserMessage(text=prompt)
         script = await chat.send_message(user_message)
@@ -1369,7 +1376,9 @@ IMPORTANT FORMATTING RULES:
 3. Include smooth transitions between chakras
 4. Use color visualization for each chakra
 5. Include each chakra's affirmation
-6. The tone will automatically shift to match each chakra, so mention when moving to next chakra"""
+6. The tone will automatically shift to match each chakra, so mention when moving to next chakra
+7. DO NOT use any markdown formatting - no asterisks (*), no hash symbols (#), no bullet points
+8. Write in plain flowing prose that sounds natural when spoken aloud"""
         ).with_model("gemini", "gemini-2.5-pro")
         
         prompt = f"""Create a complete {duration_minutes}-minute chakra realignment meditation that moves through all seven chakras:
@@ -1387,7 +1396,8 @@ Structure:
 8. Crown Chakra (violet) - spiritual connection
 9. Integration and closing
 
-Use [pause for X seconds] for breathing and integration moments."""
+Use [pause for X seconds] for breathing and integration moments.
+Write in plain prose without any markdown formatting - this will be read aloud."""
         
         user_message = UserMessage(text=prompt)
         script = await chat.send_message(user_message)
