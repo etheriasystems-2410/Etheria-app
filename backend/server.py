@@ -260,6 +260,14 @@ TRAINING_MODULES = [
         "free": False
     },
     {
+        "id": "beginner-4",
+        "title": "Automatic Writing Basics",
+        "description": "Learn to channel messages through written expression and connect with your higher self",
+        "lessons": 6,
+        "category": "beginner",
+        "free": True
+    },
+    {
         "id": "intermediate-1",
         "title": "Clairvoyance Development",
         "description": "Enhance your ability to see beyond the physical realm",
