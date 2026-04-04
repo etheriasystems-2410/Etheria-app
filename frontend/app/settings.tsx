@@ -350,27 +350,6 @@ export default function Settings() {
         </View>
       </View>
 
-      {/* Contest Dashboard Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Contests & Prizes</Text>
-        
-        <TouchableOpacity 
-          style={styles.contestCard}
-          onPress={() => router.push('/contest')}
-        >
-          <View style={styles.contestHeader}>
-            <View style={styles.contestIcon}>
-              <Ionicons name="trophy" size={32} color="#ffd700" />
-            </View>
-            <View style={styles.contestInfo}>
-              <Text style={styles.contestTitle}>Prize Drawing Dashboard</Text>
-              <Text style={styles.contestSubtitle}>View entries & upcoming drawings</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#b794f6" />
-          </View>
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Profile Information</Text>
         
@@ -847,39 +826,5 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
-  },
-  // Contest Dashboard Styles
-  contestCard: {
-    backgroundColor: '#1a0033',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#ffd700',
-  },
-  contestHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  contestIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  contestInfo: {
-    flex: 1,
-  },
-  contestTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#ffd700',
-    marginBottom: 2,
-  },
-  contestSubtitle: {
-    fontSize: 13,
-    color: '#9f7aea',
   },
 });
