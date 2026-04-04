@@ -56,7 +56,7 @@ function ProtectedLayout() {
         name="index"
         options={{
           drawerLabel: 'Home',
-          title: 'Psychic Awareness',
+          title: 'Explore Etheria',
           drawerIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
