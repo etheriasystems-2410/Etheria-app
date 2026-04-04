@@ -115,8 +115,10 @@ export default function Training() {
     // Stop any existing playback
     await stopMeditation();
     
-    setIsGeneratingTTS(true);
-    setTtsProgress('Preparing meditation...');
+    // Start immediately - set playing state first
+    isPlayingRef.current = true;
+    setIsPlayingMeditation(true);
+    setTtsProgress('Starting...');
 
     try {
       const script = currentLesson.meditation.script;
@@ -154,11 +156,6 @@ export default function Training() {
       }
 
       console.log(`Meditation has ${segments.length} segments`);
-      
-      // Set playing state
-      isPlayingRef.current = true;
-      setIsPlayingMeditation(true);
-      setIsGeneratingTTS(false);
 
       // Process each segment
       for (let i = 0; i < segments.length; i++) {

@@ -419,7 +419,19 @@ Now we'll practice 4-7-8 breathing. Inhale through your nose for 4 counts.
 
 [pause for 1 second]
 
-One... Two... Three... Four.
+One.
+
+[pause for 1 second]
+
+Two.
+
+[pause for 1 second]
+
+Three.
+
+[pause for 1 second]
+
+Four.
 
 [pause for 2 seconds]
 
@@ -427,7 +439,31 @@ Hold your breath for 7 counts.
 
 [pause for 1 second]
 
-One... Two... Three... Four... Five... Six... Seven.
+One.
+
+[pause for 1 second]
+
+Two.
+
+[pause for 1 second]
+
+Three.
+
+[pause for 1 second]
+
+Four.
+
+[pause for 1 second]
+
+Five.
+
+[pause for 1 second]
+
+Six.
+
+[pause for 1 second]
+
+Seven.
 
 [pause for 2 seconds]
 
@@ -435,7 +471,35 @@ Exhale slowly through your mouth for 8 counts.
 
 [pause for 1 second]
 
-One... Two... Three... Four... Five... Six... Seven... Eight.
+One.
+
+[pause for 1 second]
+
+Two.
+
+[pause for 1 second]
+
+Three.
+
+[pause for 1 second]
+
+Four.
+
+[pause for 1 second]
+
+Five.
+
+[pause for 1 second]
+
+Six.
+
+[pause for 1 second]
+
+Seven.
+
+[pause for 1 second]
+
+Eight.
 
 [pause for 5 seconds]
 
