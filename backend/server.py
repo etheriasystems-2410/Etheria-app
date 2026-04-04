@@ -415,15 +415,27 @@ Begin by noticing any mental chatter. Don't fight it - simply observe your thoug
 
 [pause for 20 seconds]
 
-Now we'll practice 4-7-8 breathing. Inhale through your nose for 4 counts... 1, 2, 3, 4.
+Now we'll practice 4-7-8 breathing. Inhale through your nose for 4 counts.
+
+[pause for 1 second]
+
+One... Two... Three... Four.
 
 [pause for 2 seconds]
 
-Hold your breath for 7 counts... 1, 2, 3, 4, 5, 6, 7.
+Hold your breath for 7 counts.
+
+[pause for 1 second]
+
+One... Two... Three... Four... Five... Six... Seven.
 
 [pause for 2 seconds]
 
-Exhale slowly through your mouth for 8 counts... 1, 2, 3, 4, 5, 6, 7, 8.
+Exhale slowly through your mouth for 8 counts.
+
+[pause for 1 second]
+
+One... Two... Three... Four... Five... Six... Seven... Eight.
 
 [pause for 5 seconds]
 
