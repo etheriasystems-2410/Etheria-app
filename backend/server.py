@@ -1832,7 +1832,7 @@ async def get_zodiac_element(birth_month: int, birth_day: int):
                     "element": element,
                     "gender": guide_info["gender"],
                     "personality": guide_info["personality"],
-                    "voice_id": guide_info["voice_id"]
+                    "voice": guide_info["voice"]
                 }
                 break
         

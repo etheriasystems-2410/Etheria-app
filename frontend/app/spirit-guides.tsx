@@ -164,6 +164,12 @@ export default function SpiritGuides() {
       const response = await fetch(
         `${BACKEND_URL}/api/zodiac/element/${month}/${day}`
       );
+      
+      if (!response.ok) {
+        console.error('Error fetching zodiac:', response.status);
+        return;
+      }
+      
       const data = await response.json();
 
       await AsyncStorage.setItem(
@@ -174,6 +180,8 @@ export default function SpiritGuides() {
       const matchedGuide = guides.find((g) => g.name === data.spirit_guide.name);
       if (matchedGuide) {
         setSuggestedGuide(matchedGuide);
+        // Auto-select the matched guide
+        selectGuide(matchedGuide);
       }
 
       setShowBirthdayInput(false);
@@ -486,6 +494,17 @@ export default function SpiritGuides() {
           </Text>
         </View>
         <View style={styles.chatHeaderRight}>
+          {/* Switch Guide Button */}
+          <TouchableOpacity
+            style={styles.switchGuideButton}
+            onPress={() => {
+              setSelectedGuide(null);
+              setMessages([]);
+            }}
+          >
+            <Ionicons name="people" size={18} color="#b794f6" />
+            <Text style={styles.switchGuideText}>Switch</Text>
+          </TouchableOpacity>
           {/* Mute Toggle Button */}
           <TouchableOpacity
             style={[styles.muteButton, isMuted && styles.muteButtonActive]}
@@ -934,5 +953,21 @@ const styles = StyleSheet.create({
   audioGeneratingText: {
     color: '#b794f6',
     fontSize: 13,
+  },
+  switchGuideButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2d1b4e',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+  },
+  switchGuideText: {
+    color: '#b794f6',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
