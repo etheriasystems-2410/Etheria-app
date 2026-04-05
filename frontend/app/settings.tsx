@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +18,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Paywall } from '../components/Paywall';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  registerForPushNotificationsAsync,
+  getNotificationPreferences,
+  saveNotificationPreferences,
+  checkNotificationPermission,
+  NotificationPreferences,
+} from '../utils/notifications';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -35,12 +43,85 @@ export default function Settings() {
   const [giftCode, setGiftCode] = useState('');
   const [redeemingCode, setRedeemingCode] = useState(false);
 
+  // Notification State
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
+    dailyOracle: true,
+    oracleReadings: true,
+    spiritGuideMessages: true,
+    contestWinner: true,
+    creatorMessages: true,
+    dailyOracleTime: '09:00',
+  });
+  const [loadingNotifications, setLoadingNotifications] = useState(true);
+
   // Check for payment success on mount
   useEffect(() => {
     if (params.session_id && params.success === 'true') {
       handlePaymentSuccess(params.session_id as string);
     }
   }, [params]);
+
+  // Load notification settings
+  useEffect(() => {
+    loadNotificationSettings();
+  }, []);
+
+  const loadNotificationSettings = async () => {
+    try {
+      const hasPermission = await checkNotificationPermission();
+      setNotificationsEnabled(hasPermission);
+      
+      const prefs = await getNotificationPreferences();
+      setNotificationPrefs(prefs);
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const handleEnableNotifications = async () => {
+    try {
+      const token = await registerForPushNotificationsAsync();
+      if (token) {
+        setNotificationsEnabled(true);
+        
+        // Save token to backend
+        if (user) {
+          await fetch(`${BACKEND_URL}/api/notifications/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: user.user_id,
+              push_token: token,
+              platform: Platform.OS,
+            }),
+          });
+        }
+        
+        Alert.alert('Success', 'Push notifications enabled! You will receive spiritual guidance reminders.');
+      } else {
+        Alert.alert(
+          'Permission Required',
+          'Please enable notifications in your device settings to receive spiritual guidance reminders.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+      Alert.alert('Error', 'Failed to enable notifications. Please try again.');
+    }
+  };
+
+  const handleToggleNotificationPref = async (key: keyof NotificationPreferences, value: boolean) => {
+    const newPrefs = { ...notificationPrefs, [key]: value };
+    setNotificationPrefs(newPrefs);
+    await saveNotificationPreferences(newPrefs);
+  };
 
   const handleRedeemCode = async () => {
     if (!giftCode.trim()) {
@@ -410,13 +491,99 @@ export default function Settings() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>App Settings</Text>
+        <Text style={styles.sectionTitle}>Notifications</Text>
         
-        <TouchableOpacity style={styles.settingItem}>
-          <Ionicons name="notifications" size={24} color="#b794f6" />
-          <Text style={styles.settingText}>Notifications</Text>
-          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
-        </TouchableOpacity>
+        {!notificationsEnabled ? (
+          <TouchableOpacity 
+            style={styles.enableNotificationsButton}
+            onPress={handleEnableNotifications}
+          >
+            <Ionicons name="notifications" size={24} color="#fff" />
+            <View style={styles.settingTextContainer}>
+              <Text style={styles.enableNotificationsText}>Enable Push Notifications</Text>
+              <Text style={styles.enableNotificationsSubtext}>
+                Receive spiritual guidance reminders
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <>
+            <View style={styles.notificationRow}>
+              <Ionicons name="sunny" size={22} color="#fbbf24" />
+              <View style={styles.notificationTextContainer}>
+                <Text style={styles.notificationTitle}>Daily Oracle Reminder</Text>
+                <Text style={styles.notificationSubtext}>Daily reminder to draw your oracle card</Text>
+              </View>
+              <Switch
+                value={notificationPrefs.dailyOracle}
+                onValueChange={(v) => handleToggleNotificationPref('dailyOracle', v)}
+                trackColor={{ false: '#2d1b4e', true: '#7c3aed' }}
+                thumbColor={notificationPrefs.dailyOracle ? '#a855f7' : '#666'}
+              />
+            </View>
+
+            <View style={styles.notificationRow}>
+              <Ionicons name="sparkles" size={22} color="#ec4899" />
+              <View style={styles.notificationTextContainer}>
+                <Text style={styles.notificationTitle}>Oracle Readings</Text>
+                <Text style={styles.notificationSubtext}>Insights about your readings</Text>
+              </View>
+              <Switch
+                value={notificationPrefs.oracleReadings}
+                onValueChange={(v) => handleToggleNotificationPref('oracleReadings', v)}
+                trackColor={{ false: '#2d1b4e', true: '#7c3aed' }}
+                thumbColor={notificationPrefs.oracleReadings ? '#a855f7' : '#666'}
+              />
+            </View>
+
+            <View style={styles.notificationRow}>
+              <Ionicons name="person" size={22} color="#8b5cf6" />
+              <View style={styles.notificationTextContainer}>
+                <Text style={styles.notificationTitle}>Spirit Guide Messages</Text>
+                <Text style={styles.notificationSubtext}>Messages from your matched guide</Text>
+              </View>
+              <Switch
+                value={notificationPrefs.spiritGuideMessages}
+                onValueChange={(v) => handleToggleNotificationPref('spiritGuideMessages', v)}
+                trackColor={{ false: '#2d1b4e', true: '#7c3aed' }}
+                thumbColor={notificationPrefs.spiritGuideMessages ? '#a855f7' : '#666'}
+              />
+            </View>
+
+            <View style={styles.notificationRow}>
+              <Ionicons name="trophy" size={22} color="#ffd700" />
+              <View style={styles.notificationTextContainer}>
+                <Text style={styles.notificationTitle}>Contest Winner</Text>
+                <Text style={styles.notificationSubtext}>Get notified if you win</Text>
+              </View>
+              <Switch
+                value={notificationPrefs.contestWinner}
+                onValueChange={(v) => handleToggleNotificationPref('contestWinner', v)}
+                trackColor={{ false: '#2d1b4e', true: '#7c3aed' }}
+                thumbColor={notificationPrefs.contestWinner ? '#a855f7' : '#666'}
+              />
+            </View>
+
+            <View style={styles.notificationRow}>
+              <Ionicons name="megaphone" size={22} color="#60a5fa" />
+              <View style={styles.notificationTextContainer}>
+                <Text style={styles.notificationTitle}>Etheria Updates</Text>
+                <Text style={styles.notificationSubtext}>News and announcements</Text>
+              </View>
+              <Switch
+                value={notificationPrefs.creatorMessages}
+                onValueChange={(v) => handleToggleNotificationPref('creatorMessages', v)}
+                trackColor={{ false: '#2d1b4e', true: '#7c3aed' }}
+                thumbColor={notificationPrefs.creatorMessages ? '#a855f7' : '#666'}
+              />
+            </View>
+          </>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>App Settings</Text>
 
         <TouchableOpacity style={styles.settingItem}>
           <Ionicons name="moon" size={24} color="#b794f6" />
@@ -883,5 +1050,45 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  enableNotificationsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7c3aed',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  enableNotificationsText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  enableNotificationsSubtext: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2d1b4e',
+  },
+  notificationTextContainer: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  notificationTitle: {
+    color: '#e9d5ff',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  notificationSubtext: {
+    color: '#9f7aea',
+    fontSize: 12,
+    marginTop: 2,
   },
 });
