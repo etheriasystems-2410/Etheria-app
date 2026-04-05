@@ -18,6 +18,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Paywall } from '../components/Paywall';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import {
   registerForPushNotificationsAsync,
   getNotificationPreferences,
@@ -83,6 +85,59 @@ export default function Settings() {
 
   const handleEnableNotifications = async () => {
     try {
+      // First check if we're on a physical device
+      const isPhysicalDevice = Device.isDevice;
+      
+      if (!isPhysicalDevice) {
+        Alert.alert(
+          'Physical Device Required',
+          'Push notifications only work on a physical device. Please test on a real phone or tablet.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      // Check current permission status first
+      const { status: currentStatus } = await Notifications.getPermissionsAsync();
+      
+      if (currentStatus === 'granted') {
+        // Already granted - just get the token and register
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          setNotificationsEnabled(true);
+          
+          // Save token to backend
+          if (user) {
+            await fetch(`${BACKEND_URL}/api/notifications/register`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: user.user_id,
+                push_token: token,
+                platform: Platform.OS,
+              }),
+            });
+          }
+          
+          Alert.alert('Success', 'Push notifications are enabled! You will receive spiritual guidance reminders.');
+        }
+        return;
+      }
+      
+      if (currentStatus === 'denied') {
+        // Permission was previously denied - need to go to settings
+        Alert.alert(
+          'Notifications Disabled',
+          'You previously denied notification permissions. Please enable them in your device settings to receive spiritual guidance reminders.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+      }
+      
+      // Permission is undetermined - request it
       const token = await registerForPushNotificationsAsync();
       if (token) {
         setNotificationsEnabled(true);
@@ -102,6 +157,7 @@ export default function Settings() {
         
         Alert.alert('Success', 'Push notifications enabled! You will receive spiritual guidance reminders.');
       } else {
+        // Permission request was rejected
         Alert.alert(
           'Permission Required',
           'Please enable notifications in your device settings to receive spiritual guidance reminders.',
