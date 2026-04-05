@@ -10,6 +10,7 @@ import {
   Animated,
   Dimensions,
   Alert,
+  Image as RNImage,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -330,10 +331,10 @@ export default function Oracle() {
                   <View style={styles.spreadCardRow}>
                     {/* Thumbnail Image */}
                     <View style={styles.spreadThumbnailContainer}>
-                      <Image
-                        source={{ uri: spread.image }}
+                      <RNImage
+                        source={spread.image}
                         style={[styles.spreadThumbnail, isLocked && styles.lockedThumbnail]}
-                        contentFit="cover"
+                        resizeMode="cover"
                       />
                       {isLocked && (
                         <View style={styles.thumbnailLockOverlay}>
