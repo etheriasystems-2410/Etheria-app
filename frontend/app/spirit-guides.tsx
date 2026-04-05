@@ -12,6 +12,7 @@ import {
   Modal,
   Alert,
   Image,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -104,9 +105,56 @@ export default function SpiritGuides() {
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Animation for pulsating ring when guide is talking
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0.3)).current;
+  
+  // Check if guide is currently "talking" (loading response, generating audio, or playing audio)
+  const isTalking = loading || generatingAudio || playingAudioIndex !== null;
 
   // Check if user has access to Spirit Guides feature
   const hasAccess = isPremium || checkFeatureAccess('spirit_guides');
+  
+  // Pulsating animation effect when guide is talking
+  useEffect(() => {
+    if (isTalking && selectedGuide) {
+      const pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(pulseAnim, {
+              toValue: 1.15,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+            Animated.timing(glowAnim, {
+              toValue: 0.8,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(pulseAnim, {
+              toValue: 1,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+            Animated.timing(glowAnim, {
+              toValue: 0.3,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      );
+      pulseAnimation.start();
+      return () => pulseAnimation.stop();
+    } else {
+      // Reset to default state
+      pulseAnim.setValue(1);
+      glowAnim.setValue(0.3);
+    }
+  }, [isTalking, selectedGuide]);
 
   useEffect(() => {
     if (hasAccess) {
@@ -519,20 +567,38 @@ export default function SpiritGuides() {
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
         </TouchableOpacity>
         
-        {/* Guide Picture in Header */}
-        {selectedGuide.image ? (
-          <View style={styles.chatHeaderImageContainer}>
-            <Image 
-              source={selectedGuide.image} 
-              style={styles.chatHeaderImage}
-              resizeMode="cover"
+        {/* Guide Picture in Header with Pulsating Ring */}
+        <View style={styles.chatHeaderImageWrapper}>
+          {/* Animated pulsating ring */}
+          {isTalking && (
+            <Animated.View
+              style={[
+                styles.pulseRing,
+                {
+                  borderColor: selectedGuide.color,
+                  transform: [{ scale: pulseAnim }],
+                  opacity: glowAnim,
+                },
+              ]}
             />
-          </View>
-        ) : (
-          <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
-            <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
-          </View>
-        )}
+          )}
+          {selectedGuide.image ? (
+            <View style={[
+              styles.chatHeaderImageContainer,
+              isTalking && { borderColor: selectedGuide.color }
+            ]}>
+              <Image 
+                source={selectedGuide.image} 
+                style={styles.chatHeaderImage}
+                resizeMode="cover"
+              />
+            </View>
+          ) : (
+            <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
+              <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
+            </View>
+          )}
+        </View>
         
         <View style={styles.chatHeaderInfo}>
           <Text style={styles.chatHeaderName}>{selectedGuide.name}</Text>
@@ -879,6 +945,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  chatHeaderImageWrapper: {
+    position: 'relative',
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 3,
+    backgroundColor: 'transparent',
+  },
   chatHeaderImageContainer: {
     width: 48,
     height: 48,
@@ -886,7 +968,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 2,
     borderColor: '#7c3aed',
-    marginRight: 12,
   },
   chatHeaderImage: {
     width: '100%',
