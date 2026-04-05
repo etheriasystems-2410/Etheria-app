@@ -577,12 +577,15 @@ const styles = StyleSheet.create({
   },
   optOutButton: {
     marginTop: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    minWidth: 100,
   },
   optOutButtonText: {
     color: '#ef4444',
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   enterDrawingButton: {
     flexDirection: 'row',

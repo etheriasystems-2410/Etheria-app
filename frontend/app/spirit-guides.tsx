@@ -704,10 +704,11 @@ const styles = StyleSheet.create({
   guideCard: {
     backgroundColor: '#1a0033',
     borderRadius: 16,
-    padding: 12,
+    padding: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#2d1b4e',
+    width: '100%',
   },
   guideCardSuggested: {
     borderColor: '#f59e0b',
@@ -731,6 +732,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#b794f6',
     marginBottom: 8,
+    fontWeight: '500',
   },
   guideGender: {
     fontSize: 14,
