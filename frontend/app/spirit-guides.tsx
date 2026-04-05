@@ -50,7 +50,7 @@ const guides: Guide[] = [
     gender: 'masculine',
     personality: 'passionate, direct, transformative',
     voice_id: 'TxGEqnHWrfWFTfGW9XjX',
-    image: null, // No custom image yet
+    image: require('../assets/images/guide-ignis.jpg'),
   },
   {
     name: 'Aqua',
