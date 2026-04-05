@@ -3,11 +3,14 @@ import { Drawer } from 'expo-router/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { LanguageProvider } from '../contexts/LanguageContext';
 import { useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
 
 function ProtectedLayout() {
   const { isAuthenticated, loading } = useAuth();
+  const { theme } = useTheme();
   const segments = useSegments();
   const router = useRouter();
 
@@ -39,12 +42,12 @@ function ProtectedLayout() {
     <Drawer
       screenOptions={{
         drawerStyle: {
-          backgroundColor: '#1a0033',
+          backgroundColor: theme.cardBackground,
         },
-        drawerActiveTintColor: '#b794f6',
-        drawerInactiveTintColor: '#9f7aea',
+        drawerActiveTintColor: theme.accentLight,
+        drawerInactiveTintColor: theme.accent,
         headerStyle: {
-          backgroundColor: '#2d1b4e',
+          backgroundColor: theme.cardBackgroundAlt,
         },
         headerTintColor: '#e9d5ff',
         headerTitleStyle: {
@@ -146,11 +149,15 @@ function ProtectedLayout() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <GestureHandlerRootView style={styles.container}>
-        <ProtectedLayout />
-      </GestureHandlerRootView>
-    </AuthProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <GestureHandlerRootView style={styles.container}>
+            <ProtectedLayout />
+          </GestureHandlerRootView>
+        </AuthProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

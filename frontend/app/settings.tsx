@@ -10,9 +10,12 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, THEMES, ThemeColors } from '../contexts/ThemeContext';
+import { useLanguage, LANGUAGES, Language } from '../contexts/LanguageContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Paywall } from '../components/Paywall';
@@ -22,6 +25,8 @@ const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function Settings() {
   const { user, logout, isPremium, subscription, refreshSubscription } = useAuth();
+  const { theme, themeName, setTheme, availableThemes } = useTheme();
+  const { language, languageCode, setLanguage, t, availableLanguages } = useLanguage();
   const router = useRouter();
   const params = useLocalSearchParams();
   const [editing, setEditing] = useState(false);
@@ -29,6 +34,10 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
+  
+  // Theme and Language modals
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   
   // Gift Code State
   const [showCodeInput, setShowCodeInput] = useState(false);
@@ -410,18 +419,30 @@ export default function Settings() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>App Settings</Text>
+        <Text style={styles.sectionTitle}>{t('appSettings')}</Text>
 
-        <TouchableOpacity style={styles.settingItem}>
-          <Ionicons name="moon" size={24} color="#b794f6" />
-          <Text style={styles.settingText}>Theme</Text>
-          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => setShowThemeModal(true)}
+        >
+          <Ionicons name="color-palette" size={24} color={theme.accentLight} />
+          <View style={styles.settingTextContainer}>
+            <Text style={styles.settingText}>{t('theme')}</Text>
+            <Text style={styles.settingSubtext}>{THEMES[themeName]?.name || 'Mystic Purple'}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.accent} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingItem}>
-          <Ionicons name="language" size={24} color="#b794f6" />
-          <Text style={styles.settingText}>Language</Text>
-          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => setShowLanguageModal(true)}
+        >
+          <Ionicons name="language" size={24} color={theme.accentLight} />
+          <View style={styles.settingTextContainer}>
+            <Text style={styles.settingText}>{t('language')}</Text>
+            <Text style={styles.settingSubtext}>{language.nativeName}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.accent} />
         </TouchableOpacity>
       </View>
 
@@ -516,6 +537,121 @@ export default function Settings() {
         visible={showPaywall}
         onClose={() => setShowPaywall(false)}
       />
+
+      {/* Theme Selection Modal */}
+      <Modal
+        visible={showThemeModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowThemeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('selectTheme')}</Text>
+              <TouchableOpacity onPress={() => setShowThemeModal(false)}>
+                <Ionicons name="close" size={24} color="#e9d5ff" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScrollContent}>
+              {availableThemes.map((themeOption) => {
+                const isSelected = themeOption.id === themeName;
+                const isLocked = themeOption.isPremium && !isPremium;
+                
+                return (
+                  <TouchableOpacity
+                    key={themeOption.id}
+                    style={[
+                      styles.themeOption,
+                      isSelected && styles.themeOptionSelected,
+                      { borderColor: isSelected ? themeOption.accent : '#2d1b4e' }
+                    ]}
+                    onPress={() => {
+                      if (isLocked) {
+                        setShowThemeModal(false);
+                        setShowPaywall(true);
+                      } else {
+                        setTheme(themeOption.id);
+                      }
+                    }}
+                  >
+                    <View style={styles.themePreview}>
+                      <View style={[styles.themeColorSwatch, { backgroundColor: themeOption.backgroundGradient[0] }]} />
+                      <View style={[styles.themeColorSwatch, { backgroundColor: themeOption.accent }]} />
+                      <View style={[styles.themeColorSwatch, { backgroundColor: themeOption.accentLight }]} />
+                    </View>
+                    <View style={styles.themeInfo}>
+                      <Text style={styles.themeName}>{themeOption.name}</Text>
+                      {isLocked && (
+                        <View style={styles.premiumBadge}>
+                          <Ionicons name="lock-closed" size={12} color="#fbbf24" />
+                          <Text style={styles.premiumBadgeText}>Premium</Text>
+                        </View>
+                      )}
+                      {isSelected && (
+                        <Text style={[styles.currentBadge, { color: themeOption.accent }]}>{t('currentTheme')}</Text>
+                      )}
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={24} color={themeOption.accent} />
+                    )}
+                    {isLocked && !isSelected && (
+                      <Ionicons name="lock-closed" size={20} color="#9f7aea" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={showLanguageModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowLanguageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('selectLanguage')}</Text>
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                <Ionicons name="close" size={24} color="#e9d5ff" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScrollContent}>
+              {availableLanguages.map((lang) => {
+                const isSelected = lang.code === languageCode;
+                
+                return (
+                  <TouchableOpacity
+                    key={lang.code}
+                    style={[
+                      styles.languageOption,
+                      isSelected && styles.languageOptionSelected,
+                      { borderColor: isSelected ? theme.accent : '#2d1b4e' }
+                    ]}
+                    onPress={() => {
+                      setLanguage(lang.code);
+                      Alert.alert(t('success'), t('languageChanged'));
+                    }}
+                  >
+                    <View style={styles.languageInfo}>
+                      <Text style={styles.languageName}>{lang.name}</Text>
+                      <Text style={styles.languageNative}>{lang.nativeName}</Text>
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={24} color={theme.accent} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -877,5 +1013,108 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2d1b4e',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+  },
+  modalScrollContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  // Theme Option Styles
+  themeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    marginBottom: 12,
+    backgroundColor: 'rgba(45, 27, 78, 0.5)',
+  },
+  themeOptionSelected: {
+    backgroundColor: 'rgba(124, 58, 237, 0.2)',
+  },
+  themePreview: {
+    flexDirection: 'row',
+    gap: 4,
+    marginRight: 16,
+  },
+  themeColorSwatch: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+  },
+  themeInfo: {
+    flex: 1,
+  },
+  themeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e9d5ff',
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  premiumBadgeText: {
+    fontSize: 12,
+    color: '#fbbf24',
+    fontWeight: '500',
+  },
+  currentBadge: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  // Language Option Styles
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    marginBottom: 12,
+    backgroundColor: 'rgba(45, 27, 78, 0.5)',
+  },
+  languageOptionSelected: {
+    backgroundColor: 'rgba(124, 58, 237, 0.2)',
+  },
+  languageInfo: {
+    flex: 1,
+  },
+  languageName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e9d5ff',
+  },
+  languageNative: {
+    fontSize: 14,
+    color: '#9f7aea',
+    marginTop: 2,
   },
 });

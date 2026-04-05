@@ -1677,6 +1677,7 @@ class TTSRequest(BaseModel):
     text: str
     guide_name: Optional[str] = None  # Ignis, Aqua, Terra, or Aether
     voice_id: Optional[str] = None
+    language: Optional[str] = "en"  # Language code for TTS (en, es, fr, de, it, pt, ja, ko, zh)
     
 class TTSResponse(BaseModel):
     audio_base64: Optional[str] = None
