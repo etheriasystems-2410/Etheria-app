@@ -583,9 +583,9 @@ export default function Settings() {
                     <View style={styles.themeInfo}>
                       <Text style={styles.themeName}>{themeOption.name}</Text>
                       {isLocked && (
-                        <View style={styles.premiumBadge}>
+                        <View style={styles.themePremiumBadge}>
                           <Ionicons name="lock-closed" size={12} color="#fbbf24" />
-                          <Text style={styles.premiumBadgeText}>Premium</Text>
+                          <Text style={styles.themePremiumBadgeText}>Premium</Text>
                         </View>
                       )}
                       {isSelected && (
@@ -1075,13 +1075,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#e9d5ff',
   },
-  premiumBadge: {
+  themePremiumBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
     gap: 4,
   },
-  premiumBadgeText: {
+  themePremiumBadgeText: {
     fontSize: 12,
     color: '#fbbf24',
     fontWeight: '500',
