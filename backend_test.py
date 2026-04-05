@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Testing for Etheria App - Prize Drawing and Gift Code System
-Tests all Prize Drawing and Gift Code endpoints end-to-end
+Comprehensive Backend API Testing for Etheria App
+Tests Oracle Divination endpoints and Prize Drawing/Gift Code System
 """
 
 import asyncio
@@ -384,5 +384,171 @@ async def main():
         print("Some endpoints have issues that need attention.")
         exit(1)
 
+class OracleTester:
+    """Test Oracle Divination endpoints as requested in review"""
+    
+    async def test_oracle_draw(self, client):
+        """Test POST /api/oracle/draw - Draw oracle cards"""
+        print("\n🔮 Testing Oracle Card Drawing...")
+        
+        # Test data as specified in the review request
+        test_data = {
+            "spread_type": "single",
+            "card_count": 1,
+            "positions": ["Guidance"]
+        }
+        
+        try:
+            response = await client.post(
+                f"{BACKEND_URL}/oracle/draw",
+                json=test_data,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            print(f"Status Code: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                print("✅ Oracle draw successful!")
+                print(f"Response structure: {list(data.keys())}")
+                
+                # Validate response structure
+                required_fields = ["spread_type", "cards", "timestamp"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    print(f"❌ Missing required fields: {missing_fields}")
+                    return False
+                
+                # Validate cards array
+                if not data.get("cards") or not isinstance(data["cards"], list):
+                    print("❌ Cards array is missing or invalid")
+                    return False
+                
+                card_data = data["cards"][0]
+                print(f"Card drawn: {card_data.get('card', {}).get('name', 'Unknown')}")
+                print(f"Element: {card_data.get('card', {}).get('element', 'Unknown')}")
+                print(f"Position: {card_data.get('position', 'Unknown')}")
+                
+                # Check if interpretation exists
+                if card_data.get('interpretation'):
+                    print(f"Interpretation length: {len(card_data['interpretation'])} characters")
+                    print("✅ AI interpretation generated successfully")
+                else:
+                    print("❌ No interpretation provided")
+                    return False
+                
+                return True
+            else:
+                print(f"❌ Oracle draw failed with status {response.status_code}")
+                print(f"Response: {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Request failed: {e}")
+            return False
+
+    async def test_oracle_readings(self, client):
+        """Test GET /api/oracle/readings - Get saved readings"""
+        print("\n📚 Testing Get Saved Oracle Readings...")
+        
+        try:
+            response = await client.get(f"{BACKEND_URL}/oracle/readings")
+            
+            print(f"Status Code: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                print("✅ Get readings successful!")
+                print(f"Response type: {type(data)}")
+                
+                if isinstance(data, list):
+                    print(f"Number of saved readings: {len(data)}")
+                    
+                    if len(data) > 0:
+                        # Validate first reading structure
+                        first_reading = data[0]
+                        print(f"First reading keys: {list(first_reading.keys())}")
+                        
+                        # Check for expected fields
+                        expected_fields = ["_id", "saved_at"]
+                        for field in expected_fields:
+                            if field in first_reading:
+                                print(f"✅ Field '{field}' present")
+                            else:
+                                print(f"⚠️ Field '{field}' missing")
+                    else:
+                        print("ℹ️ No saved readings found (empty array)")
+                    
+                    return True
+                else:
+                    print(f"❌ Expected array response, got {type(data)}")
+                    return False
+            else:
+                print(f"❌ Get readings failed with status {response.status_code}")
+                print(f"Response: {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Request failed: {e}")
+            return False
+
+    async def run_oracle_tests(self):
+        """Run Oracle endpoint tests"""
+        print("\n🌟 ETHERIA ORACLE DIVINATION API TESTING")
+        print("=" * 50)
+        print(f"Backend URL: {BACKEND_URL}")
+        print(f"Test Time: {datetime.now().isoformat()}")
+        print("=" * 50)
+        
+        results = []
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Test Oracle Draw
+            draw_result = await self.test_oracle_draw(client)
+            results.append(("Oracle Draw", draw_result))
+            
+            # Test Get Readings
+            readings_result = await self.test_oracle_readings(client)
+            results.append(("Get Readings", readings_result))
+        
+        # Summary
+        print("\n" + "=" * 50)
+        print("📊 ORACLE TEST SUMMARY")
+        print("=" * 50)
+        
+        passed = 0
+        total = len(results)
+        
+        for test_name, result in results:
+            status = "✅ PASS" if result else "❌ FAIL"
+            print(f"{test_name}: {status}")
+            if result:
+                passed += 1
+        
+        print(f"\nOracle Tests: {passed}/{total} tests passed")
+        
+        if passed == total:
+            print("🎉 All Oracle endpoints are working correctly!")
+            return True
+        else:
+            print("⚠️ Some Oracle endpoints have issues")
+            return False
+
+async def main_oracle_only():
+    """Run only Oracle endpoint tests as requested in review"""
+    oracle_tester = OracleTester()
+    success = await oracle_tester.run_oracle_tests()
+    
+    if success:
+        exit(0)
+    else:
+        exit(1)
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Check if we should run only Oracle tests
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "oracle":
+        asyncio.run(main_oracle_only())
+    else:
+        asyncio.run(main())

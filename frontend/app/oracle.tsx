@@ -361,7 +361,7 @@ export default function Oracle() {
                         )}
                       </View>
                       <Text style={[styles.spreadName, isLocked && styles.lockedText]}>{spread.name}</Text>
-                      <Text style={[styles.spreadDescription, isLocked && styles.lockedText]} numberOfLines={2}>{spread.description}</Text>
+                      <Text style={[styles.spreadDescription, isLocked && styles.lockedText]}>{spread.description}</Text>
                       <View style={styles.spreadMeta}>
                         <Ionicons name={spread.icon as any} size={14} color={isLocked ? '#6b5b8a' : '#b794f6'} />
                         <Text style={[styles.spreadMetaText, isLocked && styles.lockedText]}>
@@ -846,15 +846,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
     marginBottom: 24,
+    paddingHorizontal: 8,
   },
   positionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1a0033',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 20,
     gap: 8,
   },
@@ -865,6 +866,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#7c3aed',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   positionNumberText: {
     color: '#fff',
@@ -873,7 +875,8 @@ const styles = StyleSheet.create({
   },
   positionName: {
     color: '#c4b5fd',
-    fontSize: 13,
+    fontSize: 14,
+    flexShrink: 0,
   },
   cardContainer: {
     alignItems: 'center',
