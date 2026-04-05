@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,6 +30,7 @@ interface Guide {
   gender: string;
   personality: string;
   voice_id: string;
+  image?: any;
 }
 
 interface Message {
@@ -48,6 +50,7 @@ const guides: Guide[] = [
     gender: 'masculine',
     personality: 'passionate, direct, transformative',
     voice_id: 'TxGEqnHWrfWFTfGW9XjX',
+    image: null, // No custom image yet
   },
   {
     name: 'Aqua',
@@ -58,6 +61,7 @@ const guides: Guide[] = [
     gender: 'feminine',
     personality: 'intuitive, healing, emotionally wise',
     voice_id: 'EXAVITQu4vr4xnSDxMaL',
+    image: require('../assets/images/guide-aqua.jpg'),
   },
   {
     name: 'Terra',
@@ -68,6 +72,7 @@ const guides: Guide[] = [
     gender: 'masculine',
     personality: 'grounded, practical, stable',
     voice_id: 'VR6AewLTigWG4xSOukaG',
+    image: require('../assets/images/guide-terra.webp'),
   },
   {
     name: 'Aether',
@@ -78,6 +83,7 @@ const guides: Guide[] = [
     gender: 'feminine',
     personality: 'intellectual, free-spirited, enlightening',
     voice_id: 'ThT5KcBeYPX3keUQqHPh',
+    image: require('../assets/images/guide-aether.jpg'),
   },
 ];
 
@@ -454,9 +460,19 @@ export default function SpiritGuides() {
                 onPress={() => selectGuide(guide)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.guideIcon, { backgroundColor: guide.color }]}>
-                  <Ionicons name={guide.icon as any} size={40} color="#fff" />
-                </View>
+                {guide.image ? (
+                  <View style={styles.guideImageContainer}>
+                    <Image 
+                      source={guide.image} 
+                      style={styles.guideImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ) : (
+                  <View style={[styles.guideIcon, { backgroundColor: guide.color }]}>
+                    <Ionicons name={guide.icon as any} size={40} color="#fff" />
+                  </View>
+                )}
                 <Text style={styles.guideName}>{guide.name}</Text>
                 <Text style={styles.guideElement}>{guide.element}</Text>
                 <Text style={styles.guideGender}>
@@ -740,6 +756,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  guideImageContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    overflow: 'hidden',
+    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: '#7c3aed',
+  },
+  guideImage: {
+    width: '100%',
+    height: '100%',
   },
   guideName: {
     fontSize: 24,
