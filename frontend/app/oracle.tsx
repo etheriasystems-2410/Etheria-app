@@ -46,7 +46,7 @@ interface SpreadType {
   positions: string[];
   free: boolean;
   icon: string;
-  image: string;
+  image: any;
 }
 
 const SPREAD_TYPES: SpreadType[] = [
@@ -58,7 +58,7 @@ const SPREAD_TYPES: SpreadType[] = [
     positions: ['Guidance'],
     free: true,
     icon: 'sparkles',
-    image: 'https://images.unsplash.com/photo-1601662528567-526cd06f6582?w=200&h=300&fit=crop',
+    image: require('../assets/images/oracle-one-card.jpg'),
   },
   {
     id: 'three-card',
@@ -68,7 +68,7 @@ const SPREAD_TYPES: SpreadType[] = [
     positions: ['Past', 'Present', 'Future'],
     free: false,
     icon: 'time',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=300&fit=crop',
+    image: require('../assets/images/oracle-three-card.jpg'),
   },
   {
     id: 'relationship',
@@ -78,7 +78,7 @@ const SPREAD_TYPES: SpreadType[] = [
     positions: ['You', 'Partner', 'Connection'],
     free: false,
     icon: 'heart',
-    image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=200&h=300&fit=crop',
+    image: require('../assets/images/oracle-relationship.jpg'),
   },
   {
     id: 'celtic-cross',
@@ -88,7 +88,7 @@ const SPREAD_TYPES: SpreadType[] = [
     positions: ['Present', 'Challenge', 'Past', 'Future', 'Above', 'Below'],
     free: false,
     icon: 'compass',
-    image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=200&h=300&fit=crop',
+    image: require('../assets/images/oracle-guidance.jpg'),
   },
   {
     id: 'spiritual-path',
@@ -98,7 +98,7 @@ const SPREAD_TYPES: SpreadType[] = [
     positions: ['Current State', 'Obstacle', 'Hidden Influence', 'Guidance', 'Outcome'],
     free: false,
     icon: 'planet',
-    image: 'https://images.unsplash.com/photo-1507413245164-6160d8298b31?w=200&h=300&fit=crop',
+    image: require('../assets/images/oracle-spiritual.jpg'),
   },
 ];
 
