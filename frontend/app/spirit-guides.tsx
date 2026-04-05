@@ -438,6 +438,21 @@ export default function SpiritGuides() {
             <Ionicons name="chatbubbles" size={60} color="#b794f6" />
             <Text style={styles.title}>Spirit Guides</Text>
             <Text style={styles.subtitle}>Select your guide to begin</Text>
+            
+            {/* Enter/Update Birthday Link */}
+            <TouchableOpacity 
+              style={styles.enterBirthdayButton}
+              onPress={() => {
+                setBirthMonth('');
+                setBirthDay('');
+                setShowBirthdayInput(true);
+              }}
+            >
+              <Ionicons name="calendar" size={16} color="#b794f6" />
+              <Text style={styles.enterBirthdayText}>
+                {suggestedGuide ? 'Update birthday' : 'Enter birthday for guide pairing'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {suggestedGuide && (
@@ -503,11 +518,39 @@ export default function SpiritGuides() {
         >
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
         </TouchableOpacity>
+        
+        {/* Guide Picture in Header */}
+        {selectedGuide.image ? (
+          <View style={styles.chatHeaderImageContainer}>
+            <Image 
+              source={selectedGuide.image} 
+              style={styles.chatHeaderImage}
+              resizeMode="cover"
+            />
+          </View>
+        ) : (
+          <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
+            <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
+          </View>
+        )}
+        
         <View style={styles.chatHeaderInfo}>
           <Text style={styles.chatHeaderName}>{selectedGuide.name}</Text>
           <Text style={styles.chatHeaderElement}>
             Guide of {selectedGuide.element} • {selectedGuide.gender}
           </Text>
+          {/* Change Birthday Link */}
+          <TouchableOpacity 
+            style={styles.changeBirthdayLink}
+            onPress={() => {
+              setShowBirthdayInput(true);
+              setBirthMonth('');
+              setBirthDay('');
+            }}
+          >
+            <Ionicons name="calendar-outline" size={12} color="#9f7aea" />
+            <Text style={styles.changeBirthdayText}>Change birthday</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.chatHeaderRight}>
           {/* Switch Guide Button */}
@@ -532,9 +575,6 @@ export default function SpiritGuides() {
               color={isMuted ? '#ef4444' : '#b794f6'}
             />
           </TouchableOpacity>
-          <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
-            <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
-          </View>
         </View>
       </View>
 
@@ -716,6 +756,23 @@ const styles = StyleSheet.create({
     color: '#c4b5fd',
     marginTop: 8,
   },
+  enterBirthdayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    backgroundColor: 'rgba(124, 58, 237, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+  },
+  enterBirthdayText: {
+    color: '#b794f6',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   suggestedCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -821,6 +878,30 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  chatHeaderImageContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#7c3aed',
+    marginRight: 12,
+  },
+  chatHeaderImage: {
+    width: '100%',
+    height: '100%',
+  },
+  changeBirthdayLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  changeBirthdayText: {
+    color: '#9f7aea',
+    fontSize: 12,
+    textDecorationLine: 'underline',
   },
   messagesContainer: {
     flex: 1,
