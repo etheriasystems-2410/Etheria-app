@@ -72,6 +72,7 @@ export default function Journal() {
   const [saving, setSaving] = useState(false);
   const [journalStatus, setJournalStatus] = useState<JournalStatus | null>(null);
   const [trainingProgress, setTrainingProgress] = useState<TrainingProgress | null>(null);
+  const [trainingCompletions, setTrainingCompletions] = useState<JournalEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'entries' | 'readings' | 'transcripts' | 'progress'>('entries');
   const [readings, setReadings] = useState<JournalEntry[]>([]);
   const [transcripts, setTranscripts] = useState<JournalEntry[]>([]);
@@ -89,6 +90,7 @@ export default function Journal() {
     loadReadings();
     loadTranscripts();
     loadTrainingProgress();
+    loadTrainingCompletions();
     if (isAuthenticated) {
       fetchJournalStatus();
     }
@@ -158,6 +160,38 @@ export default function Journal() {
       }
     } catch (error) {
       console.error('Error loading transcripts:', error);
+    }
+  };
+
+  const loadTrainingCompletions = async () => {
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      if (sessionToken) {
+        const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        });
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          // Filter only training completion entries
+          const completionEntries = data.filter((e: any) => 
+            e.entry_type === 'training_completion'
+          ).map((e: any) => ({
+            id: e._id || e.id,
+            _id: e._id,
+            title: e.title,
+            content: e.content,
+            category: e.category,
+            date: e.created_at || e.date,
+            entry_type: e.entry_type,
+            metadata: e.metadata
+          }));
+          setTrainingCompletions(completionEntries);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading training completions:', error);
     }
   };
 
@@ -402,6 +436,38 @@ export default function Journal() {
             </View>
           );
         })}
+
+        {/* Completed Lessons History */}
+        {trainingCompletions.length > 0 && (
+          <>
+            <Text style={styles.modulesHeader}>Completion History</Text>
+            {trainingCompletions.map((completion) => {
+              const completionDate = new Date(completion.date);
+              const categoryColor = completion.metadata?.category === 'beginner' ? '#10b981' 
+                : completion.metadata?.category === 'intermediate' ? '#f59e0b' : '#ef4444';
+
+              return (
+                <View key={completion.id} style={styles.completionCard}>
+                  <View style={styles.completionHeader}>
+                    <View style={[styles.completionBadge, { backgroundColor: categoryColor }]}>
+                      <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                    </View>
+                    <View style={styles.completionDateContainer}>
+                      <Text style={styles.completionDate}>
+                        {format(completionDate, 'MMM d, yyyy')}
+                      </Text>
+                      <Text style={styles.completionTime}>
+                        {format(completionDate, 'h:mm a')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.completionModule}>{completion.metadata?.module_title}</Text>
+                  <Text style={styles.completionLesson}>{completion.metadata?.lesson_title}</Text>
+                </View>
+              );
+            })}
+          </>
+        )}
       </ScrollView>
     );
   };
@@ -1297,6 +1363,51 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     fontStyle: 'italic',
+  },
+  // Training completion styles
+  completionCard: {
+    backgroundColor: '#1a0a2e',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  completionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  completionBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  completionDateContainer: {
+    alignItems: 'flex-end',
+  },
+  completionDate: {
+    color: '#c4b5fd',
+    fontSize: 12,
+  },
+  completionTime: {
+    color: '#9f7aea',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  completionModule: {
+    color: '#a855f7',
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  completionLesson: {
+    color: '#e9d5ff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   entriesContainer: {
     flex: 1,

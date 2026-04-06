@@ -308,11 +308,44 @@ export default function Training() {
     setCurrentLesson(lesson);
   };
 
-  const markLessonComplete = () => {
+  const markLessonComplete = async () => {
     if (currentModule && currentLesson) {
       const lessonKey = `${currentModule.id}-${currentLesson.id}`;
       if (!completedLessons.includes(lessonKey)) {
         saveProgress(lessonKey);
+        
+        // Save completion to journal
+        try {
+          const sessionToken = await AsyncStorage.getItem('session_token');
+          const completionDate = new Date();
+          
+          const journalEntry = {
+            title: `Training Complete: ${currentLesson.title}`,
+            content: `Module: ${currentModule.title}\nLesson: ${currentLesson.title}\n\nCompleted on ${completionDate.toLocaleDateString()} at ${completionDate.toLocaleTimeString()}`,
+            category: 'psychic',
+            entry_type: 'training_completion',
+            date: completionDate.toISOString(),
+            metadata: {
+              module_id: currentModule.id,
+              module_title: currentModule.title,
+              lesson_id: currentLesson.id,
+              lesson_title: currentLesson.title,
+              category: currentModule.category,
+              completed_at: completionDate.toISOString(),
+            },
+          };
+
+          await fetch(`${BACKEND_URL}/api/journal/entries`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': sessionToken ? `Bearer ${sessionToken}` : '',
+            },
+            body: JSON.stringify(journalEntry),
+          });
+        } catch (error) {
+          console.error('Error saving training completion to journal:', error);
+        }
       }
       
       // Go to next lesson if available
