@@ -1852,7 +1852,11 @@ async def interpret_dream(request: DreamInterpretRequest):
         symbols_text = ", ".join(request.symbols) if request.symbols else "None specified"
         feelings_text = ", ".join(request.feelings) if request.feelings else "None specified"
         
-        prompt = f"""You are a wise dream interpreter with deep knowledge of dream symbolism, psychology, and spiritual traditions. Analyze this dream and provide a thoughtful, insightful interpretation.
+        system_message = """You are a wise dream interpreter with deep knowledge of dream symbolism, psychology, and spiritual traditions. 
+You help people understand the symbolic language of their dreams with warmth, compassion, and insight.
+Keep your interpretations supportive and empowering. Avoid being overly negative or alarming."""
+
+        prompt = f"""Analyze this dream and provide a thoughtful, insightful interpretation.
 
 DREAM DESCRIPTION:
 {request.description if request.description else "Not provided - interpret based on symbols only"}
@@ -1870,18 +1874,23 @@ Please provide a comprehensive interpretation that includes:
 4. Potential connections to waking life situations
 5. Guidance or insights the dreamer might take from this dream
 
-Keep the interpretation warm, supportive, and empowering. Avoid being overly negative or alarming. The interpretation should be 2-3 paragraphs."""
+The interpretation should be 2-3 paragraphs."""
 
         chat = LlmChat(
             api_key=EMERGENT_LLM_KEY,
-            session_id=f"dream-interpret-{uuid.uuid4()}"
+            session_id=f"dream-interpret-{uuid.uuid4()}",
+            system_message=system_message
         ).with_model("gemini", "gemini-2.0-flash")
         
         response = await chat.send_message(
             UserMessage(text=prompt)
         )
         
-        interpretation = response.text
+        # Response may be a string or an object with text attribute
+        if hasattr(response, 'text'):
+            interpretation = response.text
+        else:
+            interpretation = str(response)
         
         return {"interpretation": interpretation, "success": True}
         
