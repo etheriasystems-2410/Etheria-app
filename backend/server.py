@@ -1838,6 +1838,58 @@ async def get_spirit_guide_voices():
     """Get all spirit guide voice configurations"""
     return SPIRIT_GUIDE_VOICES
 
+# Dream Interpretation endpoint
+class DreamInterpretRequest(BaseModel):
+    description: str = ""
+    symbols: list = []
+    feelings: list = []
+
+@api_router.post("/dreams/interpret")
+async def interpret_dream(request: DreamInterpretRequest):
+    """Interpret a dream using AI"""
+    try:
+        # Build the prompt
+        symbols_text = ", ".join(request.symbols) if request.symbols else "None specified"
+        feelings_text = ", ".join(request.feelings) if request.feelings else "None specified"
+        
+        prompt = f"""You are a wise dream interpreter with deep knowledge of dream symbolism, psychology, and spiritual traditions. Analyze this dream and provide a thoughtful, insightful interpretation.
+
+DREAM DESCRIPTION:
+{request.description if request.description else "Not provided - interpret based on symbols only"}
+
+SYMBOLS PRESENT:
+{symbols_text}
+
+FEELINGS EXPERIENCED:
+{feelings_text}
+
+Please provide a comprehensive interpretation that includes:
+1. The overall meaning and message of the dream
+2. Analysis of key symbols and what they represent
+3. How the emotions relate to the dream's meaning
+4. Potential connections to waking life situations
+5. Guidance or insights the dreamer might take from this dream
+
+Keep the interpretation warm, supportive, and empowering. Avoid being overly negative or alarming. The interpretation should be 2-3 paragraphs."""
+
+        response = await client.chat.completions.create(
+            model="gemini/gemini-2.5-pro",
+            messages=[
+                {"role": "system", "content": "You are a compassionate dream interpreter who helps people understand the symbolic language of their dreams."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1000,
+            temperature=0.7,
+        )
+        
+        interpretation = response.choices[0].message.content
+        
+        return {"interpretation": interpretation, "success": True}
+        
+    except Exception as e:
+        logging.error(f"Error interpreting dream: {e}")
+        raise HTTPException(status_code=500, detail="Failed to interpret dream")
+
 @api_router.get("/zodiac/element/{birth_month}/{birth_day}")
 async def get_zodiac_element(birth_month: int, birth_day: int):
     """Get element and spirit guide based on birthday"""

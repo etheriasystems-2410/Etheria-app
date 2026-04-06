@@ -97,6 +97,16 @@ function ProtectedLayout() {
         }}
       />
       <Drawer.Screen
+        name="dreams"
+        options={{
+          drawerLabel: 'Dream Interpreter',
+          title: 'Dream Interpreter',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="moon" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="training"
         options={{
           drawerLabel: t('psychicTraining'),

@@ -73,11 +73,13 @@ export default function Journal() {
   const [journalStatus, setJournalStatus] = useState<JournalStatus | null>(null);
   const [trainingProgress, setTrainingProgress] = useState<TrainingProgress | null>(null);
   const [trainingCompletions, setTrainingCompletions] = useState<JournalEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<'entries' | 'readings' | 'transcripts' | 'progress'>('entries');
+  const [activeTab, setActiveTab] = useState<'entries' | 'readings' | 'transcripts' | 'dreams' | 'progress'>('entries');
   const [readings, setReadings] = useState<JournalEntry[]>([]);
   const [transcripts, setTranscripts] = useState<JournalEntry[]>([]);
+  const [dreams, setDreams] = useState<JournalEntry[]>([]);
   const [expandedTranscripts, setExpandedTranscripts] = useState<Set<string>>(new Set());
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: 'entry' | 'reading' | 'transcript' } | null>(null);
+  const [expandedDreams, setExpandedDreams] = useState<Set<string>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: 'entry' | 'reading' | 'transcript' | 'dream' } | null>(null);
 
   const categories = [
     { id: 'meditation', label: 'Meditation', icon: 'fitness', color: '#8b5cf6' },
@@ -93,6 +95,7 @@ export default function Journal() {
     loadTranscripts();
     loadTrainingProgress();
     loadTrainingCompletions();
+    loadDreams();
     if (isAuthenticated) {
       fetchJournalStatus();
     }
@@ -197,6 +200,38 @@ export default function Journal() {
     }
   };
 
+  const loadDreams = async () => {
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      if (sessionToken) {
+        const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        });
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          // Filter only dream entries
+          const dreamEntries = data.filter((e: any) => 
+            e.entry_type === 'dream' || e.category === 'dreams'
+          ).map((e: any) => ({
+            id: e._id || e.id,
+            _id: e._id,
+            title: e.title,
+            content: e.content,
+            category: e.category,
+            date: e.created_at || e.date,
+            entry_type: e.entry_type,
+            metadata: e.metadata
+          }));
+          setDreams(dreamEntries);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading dreams:', error);
+    }
+  };
+
   const loadTrainingProgress = async () => {
     try {
       // Use the correct AsyncStorage key that training.tsx uses
@@ -264,7 +299,7 @@ export default function Journal() {
     }
   };
 
-  const deleteEntry = (entryId: string, entryType: 'entry' | 'reading' | 'transcript') => {
+  const deleteEntry = (entryId: string, entryType: 'entry' | 'reading' | 'transcript' | 'dream') => {
     console.log('Delete entry called:', { entryId, entryType });
     // Show confirmation modal
     setDeleteConfirm({ id: entryId, type: entryType });
@@ -292,6 +327,8 @@ export default function Journal() {
           setReadings(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
         } else if (entryType === 'transcript') {
           setTranscripts(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
+        } else if (entryType === 'dream') {
+          setDreams(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
         }
         setDeleteConfirm(null);
       } else {
@@ -754,6 +791,122 @@ export default function Journal() {
     );
   };
 
+  // Render dreams tab
+  const renderDreamsTab = () => {
+    if (dreams.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Ionicons name="moon-outline" size={60} color="#9f7aea" />
+          <Text style={styles.emptyText}>No dreams saved</Text>
+          <Text style={styles.emptySubtext}>Interpret your dreams and save them here</Text>
+        </View>
+      );
+    }
+
+    const toggleDreamExpanded = (id: string) => {
+      setExpandedDreams(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+          newSet.delete(id);
+        } else {
+          newSet.add(id);
+        }
+        return newSet;
+      });
+    };
+
+    return (
+      <ScrollView style={styles.readingsContainer} contentContainerStyle={styles.readingsContent}>
+        {dreams.map((dream) => {
+          const dreamDate = new Date(dream.date);
+          const isExpanded = expandedDreams.has(dream.id);
+          const symbols = dream.metadata?.symbols || [];
+          const feelings = dream.metadata?.feelings || [];
+
+          return (
+            <View key={dream.id} style={styles.readingCard}>
+              {/* Dream Header */}
+              <View style={styles.readingHeader}>
+                <View style={[styles.readingTypeBadge, { backgroundColor: '#6366f1' }]}>
+                  <Ionicons name="moon" size={14} color="#fff" />
+                  <Text style={styles.readingTypeText}>Dream</Text>
+                </View>
+                <View style={styles.readingHeaderRight}>
+                  <View style={styles.readingDateContainer}>
+                    <Text style={styles.readingDate}>
+                      {format(dreamDate, 'MMM d, yyyy')}
+                    </Text>
+                    <Text style={styles.readingTime}>
+                      {format(dreamDate, 'h:mm a')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => deleteEntry(dream._id || dream.id, 'dream')}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Dream Title */}
+              <Text style={styles.readingTitle}>{dream.title}</Text>
+
+              {/* Symbols & Feelings */}
+              {(symbols.length > 0 || feelings.length > 0) && (
+                <View style={styles.dreamMetaContainer}>
+                  {symbols.length > 0 && (
+                    <View style={styles.dreamMetaRow}>
+                      <Text style={styles.dreamMetaLabel}>Symbols:</Text>
+                      <Text style={styles.dreamMetaValue}>{symbols.join(', ')}</Text>
+                    </View>
+                  )}
+                  {feelings.length > 0 && (
+                    <View style={styles.dreamMetaRow}>
+                      <Text style={styles.dreamMetaLabel}>Feelings:</Text>
+                      <Text style={styles.dreamMetaValue}>{feelings.join(', ')}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Content - Expandable */}
+              {isExpanded ? (
+                <ScrollView 
+                  style={styles.transcriptScrollView}
+                  nestedScrollEnabled={true}
+                >
+                  <Text style={styles.transcriptContentFull}>
+                    {dream.content}
+                  </Text>
+                </ScrollView>
+              ) : (
+                <Text style={styles.transcriptContentPreview} numberOfLines={4}>
+                  {dream.content}
+                </Text>
+              )}
+
+              {/* Expand/Collapse Button */}
+              <TouchableOpacity 
+                style={styles.expandButton}
+                onPress={() => toggleDreamExpanded(dream.id)}
+              >
+                <Ionicons 
+                  name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                  size={18} 
+                  color="#a855f7" 
+                />
+                <Text style={styles.expandButtonText}>
+                  {isExpanded ? 'Show Less' : 'View Full Interpretation'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -769,34 +922,43 @@ export default function Journal() {
 
       {/* Tab Selector */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'entries' && styles.activeTab]}
-          onPress={() => setActiveTab('entries')}
-        >
-          <Ionicons name="book" size={16} color={activeTab === 'entries' ? '#a855f7' : '#9f7aea'} />
-          <Text style={[styles.tabText, activeTab === 'entries' && styles.activeTabText]}>Entries</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'readings' && styles.activeTab]}
-          onPress={() => setActiveTab('readings')}
-        >
-          <Ionicons name="sparkles" size={16} color={activeTab === 'readings' ? '#a855f7' : '#9f7aea'} />
-          <Text style={[styles.tabText, activeTab === 'readings' && styles.activeTabText]}>Readings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'transcripts' && styles.activeTab]}
-          onPress={() => setActiveTab('transcripts')}
-        >
-          <Ionicons name="chatbubbles" size={16} color={activeTab === 'transcripts' ? '#a855f7' : '#9f7aea'} />
-          <Text style={[styles.tabText, activeTab === 'transcripts' && styles.activeTabText]}>Transcripts</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'progress' && styles.activeTab]}
-          onPress={() => setActiveTab('progress')}
-        >
-          <Ionicons name="trending-up" size={16} color={activeTab === 'progress' ? '#a855f7' : '#9f7aea'} />
-          <Text style={[styles.tabText, activeTab === 'progress' && styles.activeTabText]}>Training</Text>
-        </TouchableOpacity>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContent}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'entries' && styles.activeTab]}
+            onPress={() => setActiveTab('entries')}
+          >
+            <Ionicons name="book" size={16} color={activeTab === 'entries' ? '#a855f7' : '#9f7aea'} />
+            <Text style={[styles.tabText, activeTab === 'entries' && styles.activeTabText]}>Entries</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'readings' && styles.activeTab]}
+            onPress={() => setActiveTab('readings')}
+          >
+            <Ionicons name="sparkles" size={16} color={activeTab === 'readings' ? '#a855f7' : '#9f7aea'} />
+            <Text style={[styles.tabText, activeTab === 'readings' && styles.activeTabText]}>Readings</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'transcripts' && styles.activeTab]}
+            onPress={() => setActiveTab('transcripts')}
+          >
+            <Ionicons name="chatbubbles" size={16} color={activeTab === 'transcripts' ? '#a855f7' : '#9f7aea'} />
+            <Text style={[styles.tabText, activeTab === 'transcripts' && styles.activeTabText]}>Transcripts</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'dreams' && styles.activeTab]}
+            onPress={() => setActiveTab('dreams')}
+          >
+            <Ionicons name="moon" size={16} color={activeTab === 'dreams' ? '#a855f7' : '#9f7aea'} />
+            <Text style={[styles.tabText, activeTab === 'dreams' && styles.activeTabText]}>Dreams</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'progress' && styles.activeTab]}
+            onPress={() => setActiveTab('progress')}
+          >
+            <Ionicons name="trending-up" size={16} color={activeTab === 'progress' ? '#a855f7' : '#9f7aea'} />
+            <Text style={[styles.tabText, activeTab === 'progress' && styles.activeTabText]}>Training</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
       {activeTab === 'progress' ? (
@@ -805,6 +967,8 @@ export default function Journal() {
         renderReadingsTab()
       ) : activeTab === 'transcripts' ? (
         renderTranscriptsTab()
+      ) : activeTab === 'dreams' ? (
+        renderDreamsTab()
       ) : (
         <ScrollView
           style={styles.entriesContainer}
@@ -1276,33 +1440,59 @@ const styles = StyleSheet.create({
   },
   // Tab styles
   tabContainer: {
-    flexDirection: 'row',
     marginHorizontal: 16,
     marginBottom: 16,
     backgroundColor: '#1a0a2e',
     borderRadius: 12,
     padding: 4,
   },
+  tabScrollContent: {
+    flexDirection: 'row',
+    gap: 2,
+  },
   tab: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 10,
-    gap: 8,
+    gap: 6,
   },
   activeTab: {
     backgroundColor: '#2d1b4e',
   },
   tabText: {
     color: '#9f7aea',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
   },
   activeTabText: {
     color: '#a855f7',
     fontWeight: '600',
+  },
+  // Dreams tab styles
+  dreamMetaContainer: {
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  dreamMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 6,
+  },
+  dreamMetaLabel: {
+    color: '#a855f7',
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 6,
+  },
+  dreamMetaValue: {
+    color: '#c4b5fd',
+    fontSize: 12,
+    flex: 1,
   },
   // Progress styles
   progressContainer: {
