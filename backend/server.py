@@ -156,35 +156,35 @@ ORACLE_CARDS = [
         "element": "Fire",
         "description": "Transformation through passion and rebirth",
         "keywords": ["transformation", "passion", "renewal", "energy"],
-        "image_url": "https://images.pexels.com/photos/207353/pexels-photo-207353.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/1749303/pexels-photo-1749303.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Flame Dancer",
         "element": "Fire",
         "description": "Creative expression and bold action",
         "keywords": ["creativity", "action", "courage", "expression"],
-        "image_url": "https://images.pexels.com/photos/3075993/pexels-photo-3075993.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/266526/pexels-photo-266526.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Sacred Ember",
         "element": "Fire",
         "description": "Inner spark and divine inspiration",
         "keywords": ["inspiration", "motivation", "divine spark", "purpose"],
-        "image_url": "https://images.pexels.com/photos/672636/pexels-photo-672636.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/167701/pexels-photo-167701.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Blazing Sun",
         "element": "Fire",
         "description": "Vitality, confidence, and illumination",
         "keywords": ["vitality", "confidence", "illumination", "power"],
-        "image_url": "https://images.pexels.com/photos/912110/pexels-photo-912110.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/87611/sun-fireball-solar-flare-sunlight-87611.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Dragon's Heart",
         "element": "Fire",
         "description": "Fierce protection and inner strength",
         "keywords": ["protection", "strength", "courage", "guardian"],
-        "image_url": "https://images.pexels.com/photos/3178786/pexels-photo-3178786.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/7794401/pexels-photo-7794401.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     # Water Element Cards
     {
@@ -192,14 +192,14 @@ ORACLE_CARDS = [
         "element": "Water",
         "description": "Deep emotions and subconscious wisdom",
         "keywords": ["emotions", "intuition", "depth", "subconscious"],
-        "image_url": "https://images.pexels.com/photos/189349/pexels-photo-189349.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/932638/pexels-photo-932638.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Healing Spring",
         "element": "Water",
         "description": "Emotional cleansing and renewal",
         "keywords": ["healing", "cleansing", "forgiveness", "renewal"],
-        "image_url": "https://images.pexels.com/photos/1683492/pexels-photo-1683492.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Moon Tide",
@@ -213,14 +213,14 @@ ORACLE_CARDS = [
         "element": "Water",
         "description": "Flow, adaptability, and life's journey",
         "keywords": ["flow", "adaptability", "journey", "change"],
-        "image_url": "https://images.pexels.com/photos/1684187/pexels-photo-1684187.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/2387418/pexels-photo-2387418.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Pearl of Wisdom",
         "element": "Water",
         "description": "Hidden treasures and inner beauty",
         "keywords": ["wisdom", "treasure", "beauty", "discovery"],
-        "image_url": "https://images.pexels.com/photos/355808/pexels-photo-355808.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/5428833/pexels-photo-5428833.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     # Earth Element Cards
     {
@@ -228,14 +228,14 @@ ORACLE_CARDS = [
         "element": "Earth",
         "description": "Grounding, wisdom, and stability",
         "keywords": ["grounding", "wisdom", "stability", "growth"],
-        "image_url": "https://images.pexels.com/photos/1179229/pexels-photo-1179229.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/1632790/pexels-photo-1632790.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Sacred Mountain",
         "element": "Earth",
         "description": "Achievement and endurance",
         "keywords": ["achievement", "endurance", "strength", "foundation"],
-        "image_url": "https://images.pexels.com/photos/1242987/pexels-photo-1242987.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/417173/pexels-photo-417173.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Blooming Garden",
@@ -249,7 +249,7 @@ ORACLE_CARDS = [
         "element": "Earth",
         "description": "Inner reflection and hidden potential",
         "keywords": ["reflection", "potential", "clarity", "insight"],
-        "image_url": "https://images.pexels.com/photos/2832034/pexels-photo-2832034.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/2150610/pexels-photo-2150610.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Stone Guardian",
@@ -264,35 +264,35 @@ ORACLE_CARDS = [
         "element": "Air",
         "description": "Messages and mental clarity",
         "keywords": ["messages", "clarity", "communication", "thought"],
-        "image_url": "https://images.pexels.com/photos/1695052/pexels-photo-1695052.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/1367192/pexels-photo-1367192.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Sky Dancer",
         "element": "Air",
         "description": "Freedom and new perspectives",
         "keywords": ["freedom", "perspective", "liberation", "change"],
-        "image_url": "https://images.pexels.com/photos/1431822/pexels-photo-1431822.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/3608263/pexels-photo-3608263.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Sacred Breath",
         "element": "Air",
         "description": "Life force and spiritual connection",
         "keywords": ["life force", "spirit", "connection", "awareness"],
-        "image_url": "https://images.pexels.com/photos/158827/field-corn-air-frisch-158827.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/3560168/pexels-photo-3560168.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Starlight Messenger",
         "element": "Air",
         "description": "Divine guidance and cosmic wisdom",
         "keywords": ["guidance", "cosmos", "wisdom", "destiny"],
-        "image_url": "https://images.pexels.com/photos/1906658/pexels-photo-1906658.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Feathered Oracle",
         "element": "Air",
         "description": "Spiritual messages and higher truth",
         "keywords": ["messages", "truth", "spirit", "ascension"],
-        "image_url": "https://images.pexels.com/photos/1575515/pexels-photo-1575515.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/2629372/pexels-photo-2629372.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     # Spirit Element Cards
     {
@@ -300,21 +300,21 @@ ORACLE_CARDS = [
         "element": "Spirit",
         "description": "Psychic vision and inner knowing",
         "keywords": ["psychic", "vision", "intuition", "insight"],
-        "image_url": "https://images.pexels.com/photos/3560168/pexels-photo-3560168.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/3094230/pexels-photo-3094230.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Divine Lotus",
         "element": "Spirit",
         "description": "Spiritual awakening and enlightenment",
         "keywords": ["awakening", "enlightenment", "purity", "transformation"],
-        "image_url": "https://images.pexels.com/photos/931177/pexels-photo-931177.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/6858601/pexels-photo-6858601.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Sacred Spiral",
         "element": "Spirit",
         "description": "Evolution and infinite possibilities",
         "keywords": ["evolution", "infinity", "growth", "cycles"],
-        "image_url": "https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/2749481/pexels-photo-2749481.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Celestial Gateway",
@@ -328,7 +328,7 @@ ORACLE_CARDS = [
         "element": "Spirit",
         "description": "Ancestral wisdom and heritage",
         "keywords": ["ancestors", "wisdom", "heritage", "blessing"],
-        "image_url": "https://images.pexels.com/photos/1252873/pexels-photo-1252873.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_url": "https://images.pexels.com/photos/5875986/pexels-photo-5875986.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Veil Between Worlds",
