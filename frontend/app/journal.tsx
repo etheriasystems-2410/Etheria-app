@@ -612,7 +612,7 @@ export default function Journal() {
           onPress={() => setActiveTab('progress')}
         >
           <Ionicons name="trending-up" size={16} color={activeTab === 'progress' ? '#a855f7' : '#9f7aea'} />
-          <Text style={[styles.tabText, activeTab === 'progress' && styles.activeTabText]}>Progress</Text>
+          <Text style={[styles.tabText, activeTab === 'progress' && styles.activeTabText]}>Training</Text>
         </TouchableOpacity>
       </View>
 
