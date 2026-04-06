@@ -265,6 +265,7 @@ export default function Journal() {
   };
 
   const deleteEntry = (entryId: string, entryType: 'entry' | 'reading' | 'transcript') => {
+    console.log('Delete entry called:', { entryId, entryType });
     // Show confirmation modal
     setDeleteConfirm({ id: entryId, type: entryType });
   };
