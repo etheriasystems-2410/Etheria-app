@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -35,6 +36,7 @@ export default function Training() {
   const { isPremium } = useAuth();
   const { t, languageCode } = useLanguage();
   const { theme } = useTheme();
+  const router = useRouter();
   const [modules, setModules] = useState<Module[]>([]);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -614,9 +616,14 @@ export default function Training() {
             contentFit="cover"
           />
           <View style={styles.heroOverlay}>
-            <Ionicons name="school" size={50} color="#e9d5ff" />
-            <Text style={styles.heroTitle}>{t('psychicTraining')}</Text>
-            <Text style={styles.heroSubtitle}>{t('developAbilities')}</Text>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+            </TouchableOpacity>
+            <View style={styles.heroContent}>
+              <Ionicons name="school" size={50} color="#e9d5ff" />
+              <Text style={styles.heroTitle}>{t('psychicTraining')}</Text>
+              <Text style={styles.heroSubtitle}>{t('developAbilities')}</Text>
+            </View>
           </View>
         </View>
 
@@ -693,9 +700,21 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(15, 3, 33, 0.6)',
+    padding: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    marginBottom: 8,
+  },
+  heroContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroTitle: {
     fontSize: 26,

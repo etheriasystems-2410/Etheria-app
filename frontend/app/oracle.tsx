@@ -397,9 +397,14 @@ export default function Oracle() {
               contentFit="cover"
             />
             <View style={styles.heroOverlay}>
-              <Ionicons name="sparkles" size={50} color="#b794f6" />
-              <Text style={styles.heroTitle}>Oracle Divination</Text>
-              <Text style={styles.heroSubtitle}>Choose your card spread</Text>
+              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+              </TouchableOpacity>
+              <View style={styles.heroContent}>
+                <Ionicons name="sparkles" size={50} color="#b794f6" />
+                <Text style={styles.heroTitle}>Oracle Divination</Text>
+                <Text style={styles.heroSubtitle}>Choose your card spread</Text>
+              </View>
             </View>
           </View>
 
@@ -887,9 +892,21 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    padding: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    marginBottom: 8,
+  },
+  heroContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroTitle: {
     fontSize: 28,

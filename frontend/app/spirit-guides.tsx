@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -94,6 +95,7 @@ const guides: Guide[] = [
 export default function SpiritGuides() {
   const { isPremium, checkFeatureAccess } = useAuth();
   const { languageCode, t } = useLanguage();
+  const router = useRouter();
   const [showPaywall, setShowPaywall] = useState(false);
   const [showBirthdayInput, setShowBirthdayInput] = useState(false);
   const [birthMonth, setBirthMonth] = useState('');
@@ -594,9 +596,14 @@ export default function SpiritGuides() {
               contentFit="cover"
             />
             <View style={styles.heroOverlay}>
-              <Ionicons name="chatbubbles" size={50} color="#b794f6" />
-              <Text style={styles.heroTitle}>Spirit Guides</Text>
-              <Text style={styles.heroSubtitle}>Select your guide to begin</Text>
+              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+              </TouchableOpacity>
+              <View style={styles.heroContent}>
+                <Ionicons name="chatbubbles" size={50} color="#b794f6" />
+                <Text style={styles.heroTitle}>Spirit Guides</Text>
+                <Text style={styles.heroSubtitle}>Select your guide to begin</Text>
+              </View>
             </View>
           </View>
           
@@ -948,9 +955,21 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    padding: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    marginBottom: 8,
+  },
+  heroContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroTitle: {
     fontSize: 28,

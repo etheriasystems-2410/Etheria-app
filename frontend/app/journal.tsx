@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
@@ -65,6 +66,7 @@ export default function Journal() {
   const { isAuthenticated, isPremium } = useAuth();
   const { t, languageCode } = useLanguage();
   const { theme } = useTheme();
+  const router = useRouter();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -932,7 +934,10 @@ export default function Journal() {
           contentFit="cover"
         />
         <View style={styles.heroOverlay}>
-          <View style={styles.heroContent}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+          </TouchableOpacity>
+          <View style={styles.heroMiddle}>
             <Ionicons name="book" size={40} color="#e9d5ff" />
             <Text style={styles.heroTitle}>My Journal</Text>
           </View>
@@ -1217,7 +1222,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroMiddle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   heroContent: {
     flexDirection: 'row',
