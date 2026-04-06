@@ -49,6 +49,7 @@ export default function Settings() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [showPictureModal, setShowPictureModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   // Load profile picture on mount
   useEffect(() => {
@@ -171,7 +172,12 @@ export default function Settings() {
     setShowPictureModal(true);
   };
 
-  const handleEmailPress = async () => {
+  const handleEmailPress = () => {
+    // Show modal with email address instead of trying to open mailto
+    setShowEmailModal(true);
+  };
+
+  const tryOpenEmail = async () => {
     const email = 'etheriasystems@gmail.com';
     const mailtoUrl = `mailto:${email}`;
     
@@ -179,21 +185,11 @@ export default function Settings() {
       const canOpen = await Linking.canOpenURL(mailtoUrl);
       if (canOpen) {
         await Linking.openURL(mailtoUrl);
-      } else {
-        // Fallback: show the email address in an alert
-        Alert.alert(
-          'Contact Us',
-          `Email us at: ${email}`,
-          [{ text: 'OK' }]
-        );
+        setShowEmailModal(false);
       }
     } catch (error) {
-      // Show email address if mailto fails
-      Alert.alert(
-        'Contact Us', 
-        `Email us at: ${email}`,
-        [{ text: 'OK' }]
-      );
+      // Keep modal open if mailto fails
+      console.log('Could not open email app');
     }
   };
 
@@ -866,6 +862,46 @@ export default function Settings() {
           </View>
         </View>
       </Modal>
+
+      {/* Email Contact Modal */}
+      <Modal
+        visible={showEmailModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowEmailModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Contact Us</Text>
+              <TouchableOpacity onPress={() => setShowEmailModal(false)}>
+                <Ionicons name="close" size={24} color="#e9d5ff" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.emailModalContent}>
+              <Ionicons name="mail" size={48} color="#a855f7" />
+              <Text style={styles.emailModalTitle}>Email Us</Text>
+              <Text style={styles.emailModalAddress}>etheriasystems@gmail.com</Text>
+              <Text style={styles.emailModalHint}>Copy the email address above to contact us</Text>
+              
+              <TouchableOpacity 
+                style={styles.emailOpenButton}
+                onPress={tryOpenEmail}
+              >
+                <Ionicons name="open-outline" size={20} color="#fff" />
+                <Text style={styles.emailOpenButtonText}>Open Email App</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => setShowEmailModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1383,6 +1419,46 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 16,
     color: '#9f7aea',
+    fontWeight: '600',
+  },
+  // Email Modal Styles
+  emailModalContent: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  emailModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginTop: 16,
+  },
+  emailModalAddress: {
+    fontSize: 18,
+    color: '#a855f7',
+    marginTop: 8,
+    fontWeight: '600',
+  },
+  emailModalHint: {
+    fontSize: 14,
+    color: '#9f7aea',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  emailOpenButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#7c3aed',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 20,
+    gap: 8,
+  },
+  emailOpenButtonText: {
+    fontSize: 16,
+    color: '#fff',
     fontWeight: '600',
   },
 });
