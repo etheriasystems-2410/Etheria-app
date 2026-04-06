@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -274,9 +275,15 @@ export default function Oracle() {
         },
       };
 
+      // Get session token for authentication
+      const sessionToken = await AsyncStorage.getItem('session_token');
+
       const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': sessionToken ? `Bearer ${sessionToken}` : '',
+        },
         body: JSON.stringify(journalEntry),
       });
 
