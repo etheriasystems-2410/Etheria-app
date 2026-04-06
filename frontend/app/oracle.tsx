@@ -242,6 +242,8 @@ export default function Oracle() {
 
   const saveToJournal = async () => {
     if (!currentReading) return;
+    // Close the reading modal first to show journal prompt properly
+    setShowReading(false);
     setShowJournalPrompt(true);
   };
 
@@ -829,6 +831,8 @@ export default function Oracle() {
                 onPress={() => {
                   setShowJournalPrompt(false);
                   setReadingQuestion('');
+                  // Reopen the reading modal
+                  setShowReading(true);
                 }}
               >
                 <Text style={styles.journalPromptCancelText}>Cancel</Text>
