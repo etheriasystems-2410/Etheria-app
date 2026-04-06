@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Paywall } from '../components/Paywall';
 import { AudioPlayerManager } from '../utils/audioPlayer';
-import { BackgroundImage } from '../components/BackgroundImage';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -604,53 +604,58 @@ export default function Training() {
   const advancedModules = modules.filter(m => m.category === 'advanced');
 
   return (
-    <BackgroundImage 
-      source={require('../assets/backgrounds/training-bg.jpg')}
-      opacity={0.3}
-      overlayColor="rgba(15, 3, 33, 0.7)"
-    >
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.introSection}>
-          <Text style={styles.introTitle}>{t('psychicTraining')}</Text>
-          <Text style={styles.introText}>
-            {t('developAbilities')}
-          </Text>
-        </View>
-
-        {/* Beginner Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIcon, { backgroundColor: '#10b981' }]}>
-              <Ionicons name="leaf" size={20} color="#fff" />
-            </View>
-            <Text style={styles.sectionTitle}>{t('beginner')}</Text>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Hero Image Section */}
+        <View style={styles.heroSection}>
+          <Image
+            source={require('../assets/backgrounds/training-bg.jpg')}
+            style={styles.heroImage}
+            contentFit="cover"
+          />
+          <View style={styles.heroOverlay}>
+            <Ionicons name="school" size={50} color="#e9d5ff" />
+            <Text style={styles.heroTitle}>{t('psychicTraining')}</Text>
+            <Text style={styles.heroSubtitle}>{t('developAbilities')}</Text>
           </View>
-          {beginnerModules.map(renderModuleCard)}
         </View>
 
-        {/* Intermediate Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIcon, { backgroundColor: '#f59e0b' }]}>
-              <Ionicons name="flame" size={20} color="#fff" />
+        <View style={styles.content}>
+          {/* Beginner Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIcon, { backgroundColor: '#10b981' }]}>
+                <Ionicons name="leaf" size={20} color="#fff" />
+              </View>
+              <Text style={styles.sectionTitle}>{t('beginner')}</Text>
             </View>
-            <Text style={styles.sectionTitle}>{t('intermediate')}</Text>
+            {beginnerModules.map(renderModuleCard)}
           </View>
-          {intermediateModules.map(renderModuleCard)}
-        </View>
 
-        {/* Advanced Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIcon, { backgroundColor: '#ef4444' }]}>
-              <Ionicons name="star" size={20} color="#fff" />
+          {/* Intermediate Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIcon, { backgroundColor: '#f59e0b' }]}>
+                <Ionicons name="flame" size={20} color="#fff" />
+              </View>
+              <Text style={styles.sectionTitle}>{t('intermediate')}</Text>
             </View>
-            <Text style={styles.sectionTitle}>{t('advanced')}</Text>
+            {intermediateModules.map(renderModuleCard)}
           </View>
-          {advancedModules.map(renderModuleCard)}
-        </View>
 
-        <View style={{ height: 40 }} />
+          {/* Advanced Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIcon, { backgroundColor: '#ef4444' }]}>
+                <Ionicons name="star" size={20} color="#fff" />
+              </View>
+              <Text style={styles.sectionTitle}>{t('advanced')}</Text>
+            </View>
+            {advancedModules.map(renderModuleCard)}
+          </View>
+
+          <View style={{ height: 40 }} />
+        </View>
       </ScrollView>
 
       {renderLessonList()}
@@ -661,7 +666,7 @@ export default function Training() {
         onClose={() => setShowPaywall(false)}
         feature={selectedModule?.title || 'Premium Training'}
       />
-    </BackgroundImage>
+    </View>
   );
 }
 
@@ -670,14 +675,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f0321',
   },
-  backgroundImageContainer: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
+  },
+  heroSection: {
+    height: 200,
+    position: 'relative',
+  },
+  heroImage: {
     width: '100%',
     height: '100%',
   },
-  backgroundOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 3, 33, 0.8)',
+  heroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 3, 33, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#c4b5fd',
+    marginTop: 6,
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',

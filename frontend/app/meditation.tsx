@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { BackgroundImage } from '../components/BackgroundImage';
 
 interface MeditationType {
   id: string;
@@ -70,39 +70,41 @@ export default function Meditation() {
   };
 
   return (
-    <BackgroundImage 
-      source={require('../assets/backgrounds/meditation-bg.jpg')}
-      opacity={0.3}
-      overlayColor="rgba(15, 3, 33, 0.7)"
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Ionicons name="fitness" size={60} color={theme.accentLight} />
-          <Text style={styles.title}>{getHeaderTitle()}</Text>
-          <Text style={styles.subtitle}>{getSubtitle()}</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.scrollContent}>
+      {/* Hero Image Section */}
+      <View style={styles.heroSection}>
+        <Image
+          source={require('../assets/backgrounds/meditation-bg.jpg')}
+          style={styles.heroImage}
+          contentFit="cover"
+        />
+        <View style={styles.heroOverlay}>
+          <Ionicons name="fitness" size={50} color={theme.accentLight} />
+          <Text style={styles.heroTitle}>{getHeaderTitle()}</Text>
+          <Text style={styles.heroSubtitle}>{getSubtitle()}</Text>
         </View>
+      </View>
 
-        <View style={styles.typesContainer}>
-          {meditationTypeIds.map((type, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.typeCard, { backgroundColor: theme.cardBackground }]}
-              onPress={() => router.push(type.route as any)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.typeIcon, { backgroundColor: type.color }]}>
-                <Ionicons name={type.icon as any} size={32} color="#fff" />
-              </View>
-              <View style={styles.typeContent}>
-                <Text style={styles.typeTitle}>{getMeditationTitle(type.id)}</Text>
-                <Text style={styles.typeDescription}>{getMeditationDesc(type.id)}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color={theme.accent} />
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </BackgroundImage>
+      <View style={styles.typesContainer}>
+        {meditationTypeIds.map((type, index) => (
+          <TouchableOpacity
+            key={index}
+            style={[styles.typeCard, { backgroundColor: theme.cardBackground }]}
+            onPress={() => router.push(type.route as any)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.typeIcon, { backgroundColor: type.color }]}>
+              <Ionicons name={type.icon as any} size={32} color="#fff" />
+            </View>
+            <View style={styles.typeContent}>
+              <Text style={styles.typeTitle}>{getMeditationTitle(type.id)}</Text>
+              <Text style={styles.typeDescription}>{getMeditationDesc(type.id)}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={theme.accent} />
+          </TouchableOpacity>
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -111,33 +113,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f0321',
   },
-  backgroundImageContainer: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  backgroundOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 3, 33, 0.8)',
-  },
   scrollContent: {
     flexGrow: 1,
   },
-  header: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 12,
+  heroSection: {
+    height: 220,
+    position: 'relative',
   },
-  title: {
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 3, 33, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  heroTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#e9d5ff',
-    marginTop: 16,
+    marginTop: 12,
+    textAlign: 'center',
   },
-  subtitle: {
+  heroSubtitle: {
     fontSize: 16,
     color: '#c4b5fd',
     marginTop: 8,
+    textAlign: 'center',
   },
   typesContainer: {
     padding: 16,
@@ -171,37 +180,6 @@ const styles = StyleSheet.create({
   },
   typeDescription: {
     fontSize: 14,
-    color: '#c4b5fd',
-  },
-  statsCard: {
-    margin: 16,
-    backgroundColor: '#1a0033',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#2d1b4e',
-  },
-  statsTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#e9d5ff',
-    marginBottom: 16,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#b794f6',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
     color: '#c4b5fd',
   },
 });
