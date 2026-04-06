@@ -48,6 +48,7 @@ export default function Settings() {
   // Profile Picture State
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [showPictureModal, setShowPictureModal] = useState(false);
 
   // Load profile picture on mount
   useEffect(() => {
@@ -167,15 +168,33 @@ export default function Settings() {
   };
 
   const showImageOptions = () => {
-    Alert.alert(
-      'Change Profile Picture',
-      'Choose an option',
-      [
-        { text: 'Take Photo', onPress: takePhoto },
-        { text: 'Choose from Library', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    setShowPictureModal(true);
+  };
+
+  const handleEmailPress = async () => {
+    const email = 'etheriasystems@gmail.com';
+    const mailtoUrl = `mailto:${email}`;
+    
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+      } else {
+        // Fallback: show the email address in an alert
+        Alert.alert(
+          'Contact Us',
+          `Email us at: ${email}`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      // Show email address if mailto fails
+      Alert.alert(
+        'Contact Us', 
+        `Email us at: ${email}`,
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   // Check for payment success on mount
@@ -602,7 +621,7 @@ export default function Settings() {
 
         <TouchableOpacity 
           style={styles.settingItem}
-          onPress={() => Linking.openURL('mailto:etheriasystems@gmail.com')}
+          onPress={handleEmailPress}
         >
           <Ionicons name="mail" size={24} color="#b794f6" />
           <View style={styles.settingTextContainer}>
@@ -791,6 +810,59 @@ export default function Settings() {
                 );
               })}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Profile Picture Options Modal */}
+      <Modal
+        visible={showPictureModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPictureModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Change Profile Picture</Text>
+              <TouchableOpacity onPress={() => setShowPictureModal(false)}>
+                <Ionicons name="close" size={24} color="#e9d5ff" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pictureOptionsContainer}>
+              <TouchableOpacity 
+                style={styles.pictureOption}
+                onPress={() => {
+                  setShowPictureModal(false);
+                  takePhoto();
+                }}
+              >
+                <View style={styles.pictureOptionIcon}>
+                  <Ionicons name="camera" size={32} color="#a855f7" />
+                </View>
+                <Text style={styles.pictureOptionText}>Take Photo</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.pictureOption}
+                onPress={() => {
+                  setShowPictureModal(false);
+                  pickImage();
+                }}
+              >
+                <View style={styles.pictureOptionIcon}>
+                  <Ionicons name="images" size={32} color="#a855f7" />
+                </View>
+                <Text style={styles.pictureOptionText}>Choose from Library</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => setShowPictureModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1274,5 +1346,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9f7aea',
     marginTop: 2,
+  },
+  // Profile Picture Options Styles
+  pictureOptionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  pictureOption: {
+    alignItems: 'center',
+    padding: 16,
+  },
+  pictureOptionIcon: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  pictureOptionText: {
+    fontSize: 14,
+    color: '#e9d5ff',
+    fontWeight: '500',
+  },
+  cancelButton: {
+    paddingVertical: 14,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    backgroundColor: 'rgba(45, 27, 78, 0.5)',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#9f7aea',
+    fontWeight: '600',
   },
 });
