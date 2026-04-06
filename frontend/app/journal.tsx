@@ -355,8 +355,21 @@ export default function Journal() {
         });
         const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
-          const formattedEntries = data.map((e: any) => ({
+          // Filter out readings, transcripts, and dreams - those go to their own tabs
+          const userEntries = data.filter((e: any) => 
+            e.entry_type !== 'oracle' && 
+            e.entry_type !== 'reading' &&
+            e.entry_type !== 'transcript' && 
+            e.entry_type !== 'spirit_guide' &&
+            e.entry_type !== 'dream' &&
+            e.entry_type !== 'training_completion' &&
+            e.category !== 'divination' &&
+            e.category !== 'spirit_guide' &&
+            e.category !== 'dreams'
+          );
+          const formattedEntries = userEntries.map((e: any) => ({
             id: e._id || e.id,
+            _id: e._id,
             title: e.title,
             content: e.content,
             category: e.category,
