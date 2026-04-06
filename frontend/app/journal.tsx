@@ -197,22 +197,28 @@ export default function Journal() {
 
   const loadTrainingProgress = async () => {
     try {
-      const completedLessons = await AsyncStorage.getItem('completedLessons');
-      const completed = completedLessons ? JSON.parse(completedLessons) : [];
+      // Use the correct AsyncStorage key that training.tsx uses
+      const completedLessonsData = await AsyncStorage.getItem('completed_lessons');
+      const completed = completedLessonsData ? JSON.parse(completedLessonsData) : [];
       
       // Fetch modules from backend
       const response = await fetch(`${BACKEND_URL}/api/training/modules`);
       if (response.ok) {
         const modules = await response.json();
         
-        const moduleProgress = modules.map((module: any) => ({
-          name: module.title,
-          category: module.category,
-          total: module.lessons?.length || 0,
-          completed: module.lessons?.filter((l: any) => 
-            completed.includes(`${module.id}-${l.id}`)
-          ).length || 0,
-        }));
+        const moduleProgress = modules.map((module: any) => {
+          // Count completed lessons for this module from the stored progress
+          const moduleCompletedCount = completed.filter((key: string) => 
+            key.startsWith(`${module.id}-`)
+          ).length;
+          
+          return {
+            name: module.title,
+            category: module.category,
+            total: module.lessons || 0,
+            completed: moduleCompletedCount,
+          };
+        });
 
         const totalLessons = moduleProgress.reduce((sum: number, m: any) => sum + m.total, 0);
         const completedCount = moduleProgress.reduce((sum: number, m: any) => sum + m.completed, 0);
@@ -222,9 +228,22 @@ export default function Journal() {
           completed_lessons: completedCount,
           modules: moduleProgress,
         });
+      } else {
+        // Set empty progress if API fails
+        setTrainingProgress({
+          total_lessons: 0,
+          completed_lessons: 0,
+          modules: [],
+        });
       }
     } catch (error) {
       console.error('Error loading training progress:', error);
+      // Set empty progress on error
+      setTrainingProgress({
+        total_lessons: 0,
+        completed_lessons: 0,
+        modules: [],
+      });
     }
   };
 
