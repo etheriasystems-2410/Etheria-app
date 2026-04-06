@@ -10,8 +10,8 @@ import {
   Modal,
   Animated,
   Easing,
-  ImageBackground,
 } from 'react-native';
+import { BackgroundImage } from '../../components/BackgroundImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
@@ -396,21 +396,20 @@ export default function ChakraMeditation() {
   }
 
   return (
-    <ImageBackground 
+    <BackgroundImage 
       source={require('../../assets/backgrounds/chakra-bg.png')}
-      style={styles.container}
-      imageStyle={styles.backgroundImage}
+      opacity={0.3}
+      overlayColor="rgba(15, 3, 33, 0.7)"
     >
-      <View style={styles.backgroundOverlay}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {showSession ? (isRealignAll ? 'Chakra Realignment' : selectedChakra?.name) : 'Chakra Meditation'}
-          </Text>
-          <View style={{ width: 24 }} />
-        </View>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {showSession ? (isRealignAll ? 'Chakra Realignment' : selectedChakra?.name) : 'Chakra Meditation'}
+        </Text>
+        <View style={{ width: 24 }} />
+      </View>
 
       {/* Duration Picker Modal */}
       <Modal
@@ -661,8 +660,7 @@ export default function ChakraMeditation() {
           )}
         </ScrollView>
       )}
-      </View>
-    </ImageBackground>
+    </BackgroundImage>
   );
 }
 

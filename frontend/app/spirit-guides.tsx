@@ -13,8 +13,8 @@ import {
   Alert,
   Image,
   Animated,
-  ImageBackground,
 } from 'react-native';
+import { BackgroundImage } from '../components/BackgroundImage';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -583,80 +583,77 @@ export default function SpiritGuides() {
 
   if (!selectedGuide) {
     return (
-      <View style={styles.container}>
-        <ImageBackground 
-          source={require('../assets/backgrounds/spirit-guides-bg.png')}
-          style={styles.backgroundImageContainer}
-          resizeMode="cover"
-        >
-          <View style={styles.backgroundOverlay}>
-            <ScrollView contentContainerStyle={styles.selectionContainer}>
-            <View style={styles.header}>
-              <Ionicons name="chatbubbles" size={60} color="#b794f6" />
-              <Text style={styles.title}>Spirit Guides</Text>
-              <Text style={styles.subtitle}>Select your guide to begin</Text>
-              
-              {/* Enter/Update Birthday Link */}
-              <TouchableOpacity 
-                style={styles.enterBirthdayButton}
-                onPress={() => {
-                  setBirthMonth('');
-                  setBirthDay('');
-                  setShowBirthdayInput(true);
-                }}
+      <BackgroundImage 
+        source={require('../assets/backgrounds/spirit-guides-bg.png')}
+        opacity={0.3}
+        overlayColor="rgba(15, 3, 33, 0.7)"
+      >
+        <ScrollView contentContainerStyle={styles.selectionContainer}>
+          <View style={styles.header}>
+            <Ionicons name="chatbubbles" size={60} color="#b794f6" />
+            <Text style={styles.title}>Spirit Guides</Text>
+            <Text style={styles.subtitle}>Select your guide to begin</Text>
+            
+            {/* Enter/Update Birthday Link */}
+            <TouchableOpacity 
+              style={styles.enterBirthdayButton}
+              onPress={() => {
+                setBirthMonth('');
+                setBirthDay('');
+                setShowBirthdayInput(true);
+              }}
+            >
+              <Ionicons name="calendar" size={16} color="#b794f6" />
+              <Text style={styles.enterBirthdayText}>
+                {suggestedGuide ? 'Update birthday' : 'Enter birthday for guide pairing'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {suggestedGuide && (
+            <View style={styles.suggestedCard}>
+              <Ionicons name="star" size={24} color="#f59e0b" />
+              <Text style={styles.suggestedText}>
+                Based on your zodiac, we recommend {suggestedGuide.name} ({suggestedGuide.element})
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.guidesGrid}>
+            {guides.map((guide) => (
+              <TouchableOpacity
+                key={guide.name}
+                style={[
+                  styles.guideCard,
+                  suggestedGuide?.name === guide.name && styles.guideCardSuggested,
+                ]}
+                onPress={() => selectGuide(guide)}
+                activeOpacity={0.7}
               >
-                <Ionicons name="calendar" size={16} color="#b794f6" />
-                <Text style={styles.enterBirthdayText}>
-                  {suggestedGuide ? 'Update birthday' : 'Enter birthday for guide pairing'}
+                {guide.image ? (
+                  <View style={styles.guideImageContainer}>
+                    <Image 
+                      source={guide.image} 
+                      style={styles.guideImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ) : (
+                  <View style={[styles.guideIcon, { backgroundColor: guide.color }]}>
+                    <Ionicons name={guide.icon as any} size={40} color="#fff" />
+                  </View>
+                )}
+                <Text style={styles.guideName}>{guide.name}</Text>
+                <Text style={styles.guideElement}>{guide.element}</Text>
+                <Text style={styles.guideGender}>
+                  {guide.gender === 'feminine' ? '♀' : '♂'} {guide.gender}
                 </Text>
+                <Text style={styles.guideDescription}>{guide.description}</Text>
               </TouchableOpacity>
-            </View>
-
-            {suggestedGuide && (
-              <View style={styles.suggestedCard}>
-                <Ionicons name="star" size={24} color="#f59e0b" />
-                <Text style={styles.suggestedText}>
-                  Based on your zodiac, we recommend {suggestedGuide.name} ({suggestedGuide.element})
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.guidesGrid}>
-              {guides.map((guide) => (
-                <TouchableOpacity
-                  key={guide.name}
-                  style={[
-                    styles.guideCard,
-                    suggestedGuide?.name === guide.name && styles.guideCardSuggested,
-                  ]}
-                  onPress={() => selectGuide(guide)}
-                  activeOpacity={0.7}
-                >
-                  {guide.image ? (
-                    <View style={styles.guideImageContainer}>
-                      <Image 
-                        source={guide.image} 
-                        style={styles.guideImage}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  ) : (
-                    <View style={[styles.guideIcon, { backgroundColor: guide.color }]}>
-                      <Ionicons name={guide.icon as any} size={40} color="#fff" />
-                    </View>
-                  )}
-                  <Text style={styles.guideName}>{guide.name}</Text>
-                  <Text style={styles.guideElement}>{guide.element}</Text>
-                  <Text style={styles.guideGender}>
-                    {guide.gender === 'feminine' ? '♀' : '♂'} {guide.gender}
-                  </Text>
-                  <Text style={styles.guideDescription}>{guide.description}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-      </ImageBackground>
+            ))}
+          </View>
+        </ScrollView>
+      </BackgroundImage>
     );
   }
 
