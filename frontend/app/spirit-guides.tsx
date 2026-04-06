@@ -423,7 +423,7 @@ export default function SpiritGuides() {
   };
 
   const saveChatToJournal = async () => {
-    if (!selectedGuide || messages.length < 2) {
+    if (!selectedGuide || messages.length === 0) {
       Alert.alert('No Chat', 'Start a conversation first before saving to journal.');
       return;
     }
@@ -449,6 +449,8 @@ export default function SpiritGuides() {
 
       // Get session token for authentication
       const sessionToken = await AsyncStorage.getItem('session_token');
+      
+      console.log('Saving chat to journal:', { sessionToken: !!sessionToken, messagesCount: messages.length });
 
       const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
         method: 'POST',
@@ -459,10 +461,13 @@ export default function SpiritGuides() {
         body: JSON.stringify(journalEntry),
       });
 
+      console.log('Journal save response:', response.status);
+
       if (response.ok) {
         Alert.alert('Saved!', 'Chat transcript saved to your journal.');
       } else {
         const error = await response.json();
+        console.log('Journal save error:', error);
         Alert.alert('Error', error.detail || 'Could not save to journal. Please try again.');
       }
     } catch (error) {
