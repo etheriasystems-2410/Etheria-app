@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { Paywall } from '../components/Paywall';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface AstralLevel {
   id: string;
@@ -56,9 +59,84 @@ export default function AstralTravel() {
   const [selectedLevel, setSelectedLevel] = useState<AstralLevel | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [completedLevels, setCompletedLevels] = useState<string[]>([]);
+
+  // Load completed levels from storage
+  useEffect(() => {
+    loadProgress();
+  }, []);
+
+  const loadProgress = async () => {
+    try {
+      const progress = await AsyncStorage.getItem('completed_astral_levels');
+      if (progress) {
+        setCompletedLevels(JSON.parse(progress));
+      }
+    } catch (error) {
+      console.error('Error loading astral progress:', error);
+    }
+  };
+
+  const saveProgress = async (levelId: string) => {
+    try {
+      const newCompleted = [...completedLevels, levelId];
+      setCompletedLevels(newCompleted);
+      await AsyncStorage.setItem('completed_astral_levels', JSON.stringify(newCompleted));
+    } catch (error) {
+      console.error('Error saving astral progress:', error);
+    }
+  };
+
+  const saveToJournal = async (level: AstralLevel) => {
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      const completionDate = new Date();
+      
+      const journalEntry = {
+        title: `Astral Training Complete: ${level.name}`,
+        content: `Level: ${level.name}\nDifficulty: ${level.difficulty}\nDuration: ${level.duration} minutes\n\n${level.description}\n\nCompleted on ${completionDate.toLocaleDateString()} at ${completionDate.toLocaleTimeString()}`,
+        category: 'psychic',
+        entry_type: 'training_completion',
+        date: completionDate.toISOString(),
+        metadata: {
+          module_id: 'astral-training',
+          module_title: 'Astral Travel Self-Study',
+          lesson_id: level.id,
+          lesson_title: level.name,
+          category: 'astral',
+          difficulty: level.difficulty,
+          duration: level.duration,
+          completed_at: completionDate.toISOString(),
+        },
+      };
+
+      await fetch(`${BACKEND_URL}/api/journal/entries`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': sessionToken ? `Bearer ${sessionToken}` : '',
+        },
+        body: JSON.stringify(journalEntry),
+      });
+    } catch (error) {
+      console.error('Error saving astral training to journal:', error);
+    }
+  };
+
+  const completeSession = async () => {
+    if (selectedLevel && !completedLevels.includes(selectedLevel.id)) {
+      await saveProgress(selectedLevel.id);
+      await saveToJournal(selectedLevel);
+    }
+    setSessionActive(false);
+  };
+
+  const isLevelCompleted = (levelId: string) => {
+    return completedLevels.includes(levelId);
+  };
 
   // Check premium access on mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isPremium) {
       setShowPaywall(true);
     }
@@ -107,9 +185,10 @@ export default function AstralTravel() {
 
             <TouchableOpacity
               style={styles.endButton}
-              onPress={() => setSessionActive(false)}
+              onPress={completeSession}
             >
-              <Text style={styles.endButtonText}>End Session</Text>
+              <Ionicons name="checkmark-circle" size={24} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.endButtonText}>Complete Session</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -142,6 +221,7 @@ export default function AstralTravel() {
             style={[
               styles.levelCard,
               selectedLevel?.id === level.id && styles.levelCardActive,
+              isLevelCompleted(level.id) && styles.levelCardCompleted,
             ]}
             onPress={() => setSelectedLevel(level)}
             activeOpacity={0.7}
@@ -161,6 +241,12 @@ export default function AstralTravel() {
                 <Ionicons name="time" size={16} color="#c4b5fd" />
                 <Text style={styles.durationText}>{level.duration} min</Text>
               </View>
+              {isLevelCompleted(level.id) && (
+                <View style={styles.completedBadge}>
+                  <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+                  <Text style={styles.completedText}>Done</Text>
+                </View>
+              )}
             </View>
             <Text style={styles.levelName}>{level.name}</Text>
             <Text style={styles.levelDescription}>{level.description}</Text>
@@ -273,11 +359,17 @@ const styles = StyleSheet.create({
   levelCardActive: {
     borderColor: '#7c3aed',
   },
+  levelCardCompleted: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
   levelHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   difficultyBadge: {
     paddingHorizontal: 12,
@@ -297,6 +389,20 @@ const styles = StyleSheet.create({
   durationText: {
     fontSize: 14,
     color: '#c4b5fd',
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  completedText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#10b981',
   },
   levelName: {
     fontSize: 18,
