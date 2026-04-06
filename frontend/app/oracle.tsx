@@ -20,7 +20,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Paywall } from '../components/Paywall';
-import { AudioPlayerManager, setupAudioMode } from '../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');
@@ -118,8 +117,6 @@ export default function Oracle() {
   const [showReading, setShowReading] = useState(false);
   const [savedReadings, setSavedReadings] = useState<Reading[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [audioLoading, setAudioLoading] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showJournalPrompt, setShowJournalPrompt] = useState(false);
@@ -127,16 +124,6 @@ export default function Oracle() {
   
   const cardFlipAnim = useRef(new Animated.Value(0)).current;
   const cardScaleAnim = useRef(new Animated.Value(1)).current;
-  const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
-
-  useEffect(() => {
-    setupAudioMode();
-    return () => {
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.unload();
-      }
-    };
-  }, []);
 
   const handleSpreadSelect = (spread: SpreadType) => {
     if (spread.free || isPremium) {
@@ -317,55 +304,6 @@ export default function Oracle() {
       setShowHistory(true);
     } catch (error) {
       console.error('Error loading history:', error);
-    }
-  };
-
-  const playInterpretation = async (text: string, guideName: string) => {
-    setAudioLoading(true);
-    try {
-      if (audioPlayerRef.current) {
-        await audioPlayerRef.current.unload();
-      }
-
-      const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: text,
-          guide_name: guideName,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!data.success || !data.audio_base64) {
-        console.log('TTS unavailable');
-        return;
-      }
-
-      const player = new AudioPlayerManager();
-      const audioUri = `data:audio/mpeg;base64,${data.audio_base64}`;
-      await player.loadAndPlay(audioUri);
-
-      audioPlayerRef.current = player;
-      setIsPlayingAudio(true);
-
-      player.onPlaybackStatusChange((status) => {
-        if (status.didJustFinish) {
-          setIsPlayingAudio(false);
-        }
-      });
-    } catch (error) {
-      console.error('Error playing interpretation:', error);
-    } finally {
-      setAudioLoading(false);
-    }
-  };
-
-  const stopAudio = async () => {
-    if (audioPlayerRef.current) {
-      await audioPlayerRef.current.stop();
-      setIsPlayingAudio(false);
     }
   };
 
@@ -703,38 +641,6 @@ export default function Oracle() {
                           <Text style={styles.interpretationTitle}>Interpretation</Text>
                         </View>
                         <Text style={styles.interpretation}>{currentReading.cards[currentCardIndex].interpretation}</Text>
-                        
-                        <View style={styles.audioControlsSection}>
-                          <Text style={styles.audioLabel}>Listen to interpretation:</Text>
-                          <View style={styles.audioButtons}>
-                            {['Aether', 'Ignis'].map((guideName) => (
-                              <TouchableOpacity
-                                key={guideName}
-                                style={[
-                                  styles.guideAudioButton,
-                                  isPlayingAudio && styles.guideAudioButtonDisabled,
-                                ]}
-                                onPress={() => playInterpretation(currentReading.cards[currentCardIndex].interpretation, guideName)}
-                                disabled={isPlayingAudio || audioLoading}
-                              >
-                                {audioLoading ? (
-                                  <ActivityIndicator size="small" color="#fff" />
-                                ) : (
-                                  <>
-                                    <Ionicons name="volume-high" size={16} color="#fff" />
-                                    <Text style={styles.guideAudioButtonText}>{guideName}</Text>
-                                  </>
-                                )}
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                          {isPlayingAudio && (
-                            <TouchableOpacity style={styles.stopAudioButton} onPress={stopAudio}>
-                              <Ionicons name="stop-circle" size={20} color="#ef4444" />
-                              <Text style={styles.stopAudioText}>Stop</Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
                       </View>
 
                       {/* Card Navigation Arrows */}

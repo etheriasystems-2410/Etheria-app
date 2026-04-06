@@ -150,89 +150,199 @@ api_router = APIRouter(prefix="/api")
 
 # Oracle Cards - Spirit Guide themed with beautiful illustrations
 ORACLE_CARDS = [
+    # Fire Element Cards
     {
         "name": "The Fire Phoenix",
         "element": "Fire",
         "description": "Transformation through passion and rebirth",
         "keywords": ["transformation", "passion", "renewal", "energy"],
-        "image_url": "https://images.unsplash.com/photo-1764555719665-d2c91587a6e6"
+        "image_url": "https://images.pexels.com/photos/207353/pexels-photo-207353.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Flame Dancer",
         "element": "Fire",
         "description": "Creative expression and bold action",
         "keywords": ["creativity", "action", "courage", "expression"],
-        "image_url": "https://images.unsplash.com/photo-1762882936976-3cea8cbd6e3e"
+        "image_url": "https://images.pexels.com/photos/3075993/pexels-photo-3075993.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Sacred Ember",
         "element": "Fire",
         "description": "Inner spark and divine inspiration",
         "keywords": ["inspiration", "motivation", "divine spark", "purpose"],
-        "image_url": "https://images.pexels.com/photos/36022109/pexels-photo-36022109.jpeg"
+        "image_url": "https://images.pexels.com/photos/672636/pexels-photo-672636.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
+    {
+        "name": "The Blazing Sun",
+        "element": "Fire",
+        "description": "Vitality, confidence, and illumination",
+        "keywords": ["vitality", "confidence", "illumination", "power"],
+        "image_url": "https://images.pexels.com/photos/912110/pexels-photo-912110.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Dragon's Heart",
+        "element": "Fire",
+        "description": "Fierce protection and inner strength",
+        "keywords": ["protection", "strength", "courage", "guardian"],
+        "image_url": "https://images.pexels.com/photos/3178786/pexels-photo-3178786.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    # Water Element Cards
     {
         "name": "The Ocean Depths",
         "element": "Water",
         "description": "Deep emotions and subconscious wisdom",
         "keywords": ["emotions", "intuition", "depth", "subconscious"],
-        "image_url": "https://images.unsplash.com/photo-1628371164958-887b4c79a6be"
+        "image_url": "https://images.pexels.com/photos/189349/pexels-photo-189349.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Healing Spring",
         "element": "Water",
         "description": "Emotional cleansing and renewal",
         "keywords": ["healing", "cleansing", "forgiveness", "renewal"],
-        "image_url": "https://images.unsplash.com/photo-1752139925820-d8267dc25182"
+        "image_url": "https://images.pexels.com/photos/1683492/pexels-photo-1683492.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Moon Tide",
         "element": "Water",
         "description": "Cycles, intuition, and psychic ability",
         "keywords": ["cycles", "intuition", "psychic", "feminine energy"],
-        "image_url": "https://images.unsplash.com/photo-1633403999090-064ea7537d68"
+        "image_url": "https://images.pexels.com/photos/1252890/pexels-photo-1252890.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
+    {
+        "name": "The Mystic River",
+        "element": "Water",
+        "description": "Flow, adaptability, and life's journey",
+        "keywords": ["flow", "adaptability", "journey", "change"],
+        "image_url": "https://images.pexels.com/photos/1684187/pexels-photo-1684187.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Pearl of Wisdom",
+        "element": "Water",
+        "description": "Hidden treasures and inner beauty",
+        "keywords": ["wisdom", "treasure", "beauty", "discovery"],
+        "image_url": "https://images.pexels.com/photos/355808/pexels-photo-355808.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    # Earth Element Cards
     {
         "name": "The Ancient Tree",
         "element": "Earth",
         "description": "Grounding, wisdom, and stability",
         "keywords": ["grounding", "wisdom", "stability", "growth"],
-        "image_url": "https://images.unsplash.com/photo-1761635555180-ba6f3e7cb057"
+        "image_url": "https://images.pexels.com/photos/1179229/pexels-photo-1179229.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Sacred Mountain",
         "element": "Earth",
         "description": "Achievement and endurance",
         "keywords": ["achievement", "endurance", "strength", "foundation"],
-        "image_url": "https://images.pexels.com/photos/1242987/pexels-photo-1242987.jpeg"
+        "image_url": "https://images.pexels.com/photos/1242987/pexels-photo-1242987.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Blooming Garden",
         "element": "Earth",
         "description": "Abundance and manifestation",
         "keywords": ["abundance", "manifestation", "prosperity", "nurturing"],
-        "image_url": "https://images.unsplash.com/photo-1703825864851-b5f379b9e3fc"
+        "image_url": "https://images.pexels.com/photos/931177/pexels-photo-931177.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
+    {
+        "name": "The Crystal Cave",
+        "element": "Earth",
+        "description": "Inner reflection and hidden potential",
+        "keywords": ["reflection", "potential", "clarity", "insight"],
+        "image_url": "https://images.pexels.com/photos/2832034/pexels-photo-2832034.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Stone Guardian",
+        "element": "Earth",
+        "description": "Protection, patience, and perseverance",
+        "keywords": ["protection", "patience", "perseverance", "resilience"],
+        "image_url": "https://images.pexels.com/photos/2166711/pexels-photo-2166711.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    # Air Element Cards
     {
         "name": "The Whispering Wind",
         "element": "Air",
         "description": "Messages and mental clarity",
         "keywords": ["messages", "clarity", "communication", "thought"],
-        "image_url": "https://images.unsplash.com/photo-1715616501682-a8eb6bf657e8"
+        "image_url": "https://images.pexels.com/photos/1695052/pexels-photo-1695052.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Sky Dancer",
         "element": "Air",
         "description": "Freedom and new perspectives",
         "keywords": ["freedom", "perspective", "liberation", "change"],
-        "image_url": "https://images.unsplash.com/photo-1765813142498-fbee89bd66e5"
+        "image_url": "https://images.pexels.com/photos/1431822/pexels-photo-1431822.jpeg?auto=compress&cs=tinysrgb&w=400"
     },
     {
         "name": "The Sacred Breath",
         "element": "Air",
         "description": "Life force and spiritual connection",
         "keywords": ["life force", "spirit", "connection", "awareness"],
-        "image_url": "https://images.pexels.com/photos/6931694/pexels-photo-6931694.jpeg"
+        "image_url": "https://images.pexels.com/photos/158827/field-corn-air-frisch-158827.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Starlight Messenger",
+        "element": "Air",
+        "description": "Divine guidance and cosmic wisdom",
+        "keywords": ["guidance", "cosmos", "wisdom", "destiny"],
+        "image_url": "https://images.pexels.com/photos/1906658/pexels-photo-1906658.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Feathered Oracle",
+        "element": "Air",
+        "description": "Spiritual messages and higher truth",
+        "keywords": ["messages", "truth", "spirit", "ascension"],
+        "image_url": "https://images.pexels.com/photos/1575515/pexels-photo-1575515.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    # Spirit Element Cards
+    {
+        "name": "The Third Eye",
+        "element": "Spirit",
+        "description": "Psychic vision and inner knowing",
+        "keywords": ["psychic", "vision", "intuition", "insight"],
+        "image_url": "https://images.pexels.com/photos/3560168/pexels-photo-3560168.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Divine Lotus",
+        "element": "Spirit",
+        "description": "Spiritual awakening and enlightenment",
+        "keywords": ["awakening", "enlightenment", "purity", "transformation"],
+        "image_url": "https://images.pexels.com/photos/931177/pexels-photo-931177.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Sacred Spiral",
+        "element": "Spirit",
+        "description": "Evolution and infinite possibilities",
+        "keywords": ["evolution", "infinity", "growth", "cycles"],
+        "image_url": "https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Celestial Gateway",
+        "element": "Spirit",
+        "description": "Portals to higher dimensions",
+        "keywords": ["portal", "dimensions", "transcendence", "expansion"],
+        "image_url": "https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Ancestor's Blessing",
+        "element": "Spirit",
+        "description": "Ancestral wisdom and heritage",
+        "keywords": ["ancestors", "wisdom", "heritage", "blessing"],
+        "image_url": "https://images.pexels.com/photos/1252873/pexels-photo-1252873.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Veil Between Worlds",
+        "element": "Spirit",
+        "description": "Connection to the spirit realm",
+        "keywords": ["spirit realm", "connection", "mystery", "transition"],
+        "image_url": "https://images.pexels.com/photos/1252873/pexels-photo-1252873.jpeg?auto=compress&cs=tinysrgb&w=400"
+    },
+    {
+        "name": "The Infinite Mirror",
+        "element": "Spirit",
+        "description": "Self-reflection and soul recognition",
+        "keywords": ["reflection", "soul", "recognition", "truth"],
+        "image_url": "https://images.pexels.com/photos/949587/pexels-photo-949587.jpeg?auto=compress&cs=tinysrgb&w=400"
     }
 ]
 
