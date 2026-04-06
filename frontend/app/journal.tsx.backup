@@ -465,8 +465,324 @@ export default function Journal() {
     return 'book';
   };
 
+  // Render progress tab
+  const renderProgressTab = () => {
+    if (!trainingProgress) {
+      return (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color="#a855f7" />
+          <Text style={styles.emptyText}>Loading progress...</Text>
+        </View>
+      );
+    }
 
+    const progressPercent = trainingProgress.total_lessons > 0 
+      ? Math.round((trainingProgress.completed_lessons / trainingProgress.total_lessons) * 100)
+      : 0;
 
+    return (
+      <ScrollView style={styles.progressContainer}>
+        {/* Overall Progress Card */}
+        <View style={styles.overallProgressCard}>
+          <View style={styles.progressHeader}>
+            <Ionicons name="trophy" size={32} color="#fbbf24" />
+            <Text style={styles.progressTitle}>Training Progress</Text>
+          </View>
+          <View style={styles.progressStats}>
+            <Text style={styles.progressPercent}>{progressPercent}%</Text>
+            <Text style={styles.progressSubtext}>
+              {trainingProgress.completed_lessons} of {trainingProgress.total_lessons} lessons completed
+            </Text>
+          </View>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: `${progressPercent}%` }]} />
+          </View>
+        </View>
+
+        {/* Module Progress */}
+        <Text style={styles.modulesHeader}>Module Progress</Text>
+        {trainingProgress.modules.map((module, index) => {
+          const modulePercent = module.total > 0 
+            ? Math.round((module.completed / module.total) * 100)
+            : 0;
+          const categoryColor = module.category === 'beginner' ? '#10b981' 
+            : module.category === 'intermediate' ? '#f59e0b' : '#ef4444';
+
+          return (
+            <View key={index} style={styles.moduleCard}>
+              <View style={styles.moduleHeader}>
+                <View style={[styles.moduleCategoryBadge, { backgroundColor: categoryColor }]}>
+                  <Text style={styles.moduleCategoryText}>
+                    {module.category.charAt(0).toUpperCase() + module.category.slice(1)}
+                  </Text>
+                </View>
+                <Text style={styles.modulePercent}>{modulePercent}%</Text>
+              </View>
+              <Text style={styles.moduleName}>{module.name}</Text>
+              <View style={styles.moduleProgressContainer}>
+                <View style={[styles.moduleProgressBar, { width: `${modulePercent}%`, backgroundColor: categoryColor }]} />
+              </View>
+              <Text style={styles.moduleLessons}>
+                {module.completed} / {module.total} lessons
+              </Text>
+            </View>
+          );
+        })}
+
+        {/* Completed Lessons History */}
+        {trainingCompletions.length > 0 && (
+          <>
+            <Text style={styles.modulesHeader}>Completion History</Text>
+            {trainingCompletions.map((completion) => {
+              const completionDate = new Date(completion.date);
+              const categoryColor = completion.metadata?.category === 'beginner' ? '#10b981' 
+                : completion.metadata?.category === 'intermediate' ? '#f59e0b' : '#ef4444';
+
+              return (
+                <View key={completion.id} style={styles.completionCard}>
+                  <View style={styles.completionHeader}>
+                    <View style={[styles.completionBadge, { backgroundColor: categoryColor }]}>
+                      <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                    </View>
+                    <View style={styles.completionDateContainer}>
+                      <Text style={styles.completionDate}>
+                        {format(completionDate, 'MMM d, yyyy')}
+                      </Text>
+                      <Text style={styles.completionTime}>
+                        {format(completionDate, 'h:mm a')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.completionModule}>{completion.metadata?.module_title}</Text>
+                  <Text style={styles.completionLesson}>{completion.metadata?.lesson_title}</Text>
+                </View>
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
+    );
+  };
+
+  // Render readings tab
+  const renderReadingsTab = () => {
+    if (readings.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Ionicons name="sparkles-outline" size={60} color="#9f7aea" />
+          <Text style={styles.emptyText}>No readings saved</Text>
+          <Text style={styles.emptySubtext}>Save your Oracle readings to view them here</Text>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView style={styles.readingsContainer} contentContainerStyle={styles.readingsContent}>
+        {readings.map((reading) => {
+          const readingType = reading.entry_type === 'oracle' ? 'Oracle Reading' : 
+                              reading.entry_type === 'spirit_guide' ? 'Spirit Guide Chat' : 'Divination';
+          const readingIcon = reading.entry_type === 'oracle' ? 'sparkles' : 
+                              reading.entry_type === 'spirit_guide' ? 'chatbubbles' : 'sparkles';
+          const readingColor = reading.entry_type === 'oracle' ? '#db2777' : 
+                               reading.entry_type === 'spirit_guide' ? '#ec4899' : '#a855f7';
+          const spreadType = reading.metadata?.spread_type || '';
+          const questionAsked = reading.metadata?.question || '';
+          const readingDate = new Date(reading.date);
+
+          return (
+            <View key={reading.id} style={styles.readingCard}>
+              {/* Reading Header */}
+              <View style={styles.readingHeader}>
+                <View style={[styles.readingTypeBadge, { backgroundColor: readingColor }]}>
+                  <Ionicons name={readingIcon as any} size={14} color="#fff" />
+                  <Text style={styles.readingTypeText}>{readingType}</Text>
+                </View>
+                <View style={styles.readingHeaderRight}>
+                  <View style={styles.readingDateContainer}>
+                    <Text style={styles.readingDate}>
+                      {format(readingDate, 'MMM d, yyyy')}
+                    </Text>
+                    <Text style={styles.readingTime}>
+                      {format(readingDate, 'h:mm a')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => deleteEntry(reading._id || reading.id, 'reading')}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Spread Type */}
+              {spreadType && (
+                <View style={styles.spreadTypeRow}>
+                  <Ionicons name="layers" size={14} color="#a855f7" />
+                  <Text style={styles.spreadTypeText}>{spreadType}</Text>
+                </View>
+              )}
+
+              {/* Question Asked */}
+              {questionAsked && (
+                <View style={styles.questionContainer}>
+                  <View style={styles.questionHeader}>
+                    <Ionicons name="help-circle" size={16} color="#fbbf24" />
+                    <Text style={styles.questionLabel}>Question/Wisdom Sought:</Text>
+                  </View>
+                  <Text style={styles.questionText}>{questionAsked}</Text>
+                </View>
+              )}
+
+              {/* Reading Title */}
+              <Text style={styles.readingTitle}>{reading.title}</Text>
+
+              {/* Cards Preview (if oracle reading) */}
+              {reading.metadata?.cards && reading.metadata.cards.length > 0 && (
+                <View style={styles.cardsPreview}>
+                  {reading.metadata.cards.slice(0, 3).map((card: any, idx: number) => (
+                    <View key={idx} style={styles.cardPreviewItem}>
+                      <Text style={styles.cardPosition}>{card.position}</Text>
+                      <Text style={styles.cardName}>{card.card_name}</Text>
+                    </View>
+                  ))}
+                  {reading.metadata.cards.length > 3 && (
+                    <Text style={styles.moreCardsText}>
+                      +{reading.metadata.cards.length - 3} more
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              {/* Content Preview */}
+              <Text style={styles.readingContentPreview} numberOfLines={4}>
+                {reading.content}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
+  // Render transcripts tab
+  const renderTranscriptsTab = () => {
+    if (transcripts.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Ionicons name="chatbubbles-outline" size={60} color="#9f7aea" />
+          <Text style={styles.emptyText}>No transcripts saved</Text>
+          <Text style={styles.emptySubtext}>Save your Spirit Guide chats to view them here</Text>
+        </View>
+      );
+    }
+
+    const toggleExpanded = (id: string) => {
+      setExpandedTranscripts(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+          newSet.delete(id);
+        } else {
+          newSet.add(id);
+        }
+        return newSet;
+      });
+    };
+
+    return (
+      <ScrollView style={styles.readingsContainer} contentContainerStyle={styles.readingsContent}>
+        {transcripts.map((transcript) => {
+          const guideName = transcript.metadata?.guide_name || 'Spirit Guide';
+          const guideElement = transcript.metadata?.guide_element || '';
+          const messagesCount = transcript.metadata?.messages_count || 0;
+          const transcriptDate = new Date(transcript.date);
+          const isExpanded = expandedTranscripts.has(transcript.id);
+
+          // Get element color
+          const elementColors: { [key: string]: string } = {
+            'Fire': '#ef4444',
+            'Water': '#3b82f6',
+            'Earth': '#10b981',
+            'Air': '#a855f7',
+          };
+          const guideColor = elementColors[guideElement] || '#ec4899';
+
+          return (
+            <View key={transcript.id} style={styles.readingCard}>
+              {/* Transcript Header */}
+              <View style={styles.readingHeader}>
+                <View style={[styles.readingTypeBadge, { backgroundColor: guideColor }]}>
+                  <Ionicons name="chatbubbles" size={14} color="#fff" />
+                  <Text style={styles.readingTypeText}>Spirit Guide Chat</Text>
+                </View>
+                <View style={styles.readingHeaderRight}>
+                  <View style={styles.readingDateContainer}>
+                    <Text style={styles.readingDate}>
+                      {format(transcriptDate, 'MMM d, yyyy')}
+                    </Text>
+                    <Text style={styles.readingTime}>
+                      {format(transcriptDate, 'h:mm a')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => deleteEntry(transcript._id || transcript.id, 'transcript')}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Guide Info */}
+              <View style={styles.guideInfoRow}>
+                <View style={[styles.guideElementBadge, { backgroundColor: guideColor }]}>
+                  <Text style={styles.guideElementIcon}>
+                    {guideElement === 'Fire' ? '🔥' : guideElement === 'Water' ? '💧' : guideElement === 'Earth' ? '🌿' : '💨'}
+                  </Text>
+                  <Text style={styles.guideNameText}>{guideName}</Text>
+                </View>
+                <Text style={styles.messagesCountText}>{messagesCount} messages</Text>
+              </View>
+
+              {/* Transcript Title */}
+              <Text style={styles.readingTitle}>{transcript.title}</Text>
+
+              {/* Content - Expandable */}
+              {isExpanded ? (
+                <ScrollView 
+                  style={styles.transcriptScrollView}
+                  nestedScrollEnabled={true}
+                >
+                  <Text style={styles.transcriptContentFull}>
+                    {transcript.content}
+                  </Text>
+                </ScrollView>
+              ) : (
+                <Text style={styles.transcriptContentPreview} numberOfLines={4}>
+                  {transcript.content}
+                </Text>
+              )}
+
+              {/* Expand/Collapse Button */}
+              <TouchableOpacity 
+                style={styles.expandButton}
+                onPress={() => toggleExpanded(transcript.id)}
+              >
+                <Ionicons 
+                  name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                  size={18} 
+                  color="#a855f7" 
+                />
+                <Text style={styles.expandButtonText}>
+                  {isExpanded ? 'Show Less' : 'View Full Chat'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
+  };
 
   // Render dreams tab
   const renderDreamsTab = () => {
