@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Paywall } from '../components/Paywall';
 import { AudioPlayerManager } from '../utils/audioPlayer';
 
@@ -30,6 +32,8 @@ interface Lesson {
 
 export default function Training() {
   const { isPremium } = useAuth();
+  const { t, languageCode } = useLanguage();
+  const { theme } = useTheme();
   const [modules, setModules] = useState<Module[]>([]);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -556,7 +560,7 @@ export default function Training() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#a855f7" />
-        <Text style={styles.loadingText}>Loading training modules...</Text>
+        <Text style={styles.loadingText}>{t('loadingModules')}</Text>
       </View>
     );
   }
@@ -569,9 +573,9 @@ export default function Training() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.introSection}>
-          <Text style={styles.introTitle}>Psychic Training</Text>
+          <Text style={styles.introTitle}>{t('psychicTraining')}</Text>
           <Text style={styles.introText}>
-            Develop your psychic abilities through structured lessons and guided exercises.
+            {t('developAbilities')}
           </Text>
         </View>
 
@@ -581,7 +585,7 @@ export default function Training() {
             <View style={[styles.sectionIcon, { backgroundColor: '#10b981' }]}>
               <Ionicons name="leaf" size={20} color="#fff" />
             </View>
-            <Text style={styles.sectionTitle}>Beginner</Text>
+            <Text style={styles.sectionTitle}>{t('beginner')}</Text>
           </View>
           {beginnerModules.map(renderModuleCard)}
         </View>
@@ -592,7 +596,7 @@ export default function Training() {
             <View style={[styles.sectionIcon, { backgroundColor: '#f59e0b' }]}>
               <Ionicons name="flame" size={20} color="#fff" />
             </View>
-            <Text style={styles.sectionTitle}>Intermediate</Text>
+            <Text style={styles.sectionTitle}>{t('intermediate')}</Text>
           </View>
           {intermediateModules.map(renderModuleCard)}
         </View>
@@ -603,7 +607,7 @@ export default function Training() {
             <View style={[styles.sectionIcon, { backgroundColor: '#ef4444' }]}>
               <Ionicons name="star" size={20} color="#fff" />
             </View>
-            <Text style={styles.sectionTitle}>Advanced</Text>
+            <Text style={styles.sectionTitle}>{t('advanced')}</Text>
           </View>
           {advancedModules.map(renderModuleCard)}
         </View>

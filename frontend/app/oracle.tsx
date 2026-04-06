@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Paywall } from '../components/Paywall';
 import { AudioPlayerManager, setupAudioMode } from '../utils/audioPlayer';
 
@@ -105,6 +107,8 @@ const SPREAD_TYPES: SpreadType[] = [
 
 export default function Oracle() {
   const { isPremium } = useAuth();
+  const { t, languageCode } = useLanguage();
+  const { theme } = useTheme();
   const [selectedSpread, setSelectedSpread] = useState<SpreadType | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentReading, setCurrentReading] = useState<Reading | null>(null);

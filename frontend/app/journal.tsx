@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -39,6 +41,8 @@ interface JournalStatus {
 
 export default function Journal() {
   const { isAuthenticated, isPremium } = useAuth();
+  const { t, languageCode } = useLanguage();
+  const { theme } = useTheme();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [newTitle, setNewTitle] = useState('');
