@@ -934,10 +934,7 @@ export default function Journal() {
           contentFit="cover"
         />
         <View style={styles.heroOverlay}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
-          </TouchableOpacity>
-          <View style={styles.heroMiddle}>
+          <View style={styles.heroContent}>
             <Ionicons name="book" size={40} color="#e9d5ff" />
             <Text style={styles.heroTitle}>My Journal</Text>
           </View>
@@ -1223,19 +1220,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroMiddle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
   },
   heroContent: {
     flexDirection: 'row',

@@ -616,14 +616,9 @@ export default function Training() {
             contentFit="cover"
           />
           <View style={styles.heroOverlay}>
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
-            </TouchableOpacity>
-            <View style={styles.heroContent}>
-              <Ionicons name="school" size={50} color="#e9d5ff" />
-              <Text style={styles.heroTitle}>{t('psychicTraining')}</Text>
-              <Text style={styles.heroSubtitle}>{t('developAbilities')}</Text>
-            </View>
+            <Ionicons name="school" size={50} color="#e9d5ff" />
+            <Text style={styles.heroTitle}>{t('psychicTraining')}</Text>
+            <Text style={styles.heroSubtitle}>{t('developAbilities')}</Text>
           </View>
         </View>
 
@@ -700,21 +695,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(15, 3, 33, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  heroContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   heroTitle: {
     fontSize: 26,

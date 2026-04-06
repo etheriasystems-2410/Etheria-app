@@ -79,14 +79,9 @@ export default function Meditation() {
           contentFit="cover"
         />
         <View style={styles.heroOverlay}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
-          </TouchableOpacity>
-          <View style={styles.heroContent}>
-            <Ionicons name="fitness" size={50} color={theme.accentLight} />
-            <Text style={styles.heroTitle}>{getHeaderTitle()}</Text>
-            <Text style={styles.heroSubtitle}>{getSubtitle()}</Text>
-          </View>
+          <Ionicons name="fitness" size={50} color={theme.accentLight} />
+          <Text style={styles.heroTitle}>{getHeaderTitle()}</Text>
+          <Text style={styles.heroSubtitle}>{getSubtitle()}</Text>
         </View>
       </View>
 
@@ -136,21 +131,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(15, 3, 33, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  heroContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   heroTitle: {
     fontSize: 28,
