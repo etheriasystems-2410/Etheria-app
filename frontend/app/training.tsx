@@ -603,14 +603,15 @@ export default function Training() {
   const advancedModules = modules.filter(m => m.category === 'advanced');
 
   return (
-    <ImageBackground 
-      source={require('../assets/backgrounds/training-bg.jpg')}
-      style={styles.container}
-      imageStyle={styles.backgroundImage}
-    >
-      <View style={styles.backgroundOverlay}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.introSection}>
+    <View style={styles.container}>
+      <ImageBackground 
+        source={require('../assets/backgrounds/training-bg.jpg')}
+        style={styles.backgroundImageContainer}
+        resizeMode="cover"
+      >
+        <View style={styles.backgroundOverlay}>
+          <ScrollView contentContainerStyle={styles.content}>
+            <View style={styles.introSection}>
             <Text style={styles.introTitle}>{t('psychicTraining')}</Text>
             <Text style={styles.introText}>
               {t('developAbilities')}
@@ -661,8 +662,9 @@ export default function Training() {
           onClose={() => setShowPaywall(false)}
           feature={selectedModule?.title || 'Premium Training'}
         />
-      </View>
-    </ImageBackground>
+        </View>
+      </ImageBackground>
+    </View>
   );
 }
 
@@ -671,12 +673,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f0321',
   },
-  backgroundImage: {
-    opacity: 0.25,
+  backgroundImageContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   backgroundOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 3, 33, 0.75)',
+    backgroundColor: 'rgba(15, 3, 33, 0.8)',
   },
   header: {
     flexDirection: 'row',

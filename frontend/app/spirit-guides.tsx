@@ -583,13 +583,14 @@ export default function SpiritGuides() {
 
   if (!selectedGuide) {
     return (
-      <ImageBackground 
-        source={require('../assets/backgrounds/spirit-guides-bg.png')}
-        style={styles.container}
-        imageStyle={styles.backgroundImage}
-      >
-        <View style={styles.backgroundOverlay}>
-          <ScrollView contentContainerStyle={styles.selectionContainer}>
+      <View style={styles.container}>
+        <ImageBackground 
+          source={require('../assets/backgrounds/spirit-guides-bg.png')}
+          style={styles.backgroundImageContainer}
+          resizeMode="cover"
+        >
+          <View style={styles.backgroundOverlay}>
+            <ScrollView contentContainerStyle={styles.selectionContainer}>
             <View style={styles.header}>
               <Ionicons name="chatbubbles" size={60} color="#b794f6" />
               <Text style={styles.title}>Spirit Guides</Text>

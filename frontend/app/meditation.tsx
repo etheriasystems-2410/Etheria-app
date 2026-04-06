@@ -69,41 +69,43 @@ export default function Meditation() {
   };
 
   return (
-    <ImageBackground 
-      source={require('../assets/backgrounds/meditation-bg.jpg')}
-      style={[styles.container, { backgroundColor: theme.background }]}
-      imageStyle={styles.backgroundImage}
-    >
-      <View style={styles.backgroundOverlay}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Ionicons name="fitness" size={60} color={theme.accentLight} />
-            <Text style={styles.title}>{getHeaderTitle()}</Text>
-            <Text style={styles.subtitle}>{getSubtitle()}</Text>
-          </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ImageBackground 
+        source={require('../assets/backgrounds/meditation-bg.jpg')}
+        style={styles.backgroundImageContainer}
+        resizeMode="cover"
+      >
+        <View style={styles.backgroundOverlay}>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={styles.header}>
+              <Ionicons name="fitness" size={60} color={theme.accentLight} />
+              <Text style={styles.title}>{getHeaderTitle()}</Text>
+              <Text style={styles.subtitle}>{getSubtitle()}</Text>
+            </View>
 
-          <View style={styles.typesContainer}>
-            {meditationTypeIds.map((type, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[styles.typeCard, { backgroundColor: theme.cardBackground }]}
-                onPress={() => router.push(type.route as any)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.typeIcon, { backgroundColor: type.color }]}>
-                  <Ionicons name={type.icon as any} size={32} color="#fff" />
-                </View>
-                <View style={styles.typeContent}>
-                  <Text style={styles.typeTitle}>{getMeditationTitle(type.id)}</Text>
-                  <Text style={styles.typeDescription}>{getMeditationDesc(type.id)}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color={theme.accent} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
-      </View>
-    </ImageBackground>
+            <View style={styles.typesContainer}>
+              {meditationTypeIds.map((type, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.typeCard, { backgroundColor: theme.cardBackground }]}
+                  onPress={() => router.push(type.route as any)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.typeIcon, { backgroundColor: type.color }]}>
+                    <Ionicons name={type.icon as any} size={32} color="#fff" />
+                  </View>
+                  <View style={styles.typeContent}>
+                    <Text style={styles.typeTitle}>{getMeditationTitle(type.id)}</Text>
+                    <Text style={styles.typeDescription}>{getMeditationDesc(type.id)}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={24} color={theme.accent} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      </ImageBackground>
+    </View>
   );
 }
 
@@ -112,12 +114,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f0321',
   },
-  backgroundImage: {
-    opacity: 0.25,
+  backgroundImageContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   backgroundOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 3, 33, 0.75)',
+    backgroundColor: 'rgba(15, 3, 33, 0.8)',
   },
   scrollContent: {
     flexGrow: 1,
