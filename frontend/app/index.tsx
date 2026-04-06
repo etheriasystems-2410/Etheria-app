@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/bfuvm2xh_4327b8ef020d7d471270d8452f31001dbd0d1e664d07a7235c64a236b0e6f6e6.jpg';
@@ -12,6 +14,8 @@ const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 export default function Home() {
   const router = useRouter();
   const { isAuthenticated, user, isPremium } = useAuth();
+  const { t, languageCode } = useLanguage();
+  const { theme } = useTheme();
   
   // Prize Drawing State
   const [prizeDrawingStatus, setPrizeDrawingStatus] = React.useState<{
@@ -78,66 +82,174 @@ export default function Home() {
     }
   };
 
+  // Feature descriptions with translations
+  const getFeatureDescription = (key: string): string => {
+    const descriptions: Record<string, Record<string, string>> = {
+      training: {
+        en: 'Develop your psychic abilities with guided lessons',
+        es: 'Desarrolla tus habilidades psíquicas con lecciones guiadas',
+        fr: 'Développez vos capacités psychiques avec des leçons guidées',
+        de: 'Entwickle deine psychischen Fähigkeiten mit geführten Lektionen',
+        it: 'Sviluppa le tue abilità psichiche con lezioni guidate',
+        pt: 'Desenvolva suas habilidades psíquicas com lições guiadas',
+        ja: 'ガイド付きレッスンで超能力を開発しましょう',
+        ko: '가이드 레슨으로 초능력을 개발하세요',
+        zh: '通过指导课程开发您的超能力',
+      },
+      oracle: {
+        en: 'Receive guidance from spirit guide oracle cards',
+        es: 'Recibe orientación de las cartas del oráculo',
+        fr: 'Recevez des conseils des cartes oracle',
+        de: 'Erhalte Führung von Orakelkarten',
+        it: 'Ricevi guida dalle carte oracolo',
+        pt: 'Receba orientação das cartas de oráculo',
+        ja: 'オラクルカードからガイダンスを受け取りましょう',
+        ko: '오라클 카드로부터 안내를 받으세요',
+        zh: '从神谕卡中获得指引',
+      },
+      spiritGuides: {
+        en: 'Chat with elemental spirit guides',
+        es: 'Chatea con guías espirituales elementales',
+        fr: 'Discutez avec des guides spirituels élémentaires',
+        de: 'Chatte mit elementaren Geistführern',
+        it: 'Chatta con guide spirituali elementali',
+        pt: 'Converse com guias espirituais elementais',
+        ja: '元素の精霊ガイドとチャット',
+        ko: '원소 정령 가이드와 대화하세요',
+        zh: '与元素灵性向导聊天',
+      },
+      meditation: {
+        en: 'Practice meditation and mindfulness',
+        es: 'Practica meditación y atención plena',
+        fr: 'Pratiquez la méditation et la pleine conscience',
+        de: 'Praktiziere Meditation und Achtsamkeit',
+        it: 'Pratica meditazione e consapevolezza',
+        pt: 'Pratique meditação e atenção plena',
+        ja: '瞑想とマインドフルネスを実践',
+        ko: '명상과 마음챙김을 실천하세요',
+        zh: '练习冥想和正念',
+      },
+      journal: {
+        en: 'Track your spiritual journey',
+        es: 'Registra tu viaje espiritual',
+        fr: 'Suivez votre parcours spirituel',
+        de: 'Verfolge deine spirituelle Reise',
+        it: 'Segui il tuo percorso spirituale',
+        pt: 'Acompanhe sua jornada espiritual',
+        ja: 'スピリチュアルな旅を記録',
+        ko: '영적 여정을 기록하세요',
+        zh: '记录您的灵性之旅',
+      },
+    };
+    return descriptions[key]?.[languageCode] || descriptions[key]?.en || '';
+  };
+
   const features = [
     {
-      title: 'Psychic Training',
-      description: 'Develop your psychic abilities with guided lessons',
+      title: t('psychicTraining'),
+      description: getFeatureDescription('training'),
       icon: 'school' as const,
       route: '/training',
     },
     {
-      title: 'Oracle Divination',
-      description: 'Receive guidance from spirit guide oracle cards',
+      title: t('oracleTitle'),
+      description: getFeatureDescription('oracle'),
       icon: 'sparkles' as const,
       route: '/oracle',
     },
     {
-      title: 'Spirit Guides',
-      description: 'Chat with elemental spirit guides',
+      title: t('spiritGuidesTitle'),
+      description: getFeatureDescription('spiritGuides'),
       icon: 'chatbubbles' as const,
       route: '/spirit-guides',
     },
     {
-      title: 'Meditation',
-      description: 'Practice meditation and astral travel',
+      title: t('meditationTitle'),
+      description: getFeatureDescription('meditation'),
       icon: 'fitness' as const,
       route: '/meditation',
     },
     {
-      title: 'Journal',
-      description: 'Track your spiritual journey',
+      title: t('journalTitle'),
+      description: getFeatureDescription('journal'),
       icon: 'book' as const,
       route: '/journal',
     },
   ];
 
+  // Welcome text translations
+  const getWelcomeText = (): string => {
+    const texts: Record<string, string> = {
+      en: 'Discover tools to help you progress on your spiritual path. Practice and develop latent psychic abilities, enjoy guided meditations in this realm and beyond, consult a fully-intuitive oracle deck to receive guidance from your spirit guides, or communicate directly with a spirit guide attuned to your zodiac sign.',
+      es: 'Descubre herramientas para ayudarte a progresar en tu camino espiritual. Practica y desarrolla habilidades psíquicas latentes, disfruta de meditaciones guiadas, consulta un oráculo intuitivo para recibir orientación de tus guías espirituales, o comunícate directamente con un guía espiritual alineado con tu signo zodiacal.',
+      fr: 'Découvrez des outils pour vous aider à progresser sur votre chemin spirituel. Pratiquez et développez vos capacités psychiques latentes, profitez de méditations guidées, consultez un oracle intuitif pour recevoir des conseils de vos guides spirituels, ou communiquez directement avec un guide spirituel aligné sur votre signe du zodiaque.',
+      de: 'Entdecken Sie Werkzeuge, die Ihnen helfen, auf Ihrem spirituellen Weg voranzukommen. Üben und entwickeln Sie latente psychische Fähigkeiten, genießen Sie geführte Meditationen, konsultieren Sie ein intuitives Orakel, um Führung von Ihren Geistführern zu erhalten, oder kommunizieren Sie direkt mit einem Geistführer, der auf Ihr Sternzeichen abgestimmt ist.',
+      it: 'Scopri strumenti per aiutarti a progredire nel tuo cammino spirituale. Pratica e sviluppa abilità psichiche latenti, goditi meditazioni guidate, consulta un oracolo intuitivo per ricevere guida dai tuoi spiriti guida, o comunica direttamente con una guida spirituale allineata al tuo segno zodiacale.',
+      pt: 'Descubra ferramentas para ajudá-lo a progredir em seu caminho espiritual. Pratique e desenvolva habilidades psíquicas latentes, desfrute de meditações guiadas, consulte um oráculo intuitivo para receber orientação de seus guias espirituais, ou comunique-se diretamente com um guia espiritual alinhado ao seu signo do zodíaco.',
+      ja: 'スピリチュアルな道を進むためのツールを発見しましょう。潜在的な超能力を練習し発達させ、ガイド付き瞑想を楽しみ、直感的なオラクルでスピリットガイドからの導きを受け取り、あなたの星座に調和したスピリットガイドと直接コミュニケーションしましょう。',
+      ko: '영적 여정에서 발전할 수 있도록 도와주는 도구를 발견하세요. 잠재적인 초능력을 연습하고 개발하고, 가이드 명상을 즐기고, 직관적인 오라클로 영적 가이드의 안내를 받거나, 당신의 별자리에 맞춰진 영적 가이드와 직접 소통하세요.',
+      zh: '发现帮助您在灵性道路上进步的工具。练习和开发潜在的超能力，享受指导冥想，咨询直觉神谕牌以获得灵性向导的指引，或与与您星座相配的灵性向导直接交流。',
+    };
+    return texts[languageCode] || texts.en;
+  };
+
+  const getUnlockText = (): string => {
+    const texts: Record<string, string> = {
+      en: 'Unlock Full Access',
+      es: 'Desbloquea Acceso Completo',
+      fr: 'Débloquez l\'Accès Complet',
+      de: 'Vollzugriff Freischalten',
+      it: 'Sblocca Accesso Completo',
+      pt: 'Desbloqueie Acesso Completo',
+      ja: 'フルアクセスを解除',
+      ko: '전체 액세스 잠금 해제',
+      zh: '解锁完整访问',
+    };
+    return texts[languageCode] || texts.en;
+  };
+
+  const getSubscribeText = (): string => {
+    const texts: Record<string, string> = {
+      en: 'Subscribe Now',
+      es: 'Suscríbete Ahora',
+      fr: 'Abonnez-vous Maintenant',
+      de: 'Jetzt Abonnieren',
+      it: 'Abbonati Ora',
+      pt: 'Assine Agora',
+      ja: '今すぐ購読',
+      ko: '지금 구독',
+      zh: '立即订阅',
+    };
+    return texts[languageCode] || texts.en;
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Auth Buttons - Show login/signup if not authenticated */}
       {!isAuthenticated ? (
         <View style={styles.authSection}>
           <View style={styles.authButtons}>
             <TouchableOpacity
-              style={styles.loginButton}
+              style={[styles.loginButton, { backgroundColor: theme.accentLight }]}
               onPress={() => router.push('/auth/login')}
             >
-              <Ionicons name="log-in" size={20} color="#1a0033" />
-              <Text style={styles.loginButtonText}>Log In</Text>
+              <Ionicons name="log-in" size={20} color={theme.background} />
+              <Text style={[styles.loginButtonText, { color: theme.background }]}>{t('signIn')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.signupButton}
+              style={[styles.signupButton, { borderColor: theme.accentLight }]}
               onPress={() => router.push('/auth/signup')}
             >
-              <Ionicons name="person-add" size={20} color="#b794f6" />
-              <Text style={styles.signupButtonText}>Sign Up</Text>
+              <Ionicons name="person-add" size={20} color={theme.accentLight} />
+              <Text style={[styles.signupButtonText, { color: theme.accentLight }]}>{t('signUp')}</Text>
             </TouchableOpacity>
           </View>
         </View>
       ) : (
         <View style={styles.userWelcome}>
           <View style={styles.userInfo}>
-            <Ionicons name="person-circle" size={24} color="#b794f6" />
-            <Text style={styles.userGreeting}>Welcome, {user?.name || 'Seeker'}</Text>
+            <Ionicons name="person-circle" size={24} color={theme.accentLight} />
+            <Text style={styles.userGreeting}>{t('welcomeMessage').split(' ').slice(0, 1).join(' ')}, {user?.name || 'Seeker'}</Text>
             {isPremium && (
               <View style={styles.premiumBadgeSmall}>
                 <Ionicons name="star" size={12} color="#ffd700" />
@@ -155,32 +267,33 @@ export default function Home() {
           contentFit="cover"
         />
         <View style={styles.heroOverlay}>
-          <Text style={styles.heroTitle}>Welcome to Etheria</Text>
+          <Text style={styles.heroTitle}>{t('welcomeMessage')}</Text>
         </View>
       </View>
 
       {/* Welcome Message */}
       <View style={styles.welcomeSection}>
         <Text style={styles.welcomeText}>
-          Discover tools to help you progress on your spiritual path. Practice and develop latent psychic abilities, enjoy guided meditations in this realm and beyond, consult a fully-intuitive oracle deck to receive guidance from your spirit guides, or communicate directly with a spirit guide attuned to your zodiac sign.
+          {getWelcomeText()}
         </Text>
 
-        <View style={styles.pricingCard}>
+        <View style={[styles.pricingCard, { backgroundColor: theme.cardBackground }]}>
           <Ionicons name="diamond" size={28} color="#ffd700" />
-          <Text style={styles.pricingTitle}>Unlock Full Access</Text>
+          <Text style={styles.pricingTitle}>{getUnlockText()}</Text>
           <Text style={styles.pricingText}>
-            Access everything Etheria has to offer for a monthly commitment of only{' '}
-            <Text style={styles.priceHighlight}>$3.99</Text>.
-          </Text>
-          <Text style={styles.pricingText}>
-            A small investment to completely unlock your spiritual potential. Join today!
+            {languageCode === 'en' ? (
+              <>Access everything Etheria has to offer for a monthly commitment of only{' '}
+              <Text style={styles.priceHighlight}>$3.99</Text>.</>
+            ) : (
+              <Text style={styles.priceHighlight}>$3.99/{t('perMonth').replace('/', '')}</Text>
+            )}
           </Text>
           <TouchableOpacity 
-            style={styles.subscribeButton}
+            style={[styles.subscribeButton, { backgroundColor: theme.accent }]}
             onPress={() => router.push('/settings')}
           >
             <Ionicons name="star" size={20} color="#1a0033" />
-            <Text style={styles.subscribeButtonText}>Subscribe Now</Text>
+            <Text style={styles.subscribeButtonText}>{getSubscribeText()}</Text>
           </TouchableOpacity>
         </View>
 
