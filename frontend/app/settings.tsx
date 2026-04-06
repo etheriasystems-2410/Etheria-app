@@ -665,7 +665,7 @@ export default function Settings() {
 
         <TouchableOpacity 
           style={styles.settingItem}
-          onPress={() => Linking.openURL('https://www.etheriasystems.online/privacy')}
+          onPress={() => Linking.openURL('https://etheriasystems.online/privacy')}
         >
           <Ionicons name="shield-checkmark" size={24} color="#b794f6" />
           <Text style={styles.settingText}>{t('privacyPolicy')}</Text>
@@ -674,7 +674,7 @@ export default function Settings() {
 
         <TouchableOpacity 
           style={styles.settingItem}
-          onPress={() => Linking.openURL('https://www.etheriasystems.online/terms')}
+          onPress={() => Linking.openURL('https://etheriasystems.online/terms')}
         >
           <Ionicons name="document-text" size={24} color="#b794f6" />
           <Text style={styles.settingText}>{t('termsOfService')}</Text>
