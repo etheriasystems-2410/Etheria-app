@@ -30,7 +30,8 @@ interface CardReading {
     name: string;
     element: string;
     description: string;
-    image_url: string;
+    image_url?: string;
+    image_base64?: string;
   };
   position?: string;
   interpretation: string;

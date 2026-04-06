@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 import random
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.llm.openai import OpenAITextToSpeech
+from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
 import base64
 import io
 import bcrypt
@@ -156,35 +157,35 @@ ORACLE_CARDS = [
         "element": "Fire",
         "description": "Transformation through passion and rebirth",
         "keywords": ["transformation", "passion", "renewal", "energy"],
-        "image_url": "https://images.pexels.com/photos/1749303/pexels-photo-1749303.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Mystical phoenix bird rising from flames, glowing orange and red feathers, magical fire swirling, dark mystical background, oracle tarot card art style"
     },
     {
         "name": "The Flame Dancer",
         "element": "Fire",
         "description": "Creative expression and bold action",
         "keywords": ["creativity", "action", "courage", "expression"],
-        "image_url": "https://images.pexels.com/photos/266526/pexels-photo-266526.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Ethereal spirit dancing within flames, flowing fire dress, mystical orange and gold light, oracle card art style"
     },
     {
         "name": "The Sacred Ember",
         "element": "Fire",
         "description": "Inner spark and divine inspiration",
         "keywords": ["inspiration", "motivation", "divine spark", "purpose"],
-        "image_url": "https://images.pexels.com/photos/167701/pexels-photo-167701.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Glowing mystical ember floating in darkness, warm orange light radiating outward, sacred geometry, oracle card art"
     },
     {
         "name": "The Blazing Sun",
         "element": "Fire",
         "description": "Vitality, confidence, and illumination",
         "keywords": ["vitality", "confidence", "illumination", "power"],
-        "image_url": "https://images.pexels.com/photos/87611/sun-fireball-solar-flare-sunlight-87611.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Magnificent golden sun with corona flames, mystical face, rays of divine light, cosmic background, oracle card art"
     },
     {
         "name": "The Dragon's Heart",
         "element": "Fire",
         "description": "Fierce protection and inner strength",
         "keywords": ["protection", "strength", "courage", "guardian"],
-        "image_url": "https://images.pexels.com/photos/7794401/pexels-photo-7794401.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Glowing red crystalline dragon heart surrounded by fire, mystical scales, powerful energy, oracle tarot card art"
     },
     # Water Element Cards
     {
@@ -192,35 +193,35 @@ ORACLE_CARDS = [
         "element": "Water",
         "description": "Deep emotions and subconscious wisdom",
         "keywords": ["emotions", "intuition", "depth", "subconscious"],
-        "image_url": "https://images.pexels.com/photos/932638/pexels-photo-932638.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Deep mystical ocean with bioluminescent creatures, ancient underwater temple, ethereal blue light, oracle card art"
     },
     {
         "name": "The Healing Spring",
         "element": "Water",
         "description": "Emotional cleansing and renewal",
         "keywords": ["healing", "cleansing", "forgiveness", "renewal"],
-        "image_url": "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Magical glowing spring water in enchanted forest, healing light emanating, mystical flowers, oracle card art"
     },
     {
         "name": "The Moon Tide",
         "element": "Water",
         "description": "Cycles, intuition, and psychic ability",
         "keywords": ["cycles", "intuition", "psychic", "feminine energy"],
-        "image_url": "https://images.pexels.com/photos/1252890/pexels-photo-1252890.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Full moon reflecting on mystical ocean waves, silver moonlight, tidal energy, stars above, oracle card art"
     },
     {
         "name": "The Mystic River",
         "element": "Water",
         "description": "Flow, adaptability, and life's journey",
         "keywords": ["flow", "adaptability", "journey", "change"],
-        "image_url": "https://images.pexels.com/photos/2387418/pexels-photo-2387418.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Enchanted glowing river flowing through mystical forest, magical mist rising, ethereal blue light, oracle card art"
     },
     {
         "name": "The Pearl of Wisdom",
         "element": "Water",
         "description": "Hidden treasures and inner beauty",
         "keywords": ["wisdom", "treasure", "beauty", "discovery"],
-        "image_url": "https://images.pexels.com/photos/5428833/pexels-photo-5428833.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Giant luminous pearl glowing with inner light, mystical underwater scene, ancient wisdom symbols, oracle card art"
     },
     # Earth Element Cards
     {
@@ -228,35 +229,35 @@ ORACLE_CARDS = [
         "element": "Earth",
         "description": "Grounding, wisdom, and stability",
         "keywords": ["grounding", "wisdom", "stability", "growth"],
-        "image_url": "https://images.pexels.com/photos/1632790/pexels-photo-1632790.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Massive ancient mystical tree with glowing roots, magical leaves, spirit faces in bark, sacred grove, oracle card art"
     },
     {
         "name": "The Sacred Mountain",
         "element": "Earth",
         "description": "Achievement and endurance",
         "keywords": ["achievement", "endurance", "strength", "foundation"],
-        "image_url": "https://images.pexels.com/photos/417173/pexels-photo-417173.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Mystical mountain peak touching stars, glowing summit, ancient stone temples, spiritual energy, oracle card art"
     },
     {
         "name": "The Blooming Garden",
         "element": "Earth",
         "description": "Abundance and manifestation",
         "keywords": ["abundance", "manifestation", "prosperity", "nurturing"],
-        "image_url": "https://images.pexels.com/photos/931177/pexels-photo-931177.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Enchanted garden with magical glowing flowers, butterflies of light, abundance energy, oracle tarot card art"
     },
     {
         "name": "The Crystal Cave",
         "element": "Earth",
         "description": "Inner reflection and hidden potential",
         "keywords": ["reflection", "potential", "clarity", "insight"],
-        "image_url": "https://images.pexels.com/photos/2150610/pexels-photo-2150610.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Mystical cave filled with glowing crystals, purple and blue light, ancient magic, sacred geometry, oracle card art"
     },
     {
         "name": "The Stone Guardian",
         "element": "Earth",
         "description": "Protection, patience, and perseverance",
         "keywords": ["protection", "patience", "perseverance", "resilience"],
-        "image_url": "https://images.pexels.com/photos/2166711/pexels-photo-2166711.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Ancient mystical stone golem guardian, covered in moss and runes, protective energy, oracle tarot card art"
     },
     # Air Element Cards
     {
@@ -264,35 +265,35 @@ ORACLE_CARDS = [
         "element": "Air",
         "description": "Messages and mental clarity",
         "keywords": ["messages", "clarity", "communication", "thought"],
-        "image_url": "https://images.pexels.com/photos/1367192/pexels-photo-1367192.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Ethereal wind spirit with flowing form, swirling air currents, mystical whispers visible, oracle card art"
     },
     {
         "name": "The Sky Dancer",
         "element": "Air",
         "description": "Freedom and new perspectives",
         "keywords": ["freedom", "perspective", "liberation", "change"],
-        "image_url": "https://images.pexels.com/photos/3608263/pexels-photo-3608263.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Graceful ethereal being dancing among clouds, flowing robes of mist, cosmic sky, oracle tarot card art"
     },
     {
         "name": "The Sacred Breath",
         "element": "Air",
         "description": "Life force and spiritual connection",
         "keywords": ["life force", "spirit", "connection", "awareness"],
-        "image_url": "https://images.pexels.com/photos/3560168/pexels-photo-3560168.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Mystical visualization of divine breath, golden light particles, spiritual energy flow, oracle card art"
     },
     {
         "name": "The Starlight Messenger",
         "element": "Air",
         "description": "Divine guidance and cosmic wisdom",
         "keywords": ["guidance", "cosmos", "wisdom", "destiny"],
-        "image_url": "https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Celestial messenger angel among stars, wings of light, cosmic background, carrying divine scroll, oracle card art"
     },
     {
         "name": "The Feathered Oracle",
         "element": "Air",
         "description": "Spiritual messages and higher truth",
         "keywords": ["messages", "truth", "spirit", "ascension"],
-        "image_url": "https://images.pexels.com/photos/2629372/pexels-photo-2629372.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Mystical owl with glowing eyes, surrounded by floating feathers, ancient wisdom, starry night, oracle card art"
     },
     # Spirit Element Cards
     {
@@ -300,51 +301,88 @@ ORACLE_CARDS = [
         "element": "Spirit",
         "description": "Psychic vision and inner knowing",
         "keywords": ["psychic", "vision", "intuition", "insight"],
-        "image_url": "https://images.pexels.com/photos/3094230/pexels-photo-3094230.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Mystical third eye opening with cosmic vision, purple and indigo energy, sacred geometry, oracle card art"
     },
     {
         "name": "The Divine Lotus",
         "element": "Spirit",
         "description": "Spiritual awakening and enlightenment",
         "keywords": ["awakening", "enlightenment", "purity", "transformation"],
-        "image_url": "https://images.pexels.com/photos/6858601/pexels-photo-6858601.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Glowing lotus flower floating on mystical water, thousand petals of light, spiritual enlightenment, oracle card art"
     },
     {
         "name": "The Sacred Spiral",
         "element": "Spirit",
         "description": "Evolution and infinite possibilities",
         "keywords": ["evolution", "infinity", "growth", "cycles"],
-        "image_url": "https://images.pexels.com/photos/2749481/pexels-photo-2749481.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Cosmic spiral galaxy merging with sacred geometry, golden ratio, infinite evolution, oracle tarot card art"
     },
     {
         "name": "The Celestial Gateway",
         "element": "Spirit",
         "description": "Portals to higher dimensions",
         "keywords": ["portal", "dimensions", "transcendence", "expansion"],
-        "image_url": "https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Mystical portal to higher dimensions, ancient stone archway with glowing runes, cosmic light, oracle card art"
     },
     {
         "name": "The Ancestor's Blessing",
         "element": "Spirit",
         "description": "Ancestral wisdom and heritage",
         "keywords": ["ancestors", "wisdom", "heritage", "blessing"],
-        "image_url": "https://images.pexels.com/photos/5875986/pexels-photo-5875986.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Ethereal ancestor spirits surrounding with blessing light, ancient symbols, warm golden glow, oracle card art"
     },
     {
         "name": "The Veil Between Worlds",
         "element": "Spirit",
         "description": "Connection to the spirit realm",
         "keywords": ["spirit realm", "connection", "mystery", "transition"],
-        "image_url": "https://images.pexels.com/photos/1252873/pexels-photo-1252873.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Mystical veil of mist separating two realms, spirits visible through thin barrier, ethereal twilight, oracle card art"
     },
     {
         "name": "The Infinite Mirror",
         "element": "Spirit",
         "description": "Self-reflection and soul recognition",
         "keywords": ["reflection", "soul", "recognition", "truth"],
-        "image_url": "https://images.pexels.com/photos/949587/pexels-photo-949587.jpeg?auto=compress&cs=tinysrgb&w=400"
+        "image_prompt": "Mystical mirror reflecting infinite versions, cosmic self-reflection, ethereal glow, sacred symbols, oracle card art"
     }
 ]
+
+# Image generator for oracle cards
+oracle_image_gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY) if EMERGENT_LLM_KEY else None
+
+async def get_or_generate_card_image(card_name: str, image_prompt: str) -> str:
+    """Get cached image or generate new one for oracle card"""
+    # Check if image is cached in database
+    cached = await db.oracle_card_images.find_one({"card_name": card_name})
+    if cached and cached.get("image_base64"):
+        return cached["image_base64"]
+    
+    # Generate new image
+    if not oracle_image_gen:
+        return None
+    
+    try:
+        images = await oracle_image_gen.generate_images(
+            prompt=image_prompt,
+            model="gpt-image-1",
+            number_of_images=1
+        )
+        
+        if images and len(images) > 0:
+            image_base64 = base64.b64encode(images[0]).decode('utf-8')
+            
+            # Cache in database
+            await db.oracle_card_images.update_one(
+                {"card_name": card_name},
+                {"$set": {"card_name": card_name, "image_base64": image_base64, "created_at": datetime.now(timezone.utc)}},
+                upsert=True
+            )
+            
+            return image_base64
+    except Exception as e:
+        print(f"Error generating image for {card_name}: {e}")
+    
+    return None
 
 # Models
 class OracleReading(BaseModel):
@@ -494,13 +532,17 @@ class MultiCardDrawRequest(BaseModel):
 
 @api_router.post("/oracle/draw")
 async def draw_oracle_card(request: MultiCardDrawRequest = None):
-    """Draw oracle cards and get AI interpretation"""
+    """Draw oracle cards and get AI interpretation with AI-generated images"""
     import asyncio
     
     # Handle both old single-card and new multi-card requests
     if request is None or request.card_count == 1:
         # Single card draw (original behavior)
         card = random.choice(ORACLE_CARDS)
+        
+        # Get or generate card image
+        image_base64 = await get_or_generate_card_image(card['name'], card.get('image_prompt', ''))
+        card_with_image = {**card, 'image_base64': image_base64}
         
         try:
             chat = LlmChat(
@@ -517,7 +559,7 @@ async def draw_oracle_card(request: MultiCardDrawRequest = None):
             return {
                 "spread_type": "single",
                 "cards": [{
-                    "card": card,
+                    "card": card_with_image,
                     "position": "Guidance",
                     "interpretation": interpretation
                 }],
@@ -528,7 +570,7 @@ async def draw_oracle_card(request: MultiCardDrawRequest = None):
             return {
                 "spread_type": "single",
                 "cards": [{
-                    "card": card,
+                    "card": card_with_image,
                     "position": "Guidance",
                     "interpretation": f"The {card['name']} speaks of {card['description'].lower()}. This card brings the energy of {card['element']} into your life."
                 }],
@@ -541,6 +583,13 @@ async def draw_oracle_card(request: MultiCardDrawRequest = None):
     
     # Draw unique cards
     drawn_cards = random.sample(ORACLE_CARDS, min(card_count, len(ORACLE_CARDS)))
+    
+    # Generate images for all cards in parallel
+    async def get_card_with_image(card):
+        image_base64 = await get_or_generate_card_image(card['name'], card.get('image_prompt', ''))
+        return {**card, 'image_base64': image_base64}
+    
+    cards_with_images = await asyncio.gather(*[get_card_with_image(card) for card in drawn_cards])
     
     async def get_interpretation(card, position, spread_type):
         try:
@@ -560,14 +609,14 @@ async def draw_oracle_card(request: MultiCardDrawRequest = None):
     
     # Run all interpretations in parallel
     tasks = []
-    for i, card in enumerate(drawn_cards):
+    for i, card in enumerate(cards_with_images):
         position = positions[i] if i < len(positions) else f"Card {i+1}"
         tasks.append(get_interpretation(card, position, request.spread_type))
     
     interpretations = await asyncio.gather(*tasks)
     
     cards_result = []
-    for i, (card, interpretation) in enumerate(zip(drawn_cards, interpretations)):
+    for i, (card, interpretation) in enumerate(zip(cards_with_images, interpretations)):
         position = positions[i] if i < len(positions) else f"Card {i+1}"
         cards_result.append({
             "card": card,
