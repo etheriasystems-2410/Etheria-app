@@ -886,10 +886,10 @@ export default function AIGuidedMeditation() {
       overlayColor="rgba(15, 3, 33, 0.7)"
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/meditation')} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Guided Meditation</Text>
+        <Text style={styles.headerTitle}>Meditations</Text>
         <View style={{ width: 24 }} />
       </View>
 

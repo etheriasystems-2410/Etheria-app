@@ -225,7 +225,7 @@ export default function ChakraMeditation() {
       setScript(null);
       setIsRealignAll(false);
     } else {
-      router.back();
+      router.push('/meditation');
     }
   };
 
@@ -406,7 +406,7 @@ export default function ChakraMeditation() {
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {showSession ? (isRealignAll ? 'Chakra Realignment' : selectedChakra?.name) : 'Chakra Meditation'}
+          {showSession ? (isRealignAll ? 'Chakra Realignment' : selectedChakra?.name) : 'Meditations'}
         </Text>
         <View style={{ width: 24 }} />
       </View>
