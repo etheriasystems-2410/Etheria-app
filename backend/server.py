@@ -1872,17 +1872,16 @@ Please provide a comprehensive interpretation that includes:
 
 Keep the interpretation warm, supportive, and empowering. Avoid being overly negative or alarming. The interpretation should be 2-3 paragraphs."""
 
-        response = await client.chat.completions.create(
-            model="gemini/gemini-2.5-pro",
-            messages=[
-                {"role": "system", "content": "You are a compassionate dream interpreter who helps people understand the symbolic language of their dreams."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=1000,
-            temperature=0.7,
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"dream-interpret-{uuid.uuid4()}"
+        ).with_model("gemini", "gemini-2.0-flash")
+        
+        response = await chat.send_message(
+            UserMessage(text=prompt)
         )
         
-        interpretation = response.choices[0].message.content
+        interpretation = response.text
         
         return {"interpretation": interpretation, "success": True}
         
