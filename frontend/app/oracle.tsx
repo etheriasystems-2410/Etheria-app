@@ -291,6 +291,11 @@ export default function Oracle() {
         Alert.alert('Saved!', 'Reading saved to your journal.');
         setShowJournalPrompt(false);
         setReadingQuestion('');
+        // Close the reading modal and reset state
+        setShowReading(false);
+        setCurrentReading(null);
+        setSelectedSpread(null);
+        setCurrentCardIndex(0);
       } else {
         const error = await response.json();
         Alert.alert('Error', error.detail || 'Could not save to journal. Please try again.');
@@ -775,15 +780,8 @@ export default function Oracle() {
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  style={[styles.modalButton, styles.journalButton]}
-                  onPress={saveToJournal}
-                >
-                  <Ionicons name="book" size={20} color="#fff" />
-                  <Text style={styles.modalButtonText}>Save to Journal</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                   style={[styles.modalButton, styles.saveButton]}
-                  onPress={saveReading}
+                  onPress={saveToJournal}
                 >
                   <Ionicons name="save" size={20} color="#fff" />
                   <Text style={styles.modalButtonText}>Save Reading</Text>
@@ -1382,6 +1380,83 @@ const styles = StyleSheet.create({
   stopAudioText: {
     color: '#ef4444',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  // Journal Prompt Modal Styles
+  journalPromptOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  journalPromptModal: {
+    backgroundColor: '#1a0033',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  journalPromptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  journalPromptTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+  },
+  journalPromptSubtitle: {
+    fontSize: 15,
+    color: '#c4b5fd',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  journalPromptInput: {
+    backgroundColor: '#2d1b4e',
+    borderRadius: 12,
+    padding: 16,
+    color: '#e9d5ff',
+    fontSize: 16,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: '#4a3b6e',
+  },
+  journalPromptButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  journalPromptButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  journalPromptCancel: {
+    backgroundColor: '#2d1b4e',
+    borderWidth: 1,
+    borderColor: '#4a3b6e',
+  },
+  journalPromptCancelText: {
+    color: '#c4b5fd',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  journalPromptSave: {
+    backgroundColor: '#7c3aed',
+  },
+  journalPromptSaveText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });
