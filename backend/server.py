@@ -252,6 +252,20 @@ class SpiritGuideMessage(BaseModel):
     element: str
     message: str
     history: List[dict] = []
+    language: str = "en"  # Language code for response and TTS
+
+# Language names for system prompts
+LANGUAGE_NAMES = {
+    "en": "English",
+    "es": "Spanish",
+    "fr": "French",
+    "de": "German",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese",
+}
 
 class SpiritGuideResponse(BaseModel):
     response: str
@@ -502,6 +516,9 @@ async def get_saved_readings(request: Request, limit: int = 20):
 async def chat_with_spirit_guide(message: SpiritGuideMessage):
     """Chat with a spirit guide - returns text and TTS audio"""
     
+    # Get the language name for the prompt
+    language_name = LANGUAGE_NAMES.get(message.language, "English")
+    
     # Define guide personalities with no-markdown instructions
     guide_personalities = {
         "Ignis": "You are Ignis, the Fire spirit guide. You are passionate, direct, and transformative. You encourage action, courage, and embracing change. Your wisdom comes through powerful metaphors of flame, transformation, and rebirth. You speak with energy and conviction.",
@@ -511,7 +528,9 @@ async def chat_with_spirit_guide(message: SpiritGuideMessage):
     }
     
     system_message = guide_personalities.get(message.guide, guide_personalities["Aether"])
-    system_message += """ Keep responses under 150 words. Be warm, wise, and helpful.
+    system_message += f""" Keep responses under 150 words. Be warm, wise, and helpful.
+
+IMPORTANT: You MUST respond in {language_name}. The user has selected {language_name} as their preferred language.
 
 IMPORTANT: DO NOT use any markdown formatting in your response - no asterisks (*), no hash symbols (#), no bullet points, no bold or italic markers. Write in plain flowing prose that sounds natural when spoken aloud, as your response will be read by text-to-speech."""
     

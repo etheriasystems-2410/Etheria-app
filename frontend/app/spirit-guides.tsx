@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Paywall } from '../components/Paywall';
 import { AudioPlayerManager, setupAudioMode } from '../utils/audioPlayer';
 
@@ -90,6 +91,7 @@ const guides: Guide[] = [
 
 export default function SpiritGuides() {
   const { isPremium, checkFeatureAccess } = useAuth();
+  const { languageCode, t } = useLanguage();
   const [showPaywall, setShowPaywall] = useState(false);
   const [showBirthdayInput, setShowBirthdayInput] = useState(false);
   const [birthMonth, setBirthMonth] = useState('');
@@ -274,6 +276,7 @@ export default function SpiritGuides() {
         body: JSON.stringify({
           text: text,
           guide_name: guideName,
+          language: languageCode,
         }),
       });
 
@@ -359,6 +362,7 @@ export default function SpiritGuides() {
           element: selectedGuide.element,
           message: inputText,
           history: messages,
+          language: languageCode,
         }),
       });
       const data = await response.json();
