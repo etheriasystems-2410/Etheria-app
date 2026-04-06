@@ -218,6 +218,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: POST /api/journal/save working correctly. Successfully saves journal entries to MongoDB with UUID, timestamp, and all entry data (title, content, category, mood, tags). Returns success confirmation with entry ID."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-TESTED: Journal API endpoints comprehensive testing complete. Both POST /api/journal/save (primary) and POST /api/journal/entries (alias) working perfectly. Oracle reading entries with complex metadata (spread_type, question, cards array) saved and retrieved correctly. Entry_type 'oracle' preserved, metadata structure maintained. Authentication via session_token working. All 4/4 journal API tests passed."
 
   - task: "Get journal entries"
     implemented: true
@@ -233,6 +236,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: GET /api/journal/entries working correctly. Retrieves journal entries from MongoDB, sorted by most recent first. Returns array of entry objects with all saved data including metadata."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-TESTED: GET /api/journal/entries confirmed working perfectly. Retrieved 8 journal entries including 6 oracle entries with complete metadata preservation. Oracle entries maintain entry_type 'oracle', category 'divination', and complex metadata structure (spread_type, question, cards array). Sorting by most recent first working correctly."
 
   - task: "User authentication with signup/login"
     implemented: true
@@ -485,3 +491,5 @@ agent_communication:
     message: "🔮 ORACLE DIVINATION RE-TESTING COMPLETE: Both Oracle endpoints verified working perfectly as requested in review. ✅ POST /api/oracle/draw: Successfully draws cards (tested 'The Fire Phoenix' with Fire element), generates 439-character AI interpretations using Gemini, returns proper response structure with spread_type, cards array, and timestamp. Supports both single and multi-card draws with position handling. ✅ GET /api/oracle/readings: Returns proper array response, handles both authenticated and unauthenticated requests correctly. Backend logs confirm endpoints receiving 200 OK responses. Oracle divination system fully functional and ready for production use."
   - agent: "testing"
     message: "🌍 SPIRIT GUIDE LANGUAGE SUPPORT TESTING COMPLETE: All 4/4 language tests passed perfectly. ✅ POST /api/spirit-guides/chat: Confirmed working with multi-language support - English (Ignis/Fire), Spanish (Aqua/Water), and French (Terra/Earth). Each guide responds correctly in requested language with appropriate cultural context and personality. ✅ POST /api/tts/generate: TTS endpoint working with language parameter, generates proper audio in Spanish. Language detection working correctly with LANGUAGE_NAMES mapping (en, es, fr, de, it, pt, ja, ko, zh). All responses include success=true, proper audio_base64, and correct voice assignments. Spirit Guide language localization fully functional for international users."
+  - agent: "testing"
+    message: "📖 JOURNAL API ENDPOINTS TESTING COMPLETE: All 4/4 journal API tests passed perfectly as requested in review. ✅ FIXED: Both POST endpoints now working correctly (previously showing 405 Method Not Allowed). ✅ POST /api/journal/entries (alias): Creates oracle entries with complex metadata successfully. ✅ POST /api/journal/save (primary): Creates oracle entries with proper data structure. ✅ GET /api/journal/entries: Retrieves entries with complete metadata preservation. ✅ VERIFIED: Oracle entry_type 'oracle' preserved, metadata with spread_type/question/cards array maintained, authentication via session_token working. Backend logs confirm all endpoints returning 200 OK. Journal system fully functional for oracle reading storage and retrieval."

@@ -72,7 +72,8 @@ export default function Journal() {
   const [saving, setSaving] = useState(false);
   const [journalStatus, setJournalStatus] = useState<JournalStatus | null>(null);
   const [trainingProgress, setTrainingProgress] = useState<TrainingProgress | null>(null);
-  const [activeTab, setActiveTab] = useState<'entries' | 'progress'>('entries');
+  const [activeTab, setActiveTab] = useState<'entries' | 'readings' | 'progress'>('entries');
+  const [readings, setReadings] = useState<JournalEntry[]>([]);
 
   const categories = [
     { id: 'meditation', label: 'Meditation', icon: 'fitness', color: '#8b5cf6' },
@@ -84,11 +85,47 @@ export default function Journal() {
 
   useEffect(() => {
     loadEntries();
+    loadReadings();
     loadTrainingProgress();
     if (isAuthenticated) {
       fetchJournalStatus();
     }
   }, [isAuthenticated]);
+
+  const loadReadings = async () => {
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      if (sessionToken) {
+        const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        });
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          // Filter only oracle and spirit_guide entries
+          const readingEntries = data.filter((e: any) => 
+            e.entry_type === 'oracle' || 
+            e.entry_type === 'spirit_guide' ||
+            e.category === 'divination' ||
+            e.category === 'spirit_guide'
+          ).map((e: any) => ({
+            id: e._id || e.id,
+            _id: e._id,
+            title: e.title,
+            content: e.content,
+            category: e.category,
+            date: e.created_at || e.date,
+            entry_type: e.entry_type,
+            metadata: e.metadata
+          }));
+          setReadings(readingEntries);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading readings:', error);
+    }
+  };
 
   const loadTrainingProgress = async () => {
     try {
@@ -335,6 +372,99 @@ export default function Journal() {
     );
   };
 
+  // Render readings tab
+  const renderReadingsTab = () => {
+    if (readings.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Ionicons name="sparkles-outline" size={60} color="#9f7aea" />
+          <Text style={styles.emptyText}>No readings saved</Text>
+          <Text style={styles.emptySubtext}>Save your Oracle readings to view them here</Text>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView style={styles.readingsContainer} contentContainerStyle={styles.readingsContent}>
+        {readings.map((reading) => {
+          const readingType = reading.entry_type === 'oracle' ? 'Oracle Reading' : 
+                              reading.entry_type === 'spirit_guide' ? 'Spirit Guide Chat' : 'Divination';
+          const readingIcon = reading.entry_type === 'oracle' ? 'sparkles' : 
+                              reading.entry_type === 'spirit_guide' ? 'chatbubbles' : 'sparkles';
+          const readingColor = reading.entry_type === 'oracle' ? '#db2777' : 
+                               reading.entry_type === 'spirit_guide' ? '#ec4899' : '#a855f7';
+          const spreadType = reading.metadata?.spread_type || '';
+          const questionAsked = reading.metadata?.question || '';
+          const readingDate = new Date(reading.date);
+
+          return (
+            <View key={reading.id} style={styles.readingCard}>
+              {/* Reading Header */}
+              <View style={styles.readingHeader}>
+                <View style={[styles.readingTypeBadge, { backgroundColor: readingColor }]}>
+                  <Ionicons name={readingIcon as any} size={14} color="#fff" />
+                  <Text style={styles.readingTypeText}>{readingType}</Text>
+                </View>
+                <View style={styles.readingDateContainer}>
+                  <Text style={styles.readingDate}>
+                    {format(readingDate, 'MMM d, yyyy')}
+                  </Text>
+                  <Text style={styles.readingTime}>
+                    {format(readingDate, 'h:mm a')}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Spread Type */}
+              {spreadType && (
+                <View style={styles.spreadTypeRow}>
+                  <Ionicons name="layers" size={14} color="#a855f7" />
+                  <Text style={styles.spreadTypeText}>{spreadType}</Text>
+                </View>
+              )}
+
+              {/* Question Asked */}
+              {questionAsked && (
+                <View style={styles.questionContainer}>
+                  <View style={styles.questionHeader}>
+                    <Ionicons name="help-circle" size={16} color="#fbbf24" />
+                    <Text style={styles.questionLabel}>Question/Wisdom Sought:</Text>
+                  </View>
+                  <Text style={styles.questionText}>{questionAsked}</Text>
+                </View>
+              )}
+
+              {/* Reading Title */}
+              <Text style={styles.readingTitle}>{reading.title}</Text>
+
+              {/* Cards Preview (if oracle reading) */}
+              {reading.metadata?.cards && reading.metadata.cards.length > 0 && (
+                <View style={styles.cardsPreview}>
+                  {reading.metadata.cards.slice(0, 3).map((card: any, idx: number) => (
+                    <View key={idx} style={styles.cardPreviewItem}>
+                      <Text style={styles.cardPosition}>{card.position}</Text>
+                      <Text style={styles.cardName}>{card.card_name}</Text>
+                    </View>
+                  ))}
+                  {reading.metadata.cards.length > 3 && (
+                    <Text style={styles.moreCardsText}>
+                      +{reading.metadata.cards.length - 3} more
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              {/* Content Preview */}
+              <Text style={styles.readingContentPreview} numberOfLines={4}>
+                {reading.content}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -354,20 +484,29 @@ export default function Journal() {
           style={[styles.tab, activeTab === 'entries' && styles.activeTab]}
           onPress={() => setActiveTab('entries')}
         >
-          <Ionicons name="book" size={20} color={activeTab === 'entries' ? '#a855f7' : '#9f7aea'} />
+          <Ionicons name="book" size={18} color={activeTab === 'entries' ? '#a855f7' : '#9f7aea'} />
           <Text style={[styles.tabText, activeTab === 'entries' && styles.activeTabText]}>Entries</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'readings' && styles.activeTab]}
+          onPress={() => setActiveTab('readings')}
+        >
+          <Ionicons name="sparkles" size={18} color={activeTab === 'readings' ? '#a855f7' : '#9f7aea'} />
+          <Text style={[styles.tabText, activeTab === 'readings' && styles.activeTabText]}>Readings</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'progress' && styles.activeTab]}
           onPress={() => setActiveTab('progress')}
         >
-          <Ionicons name="trending-up" size={20} color={activeTab === 'progress' ? '#a855f7' : '#9f7aea'} />
+          <Ionicons name="trending-up" size={18} color={activeTab === 'progress' ? '#a855f7' : '#9f7aea'} />
           <Text style={[styles.tabText, activeTab === 'progress' && styles.activeTabText]}>Progress</Text>
         </TouchableOpacity>
       </View>
 
       {activeTab === 'progress' ? (
         renderProgressTab()
+      ) : activeTab === 'readings' ? (
+        renderReadingsTab()
       ) : (
         <ScrollView
           style={styles.entriesContainer}
@@ -884,5 +1023,134 @@ const styles = StyleSheet.create({
   moduleLessons: {
     color: '#9f7aea',
     fontSize: 12,
+  },
+  // Readings tab styles
+  readingsContainer: {
+    flex: 1,
+  },
+  readingsContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  readingCard: {
+    backgroundColor: '#1a0a2e',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  readingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  readingTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 5,
+  },
+  readingTypeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  readingDateContainer: {
+    alignItems: 'flex-end',
+  },
+  readingDate: {
+    color: '#c4b5fd',
+    fontSize: 12,
+  },
+  readingTime: {
+    color: '#9f7aea',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  spreadTypeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  spreadTypeText: {
+    color: '#a855f7',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  questionContainer: {
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#fbbf24',
+  },
+  questionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  questionLabel: {
+    color: '#fbbf24',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  questionText: {
+    color: '#e9d5ff',
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  readingTitle: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  cardsPreview: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  cardPreviewItem: {
+    backgroundColor: '#2d1b4e',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  cardPosition: {
+    color: '#a855f7',
+    fontSize: 10,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  cardName: {
+    color: '#e9d5ff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  moreCardsText: {
+    color: '#9f7aea',
+    fontSize: 12,
+    alignSelf: 'center',
+    marginLeft: 4,
+  },
+  readingContentPreview: {
+    color: '#c4b5fd',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  entriesContainer: {
+    flex: 1,
+  },
+  entriesContent: {
+    paddingBottom: 32,
   },
 });
