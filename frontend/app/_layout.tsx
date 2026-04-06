@@ -67,22 +67,12 @@ function ProtectedLayout() {
         }}
       />
       <Drawer.Screen
-        name="training"
+        name="meditation"
         options={{
-          drawerLabel: t('psychicTraining'),
-          title: t('psychicTraining'),
+          drawerLabel: t('meditationTitle'),
+          title: t('meditationTitle'),
           drawerIcon: ({ color, size }) => (
-            <Ionicons name="school" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="oracle"
-        options={{
-          drawerLabel: t('oracleTitle'),
-          title: t('oracleTitle'),
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="sparkles" size={size} color={color} />
+            <Ionicons name="fitness" size={size} color={color} />
           ),
         }}
       />
@@ -97,12 +87,22 @@ function ProtectedLayout() {
         }}
       />
       <Drawer.Screen
-        name="meditation"
+        name="oracle"
         options={{
-          drawerLabel: t('meditationTitle'),
-          title: t('meditationTitle'),
+          drawerLabel: t('oracleTitle'),
+          title: t('oracleTitle'),
           drawerIcon: ({ color, size }) => (
-            <Ionicons name="fitness" size={size} color={color} />
+            <Ionicons name="sparkles" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="training"
+        options={{
+          drawerLabel: t('psychicTraining'),
+          title: t('psychicTraining'),
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="school" size={size} color={color} />
           ),
         }}
       />
