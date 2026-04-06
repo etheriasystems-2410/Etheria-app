@@ -20,6 +20,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Paywall } from '../components/Paywall';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -43,6 +44,139 @@ export default function Settings() {
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [giftCode, setGiftCode] = useState('');
   const [redeemingCode, setRedeemingCode] = useState(false);
+  
+  // Profile Picture State
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+
+  // Load profile picture on mount
+  useEffect(() => {
+    loadProfilePicture();
+  }, []);
+
+  const loadProfilePicture = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('profile_picture');
+      if (stored) {
+        setProfilePicture(stored);
+      }
+    } catch (error) {
+      console.error('Error loading profile picture:', error);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant access to your photo library to upload a profile picture.');
+        return;
+      }
+
+      // Pick image
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploadingPicture(true);
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        
+        // Save locally
+        await AsyncStorage.setItem('profile_picture', base64Image);
+        setProfilePicture(base64Image);
+        
+        // Also save to backend
+        try {
+          const sessionToken = await AsyncStorage.getItem('session_token');
+          await fetch(`${BACKEND_URL}/api/auth/update-profile`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({ picture: base64Image }),
+          });
+        } catch (error) {
+          console.log('Could not sync profile picture to server');
+        }
+        
+        setUploadingPicture(false);
+        Alert.alert('Success', 'Profile picture updated!');
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to update profile picture');
+      setUploadingPicture(false);
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      // Request camera permission
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant access to your camera to take a profile picture.');
+        return;
+      }
+
+      // Take photo
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploadingPicture(true);
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        
+        // Save locally
+        await AsyncStorage.setItem('profile_picture', base64Image);
+        setProfilePicture(base64Image);
+        
+        // Also save to backend
+        try {
+          const sessionToken = await AsyncStorage.getItem('session_token');
+          await fetch(`${BACKEND_URL}/api/auth/update-profile`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({ picture: base64Image }),
+          });
+        } catch (error) {
+          console.log('Could not sync profile picture to server');
+        }
+        
+        setUploadingPicture(false);
+        Alert.alert('Success', 'Profile picture updated!');
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
+      setUploadingPicture(false);
+    }
+  };
+
+  const showImageOptions = () => {
+    Alert.alert(
+      'Change Profile Picture',
+      'Choose an option',
+      [
+        { text: 'Take Photo', onPress: takePhoto },
+        { text: 'Choose from Library', onPress: pickImage },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   // Check for payment success on mount
   useEffect(() => {
@@ -225,20 +359,28 @@ export default function Settings() {
       )}
 
       <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          {user?.picture ? (
-            <Image source={{ uri: user.picture }} style={styles.avatar} />
+        <TouchableOpacity style={styles.avatarContainer} onPress={showImageOptions} disabled={uploadingPicture}>
+          {uploadingPicture ? (
+            <View style={styles.avatarPlaceholder}>
+              <ActivityIndicator size="large" color="#a855f7" />
+            </View>
+          ) : profilePicture || user?.picture ? (
+            <Image source={{ uri: profilePicture || user?.picture }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Ionicons name="person" size={48} color="#e9d5ff" />
             </View>
           )}
+          <View style={styles.cameraOverlay}>
+            <Ionicons name="camera" size={20} color="#fff" />
+          </View>
           {isPremium && (
             <View style={styles.premiumBadge}>
               <Ionicons name="star" size={16} color="#ffd700" />
             </View>
           )}
-        </View>
+        </TouchableOpacity>
+        <Text style={styles.avatarHint}>Tap to change photo</Text>
         <Text style={styles.email}>{user?.email}</Text>
         {isPremium && (
           <View style={styles.premiumTag}>
@@ -703,9 +845,25 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#7c3aed',
   },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: '#7c3aed',
+    borderRadius: 16,
+    padding: 8,
+    borderWidth: 2,
+    borderColor: '#0a0014',
+  },
+  avatarHint: {
+    fontSize: 12,
+    color: '#9f7aea',
+    marginTop: 8,
+    marginBottom: 4,
+  },
   premiumBadge: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     right: 0,
     backgroundColor: '#2d1b4e',
     borderRadius: 12,
