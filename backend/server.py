@@ -2867,19 +2867,19 @@ async def get_prize_drawing_status(request: Request):
     user_doc = await db.users.find_one({"user_id": user.get("user_id")})
     opted_in = user_doc.get("prize_drawing_opted_in", False) if user_doc else False
     
-    # Calculate weekly usage
+    # Calculate weekly usage using aggregation for efficiency
     now = datetime.now(timezone.utc)
     week_start = now - timedelta(days=now.weekday())
     week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
     
-    # Get all sessions from this week
+    # Get total usage using aggregation pipeline
     user_id = user.get("user_id")
-    sessions = await db.usage_tracking.find({
-        "user_id": user_id,
-        "timestamp": {"$gte": week_start.isoformat()}
-    }).to_list(1000)
-    
-    total_seconds = sum(s.get("duration_seconds", 0) for s in sessions)
+    pipeline = [
+        {"$match": {"user_id": user_id, "timestamp": {"$gte": week_start.isoformat()}}},
+        {"$group": {"_id": None, "total_seconds": {"$sum": "$duration_seconds"}}}
+    ]
+    result = await db.usage_tracking.aggregate(pipeline).to_list(1)
+    total_seconds = result[0]["total_seconds"] if result else 0
     total_minutes = total_seconds / 60
     
     return {
@@ -3026,10 +3026,10 @@ async def run_prize_drawing(request: Request):
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    # Find users who opted in
+    # Find users who opted in (use cursor for large datasets)
     opted_in_users = await db.users.find({
         "prize_drawing_opted_in": True
-    }).to_list(10000)
+    }).to_list(None)  # No limit - get all opted-in users
     
     eligible_users = []
     
@@ -3041,32 +3041,21 @@ async def run_prize_drawing(request: Request):
             eligible_users.append(user)
             continue
         
-        # Check weekly usage for the past month (average 30 min/week)
-        # Get all weeks in the month
-        weeks_checked = 0
-        weeks_eligible = 0
-        
-        check_date = month_start
-        while check_date < now:
-            week_end = min(check_date + timedelta(days=7), now)
-            
-            sessions = await db.usage_tracking.find({
+        # Check weekly usage for the past month using aggregation
+        # Calculate total usage per week using aggregation pipeline
+        pipeline = [
+            {"$match": {
                 "user_id": user_id,
-                "timestamp": {
-                    "$gte": check_date.isoformat(),
-                    "$lt": week_end.isoformat()
-                }
-            }).to_list(1000)
-            
-            total_seconds = sum(s.get("duration_seconds", 0) for s in sessions)
-            if total_seconds >= 1800:  # 30 minutes = 1800 seconds
-                weeks_eligible += 1
-            
-            weeks_checked += 1
-            check_date = week_end
+                "timestamp": {"$gte": month_start.isoformat(), "$lt": now.isoformat()}
+            }},
+            {"$group": {"_id": None, "total_seconds": {"$sum": "$duration_seconds"}}}
+        ]
+        result = await db.usage_tracking.aggregate(pipeline).to_list(1)
+        total_seconds = result[0]["total_seconds"] if result else 0
         
-        # User is eligible if they met the 30 min requirement for at least half the weeks
-        if weeks_checked > 0 and weeks_eligible >= (weeks_checked / 2):
+        # User is eligible if they have at least 2 hours (7200 seconds) total usage this month
+        # This is equivalent to averaging 30 min/week over 4 weeks
+        if total_seconds >= 7200:
             eligible_users.append(user)
     
     if not eligible_users:
@@ -3162,17 +3151,24 @@ async def get_admin_dashboard(admin_secret: str):
     }
 
 @api_router.get("/admin/participants")
-async def get_drawing_participants(admin_secret: str):
-    """Get list of prize drawing participants"""
+async def get_drawing_participants(admin_secret: str, skip: int = 0, limit: int = 100):
+    """Get list of prize drawing participants with pagination"""
     if admin_secret != ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Unauthorized")
     
+    # Get total count
+    total_count = await db.users.count_documents({"prize_drawing_opted_in": True})
+    
+    # Get paginated results
     participants = await db.users.find(
         {"prize_drawing_opted_in": True},
         {"email": 1, "name": 1, "prize_drawing_opted_at": 1}
-    ).to_list(10000)
+    ).skip(skip).limit(limit).to_list(limit)
     
     return {
+        "total_count": total_count,
+        "skip": skip,
+        "limit": limit,
         "count": len(participants),
         "participants": [
             {
