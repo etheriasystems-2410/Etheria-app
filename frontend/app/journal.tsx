@@ -369,35 +369,38 @@ export default function Journal() {
       {activeTab === 'progress' ? (
         renderProgressTab()
       ) : (
-        <>
+        <ScrollView
+          style={styles.entriesContainer}
+          contentContainerStyle={styles.entriesContent}
+        >
           {/* Entry Limit Status Banner */}
           {isAuthenticated && journalStatus && !journalStatus.unlimited && (
             <View style={styles.limitBanner}>
               <Ionicons name="information-circle" size={20} color="#f59e0b" />
               <Text style={styles.limitText}>
-            {journalStatus.entries_remaining === 0 
-              ? "Weekly limit reached! Upgrade for unlimited entries."
-              : `${journalStatus.entries_remaining} of ${journalStatus.weekly_limit} entries remaining this week`
-            }
-          </Text>
-          {journalStatus.entries_remaining === 0 && (
-            <TouchableOpacity style={styles.upgradeBadge}>
-              <Text style={styles.upgradeBadgeText}>Upgrade</Text>
-            </TouchableOpacity>
+                {journalStatus.entries_remaining === 0 
+                  ? "Weekly limit reached! Upgrade for unlimited entries."
+                  : `${journalStatus.entries_remaining} of ${journalStatus.weekly_limit} entries remaining this week`
+                }
+              </Text>
+              {journalStatus.entries_remaining === 0 && (
+                <TouchableOpacity style={styles.upgradeBadge}>
+                  <Text style={styles.upgradeBadgeText}>Upgrade</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
-        </View>
-      )}
 
-      {isPremium && (
-        <View style={styles.premiumBanner}>
-          <Ionicons name="infinite" size={20} color="#10b981" />
-          <Text style={styles.premiumText}>Unlimited journal entries</Text>
-        </View>
-      )}
+          {isPremium && (
+            <View style={styles.premiumBanner}>
+              <Ionicons name="infinite" size={20} color="#10b981" />
+              <Text style={styles.premiumText}>Unlimited journal entries</Text>
+            </View>
+          )}
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#b794f6" />
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#b794f6" />
           <Text style={styles.loadingText}>Loading entries...</Text>
         </View>
       ) : (
@@ -432,8 +435,7 @@ export default function Journal() {
             );
           })
         )}
-      </ScrollView>
-        </>
+        </ScrollView>
       )}
 
       <Modal visible={showNewEntry} animationType="slide" transparent>
