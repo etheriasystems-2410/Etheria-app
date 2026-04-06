@@ -8,6 +8,16 @@ from .auth import router as auth_router
 from .spirit_guides import router as spirit_guides_router
 from .dreams import router as dreams_router, zodiac_router
 from .subscription import router as subscription_router, webhook_router, user_router
+from .meditation import router as meditation_router
+from .admin import (
+    tts_router,
+    gift_code_router,
+    prize_drawing_router,
+    usage_router,
+    admin_router,
+    feedback_router,
+    notifications_router
+)
 
 __all__ = [
     'training_router',
@@ -20,4 +30,12 @@ __all__ = [
     'subscription_router',
     'webhook_router',
     'user_router',
+    'meditation_router',
+    'tts_router',
+    'gift_code_router',
+    'prize_drawing_router',
+    'usage_router',
+    'admin_router',
+    'feedback_router',
+    'notifications_router',
 ]
