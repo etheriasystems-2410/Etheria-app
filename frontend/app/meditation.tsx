@@ -18,7 +18,6 @@ const meditationTypeIds: MeditationType[] = [
   { id: 'binaural', icon: 'headset', color: '#8b5cf6', route: '/meditation/binaural' },
   { id: 'aiGuided', icon: 'mic', color: '#3b82f6', route: '/meditation/ai-guided' },
   { id: 'timed', icon: 'timer', color: '#10b981', route: '/meditation/timed' },
-  { id: 'astral', icon: 'planet', color: '#f59e0b', route: '/meditation/astral' },
 ];
 
 export default function Meditation() {
