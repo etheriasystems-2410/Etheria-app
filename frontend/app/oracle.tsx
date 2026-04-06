@@ -802,6 +802,48 @@ export default function Oracle() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Journal Save Prompt Modal - for Card Drawing View */}
+      <Modal visible={showJournalPrompt} animationType="fade" transparent>
+        <View style={styles.journalPromptOverlay}>
+          <View style={styles.journalPromptModal}>
+            <View style={styles.journalPromptHeader}>
+              <Ionicons name="book" size={28} color="#10b981" />
+              <Text style={styles.journalPromptTitle}>Save to Journal</Text>
+            </View>
+            <Text style={styles.journalPromptSubtitle}>
+              What question or wisdom were you seeking with this reading? (Optional)
+            </Text>
+            <TextInput
+              style={styles.journalPromptInput}
+              placeholder="e.g., Guidance about my career path..."
+              placeholderTextColor="#9f7aea"
+              value={readingQuestion}
+              onChangeText={setReadingQuestion}
+              multiline
+              numberOfLines={3}
+            />
+            <View style={styles.journalPromptButtons}>
+              <TouchableOpacity
+                style={[styles.journalPromptButton, styles.journalPromptCancel]}
+                onPress={() => {
+                  setShowJournalPrompt(false);
+                  setReadingQuestion('');
+                }}
+              >
+                <Text style={styles.journalPromptCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.journalPromptButton, styles.journalPromptSave]}
+                onPress={confirmSaveToJournal}
+              >
+                <Ionicons name="save" size={18} color="#fff" />
+                <Text style={styles.journalPromptSaveText}>Save Reading</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
