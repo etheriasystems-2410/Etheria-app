@@ -401,40 +401,38 @@ export default function Journal() {
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#b794f6" />
-          <Text style={styles.loadingText}>Loading entries...</Text>
-        </View>
-      ) : (
-        <ScrollView style={styles.entriesList}>
-        {entries.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="book-outline" size={60} color="#9f7aea" />
-            <Text style={styles.emptyText}>No entries yet</Text>
-            <Text style={styles.emptySubtext}>Start journaling your spiritual journey</Text>
-          </View>
-        ) : (
-          entries.map((entry) => {
-            const categoryInfo = getCategoryInfo(entry.category);
-            return (
-              <View key={entry.id} style={styles.entryCard}>
-                <View style={styles.entryHeader}>
-                  <View
-                    style={[styles.categoryBadge, { backgroundColor: categoryInfo.color }]}
-                  >
-                    <Ionicons name={categoryInfo.icon as any} size={16} color="#fff" />
-                    <Text style={styles.categoryText}>{categoryInfo.label}</Text>
+              <Text style={styles.loadingText}>Loading entries...</Text>
+            </View>
+          ) : entries.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="book-outline" size={60} color="#9f7aea" />
+              <Text style={styles.emptyText}>No entries yet</Text>
+              <Text style={styles.emptySubtext}>Start journaling your spiritual journey</Text>
+            </View>
+          ) : (
+            entries.map((entry) => {
+              const categoryInfo = getCategoryInfo(entry.category);
+              return (
+                <View key={entry.id} style={styles.entryCard}>
+                  <View style={styles.entryHeader}>
+                    <View
+                      style={[styles.categoryBadge, { backgroundColor: categoryInfo.color }]}
+                    >
+                      <Ionicons name={categoryInfo.icon as any} size={16} color="#fff" />
+                      <Text style={styles.categoryText}>{categoryInfo.label}</Text>
+                    </View>
+                    <Text style={styles.entryDate}>
+                      {format(new Date(entry.date), 'MMM d, yyyy')}
+                    </Text>
                   </View>
-                  <Text style={styles.entryDate}>
-                    {format(new Date(entry.date), 'MMM d, yyyy')}
+                  <Text style={styles.entryTitle}>{entry.title}</Text>
+                  <Text style={styles.entryContent} numberOfLines={3}>
+                    {entry.content}
                   </Text>
                 </View>
-                <Text style={styles.entryTitle}>{entry.title}</Text>
-                <Text style={styles.entryContent} numberOfLines={3}>
-                  {entry.content}
-                </Text>
-              </View>
-            );
-          })
-        )}
+              );
+            })
+          )}
         </ScrollView>
       )}
 
