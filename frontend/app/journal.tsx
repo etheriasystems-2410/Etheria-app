@@ -72,8 +72,9 @@ export default function Journal() {
   const [saving, setSaving] = useState(false);
   const [journalStatus, setJournalStatus] = useState<JournalStatus | null>(null);
   const [trainingProgress, setTrainingProgress] = useState<TrainingProgress | null>(null);
-  const [activeTab, setActiveTab] = useState<'entries' | 'readings' | 'progress'>('entries');
+  const [activeTab, setActiveTab] = useState<'entries' | 'readings' | 'transcripts' | 'progress'>('entries');
   const [readings, setReadings] = useState<JournalEntry[]>([]);
+  const [transcripts, setTranscripts] = useState<JournalEntry[]>([]);
 
   const categories = [
     { id: 'meditation', label: 'Meditation', icon: 'fitness', color: '#8b5cf6' },
@@ -86,6 +87,7 @@ export default function Journal() {
   useEffect(() => {
     loadEntries();
     loadReadings();
+    loadTranscripts();
     loadTrainingProgress();
     if (isAuthenticated) {
       fetchJournalStatus();
@@ -103,12 +105,10 @@ export default function Journal() {
         });
         const data = await response.json();
         if (Array.isArray(data)) {
-          // Filter only oracle and spirit_guide entries
+          // Filter only oracle readings (not transcripts)
           const readingEntries = data.filter((e: any) => 
             e.entry_type === 'oracle' || 
-            e.entry_type === 'spirit_guide' ||
-            e.category === 'divination' ||
-            e.category === 'spirit_guide'
+            e.category === 'divination'
           ).map((e: any) => ({
             id: e._id || e.id,
             _id: e._id,
@@ -124,6 +124,40 @@ export default function Journal() {
       }
     } catch (error) {
       console.error('Error loading readings:', error);
+    }
+  };
+
+  const loadTranscripts = async () => {
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      if (sessionToken) {
+        const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        });
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          // Filter only spirit guide transcripts
+          const transcriptEntries = data.filter((e: any) => 
+            e.entry_type === 'transcript' || 
+            e.entry_type === 'spirit_guide' ||
+            e.category === 'spirit_guide'
+          ).map((e: any) => ({
+            id: e._id || e.id,
+            _id: e._id,
+            title: e.title,
+            content: e.content,
+            category: e.category,
+            date: e.created_at || e.date,
+            entry_type: e.entry_type,
+            metadata: e.metadata
+          }));
+          setTranscripts(transcriptEntries);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading transcripts:', error);
     }
   };
 
@@ -465,6 +499,78 @@ export default function Journal() {
     );
   };
 
+  // Render transcripts tab
+  const renderTranscriptsTab = () => {
+    if (transcripts.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Ionicons name="chatbubbles-outline" size={60} color="#9f7aea" />
+          <Text style={styles.emptyText}>No transcripts saved</Text>
+          <Text style={styles.emptySubtext}>Save your Spirit Guide chats to view them here</Text>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView style={styles.readingsContainer} contentContainerStyle={styles.readingsContent}>
+        {transcripts.map((transcript) => {
+          const guideName = transcript.metadata?.guide_name || 'Spirit Guide';
+          const guideElement = transcript.metadata?.guide_element || '';
+          const messagesCount = transcript.metadata?.messages_count || 0;
+          const transcriptDate = new Date(transcript.date);
+
+          // Get element color
+          const elementColors: { [key: string]: string } = {
+            'Fire': '#ef4444',
+            'Water': '#3b82f6',
+            'Earth': '#10b981',
+            'Air': '#a855f7',
+          };
+          const guideColor = elementColors[guideElement] || '#ec4899';
+
+          return (
+            <View key={transcript.id} style={styles.readingCard}>
+              {/* Transcript Header */}
+              <View style={styles.readingHeader}>
+                <View style={[styles.readingTypeBadge, { backgroundColor: guideColor }]}>
+                  <Ionicons name="chatbubbles" size={14} color="#fff" />
+                  <Text style={styles.readingTypeText}>Spirit Guide Chat</Text>
+                </View>
+                <View style={styles.readingDateContainer}>
+                  <Text style={styles.readingDate}>
+                    {format(transcriptDate, 'MMM d, yyyy')}
+                  </Text>
+                  <Text style={styles.readingTime}>
+                    {format(transcriptDate, 'h:mm a')}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Guide Info */}
+              <View style={styles.guideInfoRow}>
+                <View style={[styles.guideElementBadge, { backgroundColor: guideColor }]}>
+                  <Text style={styles.guideElementIcon}>
+                    {guideElement === 'Fire' ? '🔥' : guideElement === 'Water' ? '💧' : guideElement === 'Earth' ? '🌿' : '💨'}
+                  </Text>
+                  <Text style={styles.guideNameText}>{guideName}</Text>
+                </View>
+                <Text style={styles.messagesCountText}>{messagesCount} messages</Text>
+              </View>
+
+              {/* Transcript Title */}
+              <Text style={styles.readingTitle}>{transcript.title}</Text>
+
+              {/* Content Preview */}
+              <Text style={styles.transcriptContentPreview} numberOfLines={6}>
+                {transcript.content}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -484,21 +590,28 @@ export default function Journal() {
           style={[styles.tab, activeTab === 'entries' && styles.activeTab]}
           onPress={() => setActiveTab('entries')}
         >
-          <Ionicons name="book" size={18} color={activeTab === 'entries' ? '#a855f7' : '#9f7aea'} />
+          <Ionicons name="book" size={16} color={activeTab === 'entries' ? '#a855f7' : '#9f7aea'} />
           <Text style={[styles.tabText, activeTab === 'entries' && styles.activeTabText]}>Entries</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'readings' && styles.activeTab]}
           onPress={() => setActiveTab('readings')}
         >
-          <Ionicons name="sparkles" size={18} color={activeTab === 'readings' ? '#a855f7' : '#9f7aea'} />
+          <Ionicons name="sparkles" size={16} color={activeTab === 'readings' ? '#a855f7' : '#9f7aea'} />
           <Text style={[styles.tabText, activeTab === 'readings' && styles.activeTabText]}>Readings</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'transcripts' && styles.activeTab]}
+          onPress={() => setActiveTab('transcripts')}
+        >
+          <Ionicons name="chatbubbles" size={16} color={activeTab === 'transcripts' ? '#a855f7' : '#9f7aea'} />
+          <Text style={[styles.tabText, activeTab === 'transcripts' && styles.activeTabText]}>Transcripts</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'progress' && styles.activeTab]}
           onPress={() => setActiveTab('progress')}
         >
-          <Ionicons name="trending-up" size={18} color={activeTab === 'progress' ? '#a855f7' : '#9f7aea'} />
+          <Ionicons name="trending-up" size={16} color={activeTab === 'progress' ? '#a855f7' : '#9f7aea'} />
           <Text style={[styles.tabText, activeTab === 'progress' && styles.activeTabText]}>Progress</Text>
         </TouchableOpacity>
       </View>
@@ -507,6 +620,8 @@ export default function Journal() {
         renderProgressTab()
       ) : activeTab === 'readings' ? (
         renderReadingsTab()
+      ) : activeTab === 'transcripts' ? (
+        renderTranscriptsTab()
       ) : (
         <ScrollView
           style={styles.entriesContainer}
@@ -1146,6 +1261,42 @@ const styles = StyleSheet.create({
     color: '#c4b5fd',
     fontSize: 13,
     lineHeight: 20,
+  },
+  // Transcript-specific styles
+  guideInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  guideElementBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 6,
+  },
+  guideElementIcon: {
+    fontSize: 14,
+  },
+  guideNameText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  messagesCountText: {
+    color: '#9f7aea',
+    fontSize: 12,
+  },
+  transcriptContentPreview: {
+    color: '#c4b5fd',
+    fontSize: 13,
+    lineHeight: 20,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    padding: 12,
+    borderRadius: 10,
+    fontStyle: 'italic',
   },
   entriesContainer: {
     flex: 1,

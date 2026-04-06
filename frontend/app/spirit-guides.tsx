@@ -435,25 +435,35 @@ export default function SpiritGuides() {
 
       const journalEntry = {
         title: `Spirit Guide Chat: ${selectedGuide.name}`,
-        content: `Guide: ${selectedGuide.name} (${selectedGuide.element})\nDate: ${new Date().toLocaleDateString()}\n\n${chatContent}`,
+        content: `Guide: ${selectedGuide.name} (${selectedGuide.element})\nDate: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}\n\n${chatContent}`,
         category: 'spirit_guide',
-        entry_type: 'spirit_guide',
+        entry_type: 'transcript',
+        date: new Date().toISOString(),
         metadata: {
           guide_name: selectedGuide.name,
+          guide_element: selectedGuide.element,
           messages_count: messages.length,
+          chat_date: new Date().toISOString(),
         },
       };
 
+      // Get session token for authentication
+      const sessionToken = await AsyncStorage.getItem('session_token');
+
       const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': sessionToken ? `Bearer ${sessionToken}` : '',
+        },
         body: JSON.stringify(journalEntry),
       });
 
       if (response.ok) {
-        Alert.alert('Saved!', 'Chat saved to your journal.');
+        Alert.alert('Saved!', 'Chat transcript saved to your journal.');
       } else {
-        Alert.alert('Error', 'Could not save to journal. Please try again.');
+        const error = await response.json();
+        Alert.alert('Error', error.detail || 'Could not save to journal. Please try again.');
       }
     } catch (error) {
       console.error('Error saving to journal:', error);
