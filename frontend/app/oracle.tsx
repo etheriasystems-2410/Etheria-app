@@ -11,6 +11,7 @@ import {
   Dimensions,
   Alert,
   Image as RNImage,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -119,6 +120,8 @@ export default function Oracle() {
   const [audioLoading, setAudioLoading] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [showJournalPrompt, setShowJournalPrompt] = useState(false);
+  const [readingQuestion, setReadingQuestion] = useState('');
   
   const cardFlipAnim = useRef(new Animated.Value(0)).current;
   const cardScaleAnim = useRef(new Animated.Value(1)).current;
@@ -238,22 +241,35 @@ export default function Oracle() {
 
   const saveToJournal = async () => {
     if (!currentReading) return;
+    setShowJournalPrompt(true);
+  };
+
+  const confirmSaveToJournal = async () => {
+    if (!currentReading) return;
     try {
       const cardSummary = currentReading.cards.map(card => 
         `${card.position}: ${card.card.name} - ${card.interpretation}`
       ).join('\n\n');
 
+      const questionText = readingQuestion.trim() 
+        ? `\nQuestion/Wisdom Sought: ${readingQuestion}\n\n` 
+        : '\n';
+
       const journalEntry = {
         title: `Oracle Reading: ${selectedSpread?.name || 'Reading'}`,
-        content: `Spread: ${selectedSpread?.name}\nDate: ${new Date().toLocaleDateString()}\n\n${cardSummary}`,
+        content: `Spread: ${selectedSpread?.name}\nDate: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}${questionText}${cardSummary}`,
         category: 'divination',
         entry_type: 'oracle',
+        date: new Date().toISOString(),
         metadata: {
           spread_type: selectedSpread?.name,
+          question: readingQuestion.trim() || null,
+          reading_time: new Date().toISOString(),
           cards: currentReading.cards.map(c => ({
             position: c.position,
             card_name: c.card.name,
             element: c.card.element,
+            interpretation: c.interpretation,
           })),
         },
       };
@@ -266,8 +282,11 @@ export default function Oracle() {
 
       if (response.ok) {
         Alert.alert('Saved!', 'Reading saved to your journal.');
+        setShowJournalPrompt(false);
+        setReadingQuestion('');
       } else {
-        Alert.alert('Error', 'Could not save to journal. Please try again.');
+        const error = await response.json();
+        Alert.alert('Error', error.detail || 'Could not save to journal. Please try again.');
       }
     } catch (error) {
       console.error('Error saving to journal:', error);
@@ -439,6 +458,48 @@ export default function Oracle() {
           onClose={() => setShowPaywall(false)}
           feature="Premium Card Spreads"
         />
+
+        {/* Journal Save Prompt Modal */}
+        <Modal visible={showJournalPrompt} animationType="fade" transparent>
+          <View style={styles.journalPromptOverlay}>
+            <View style={styles.journalPromptModal}>
+              <View style={styles.journalPromptHeader}>
+                <Ionicons name="book" size={28} color="#10b981" />
+                <Text style={styles.journalPromptTitle}>Save to Journal</Text>
+              </View>
+              <Text style={styles.journalPromptSubtitle}>
+                What question or wisdom were you seeking with this reading? (Optional)
+              </Text>
+              <TextInput
+                style={styles.journalPromptInput}
+                placeholder="e.g., Guidance about my career path..."
+                placeholderTextColor="#9f7aea"
+                value={readingQuestion}
+                onChangeText={setReadingQuestion}
+                multiline
+                numberOfLines={3}
+              />
+              <View style={styles.journalPromptButtons}>
+                <TouchableOpacity
+                  style={[styles.journalPromptButton, styles.journalPromptCancel]}
+                  onPress={() => {
+                    setShowJournalPrompt(false);
+                    setReadingQuestion('');
+                  }}
+                >
+                  <Text style={styles.journalPromptCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.journalPromptButton, styles.journalPromptSave]}
+                  onPress={confirmSaveToJournal}
+                >
+                  <Ionicons name="save" size={18} color="#fff" />
+                  <Text style={styles.journalPromptSaveText}>Save Reading</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* History Modal */}
         <Modal visible={showHistory} animationType="slide" transparent>

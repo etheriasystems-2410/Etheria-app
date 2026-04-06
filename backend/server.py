@@ -635,6 +635,7 @@ Write in plain prose without any markdown formatting - this will be read aloud."
         raise HTTPException(status_code=500, detail="Failed to generate meditation")
 
 @api_router.post("/journal/save")
+@api_router.post("/journal/entries")
 async def save_journal_entry(entry: dict, request: Request):
     """Save a journal entry"""
     try:
