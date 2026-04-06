@@ -12,6 +12,7 @@ import {
   Platform,
   Modal,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +20,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const DREAMS_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/la383jz1_36726.jpg';
 
 // Common dream symbols for quick selection
 const DREAM_SYMBOLS = [
@@ -228,25 +230,33 @@ export default function DreamsScreen() {
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Ionicons name="moon" size={28} color="#a855f7" />
-            <Text style={styles.headerTitle}>Dream Interpreter</Text>
-          </View>
-          {interpretation && (
-            <TouchableOpacity style={styles.clearButton} onPress={clearForm}>
-              <Ionicons name="refresh" size={20} color="#9f7aea" />
-            </TouchableOpacity>
-          )}
-        </View>
-
         <ScrollView 
           ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Hero Image Section */}
+          <View style={styles.heroSection}>
+            <Image
+              source={{ uri: DREAMS_HERO_IMAGE }}
+              style={styles.heroImage}
+              contentFit="cover"
+            />
+            <View style={styles.heroOverlay}>
+              <Ionicons name="moon" size={50} color="#a855f7" />
+              <Text style={styles.heroTitle}>Dream Interpreter</Text>
+              <Text style={styles.heroSubtitle}>Unlock the mysteries of your dreams</Text>
+            </View>
+          </View>
+
+          {interpretation && (
+            <TouchableOpacity style={styles.clearButton} onPress={clearForm}>
+              <Ionicons name="refresh" size={18} color="#9f7aea" />
+              <Text style={styles.clearButtonText}>New Dream</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Dream Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
@@ -452,10 +462,54 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#e9d5ff',
   },
+  heroSection: {
+    height: 180,
+    position: 'relative',
+    marginBottom: 16,
+    marginHorizontal: -20,
+    marginTop: -20,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#c4b5fd',
+    marginTop: 6,
+    textAlign: 'center',
+  },
   clearButton: {
-    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
     borderRadius: 8,
     backgroundColor: '#1a0a2e',
+    gap: 6,
+    alignSelf: 'flex-end',
+    marginBottom: 12,
+  },
+  clearButtonText: {
+    color: '#9f7aea',
+    fontSize: 14,
   },
   scrollView: {
     flex: 1,

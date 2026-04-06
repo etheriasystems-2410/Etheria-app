@@ -14,7 +14,7 @@ import {
   Image,
   Animated,
 } from 'react-native';
-import { BackgroundImage } from '../components/BackgroundImage';
+import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,6 +23,7 @@ import { Paywall } from '../components/Paywall';
 import { AudioPlayerManager, setupAudioMode } from '../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const SPIRIT_GUIDES_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/yv072mjq_36707.png';
 
 interface Guide {
   name: string;
@@ -583,32 +584,36 @@ export default function SpiritGuides() {
 
   if (!selectedGuide) {
     return (
-      <BackgroundImage 
-        source={require('../assets/backgrounds/spirit-guides-bg.png')}
-        opacity={0.3}
-        overlayColor="rgba(15, 3, 33, 0.7)"
-      >
+      <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.selectionContainer}>
-          <View style={styles.header}>
-            <Ionicons name="chatbubbles" size={60} color="#b794f6" />
-            <Text style={styles.title}>Spirit Guides</Text>
-            <Text style={styles.subtitle}>Select your guide to begin</Text>
-            
-            {/* Enter/Update Birthday Link */}
-            <TouchableOpacity 
-              style={styles.enterBirthdayButton}
-              onPress={() => {
-                setBirthMonth('');
-                setBirthDay('');
-                setShowBirthdayInput(true);
-              }}
-            >
-              <Ionicons name="calendar" size={16} color="#b794f6" />
-              <Text style={styles.enterBirthdayText}>
-                {suggestedGuide ? 'Update birthday' : 'Enter birthday for guide pairing'}
-              </Text>
-            </TouchableOpacity>
+          {/* Hero Image Section */}
+          <View style={styles.heroSection}>
+            <ExpoImage
+              source={{ uri: SPIRIT_GUIDES_HERO_IMAGE }}
+              style={styles.heroImage}
+              contentFit="cover"
+            />
+            <View style={styles.heroOverlay}>
+              <Ionicons name="chatbubbles" size={50} color="#b794f6" />
+              <Text style={styles.heroTitle}>Spirit Guides</Text>
+              <Text style={styles.heroSubtitle}>Select your guide to begin</Text>
+            </View>
           </View>
+          
+          {/* Enter/Update Birthday Link */}
+          <TouchableOpacity 
+            style={styles.enterBirthdayButton}
+            onPress={() => {
+              setBirthMonth('');
+              setBirthDay('');
+              setShowBirthdayInput(true);
+            }}
+          >
+            <Ionicons name="calendar" size={16} color="#b794f6" />
+            <Text style={styles.enterBirthdayText}>
+              {suggestedGuide ? 'Update birthday' : 'Enter birthday for guide pairing'}
+            </Text>
+          </TouchableOpacity>
 
           {suggestedGuide && (
             <View style={styles.suggestedCard}>
@@ -653,7 +658,7 @@ export default function SpiritGuides() {
             ))}
           </View>
         </ScrollView>
-      </BackgroundImage>
+      </View>
     );
   }
 
@@ -926,6 +931,39 @@ const styles = StyleSheet.create({
   },
   selectionContainer: {
     padding: 12,
+    paddingTop: 0,
+  },
+  heroSection: {
+    height: 200,
+    position: 'relative',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: '#c4b5fd',
+    marginTop: 6,
+    textAlign: 'center',
   },
   header: {
     alignItems: 'center',
