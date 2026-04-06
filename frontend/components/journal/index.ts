@@ -10,3 +10,4 @@ export { EmptyState } from './EmptyState';
 export { ReadingsTab } from './ReadingsTab';
 export { TranscriptsTab } from './TranscriptsTab';
 export { ProgressTab } from './ProgressTab';
+export { DreamsTab } from './DreamsTab';

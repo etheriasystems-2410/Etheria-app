@@ -24,6 +24,7 @@ import {
   ReadingsTab, 
   TranscriptsTab, 
   ProgressTab,
+  DreamsTab,
   EmptyState,
   JournalEntry as JournalEntryType,
   TrainingProgress as TrainingProgressType,
@@ -57,8 +58,6 @@ export default function Journal() {
   const [readings, setReadings] = useState<JournalEntry[]>([]);
   const [transcripts, setTranscripts] = useState<JournalEntry[]>([]);
   const [dreams, setDreams] = useState<JournalEntry[]>([]);
-  const [expandedTranscripts, setExpandedTranscripts] = useState<Set<string>>(new Set());
-  const [expandedDreams, setExpandedDreams] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: 'entry' | 'reading' | 'transcript' | 'dream' } | null>(null);
 
   const categories = [
@@ -468,122 +467,6 @@ export default function Journal() {
 
 
 
-  // Render dreams tab
-  const renderDreamsTab = () => {
-    if (dreams.length === 0) {
-      return (
-        <View style={styles.emptyState}>
-          <Ionicons name="moon-outline" size={60} color="#9f7aea" />
-          <Text style={styles.emptyText}>No dreams saved</Text>
-          <Text style={styles.emptySubtext}>Interpret your dreams and save them here</Text>
-        </View>
-      );
-    }
-
-    const toggleDreamExpanded = (id: string) => {
-      setExpandedDreams(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(id)) {
-          newSet.delete(id);
-        } else {
-          newSet.add(id);
-        }
-        return newSet;
-      });
-    };
-
-    return (
-      <ScrollView style={styles.readingsContainer} contentContainerStyle={styles.readingsContent}>
-        {dreams.map((dream) => {
-          const dreamDate = new Date(dream.date);
-          const isExpanded = expandedDreams.has(dream.id);
-          const symbols = dream.metadata?.symbols || [];
-          const feelings = dream.metadata?.feelings || [];
-
-          return (
-            <View key={dream.id} style={styles.readingCard}>
-              {/* Dream Header */}
-              <View style={styles.readingHeader}>
-                <View style={[styles.readingTypeBadge, { backgroundColor: '#6366f1' }]}>
-                  <Ionicons name="moon" size={14} color="#fff" />
-                  <Text style={styles.readingTypeText}>Dream</Text>
-                </View>
-                <View style={styles.readingHeaderRight}>
-                  <View style={styles.readingDateContainer}>
-                    <Text style={styles.readingDate}>
-                      {format(dreamDate, 'MMM d, yyyy')}
-                    </Text>
-                    <Text style={styles.readingTime}>
-                      {format(dreamDate, 'h:mm a')}
-                    </Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.deleteButton}
-                    onPress={() => deleteEntry(dream._id || dream.id, 'dream')}
-                  >
-                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Dream Title */}
-              <Text style={styles.readingTitle}>{dream.title}</Text>
-
-              {/* Symbols & Feelings */}
-              {(symbols.length > 0 || feelings.length > 0) && (
-                <View style={styles.dreamMetaContainer}>
-                  {symbols.length > 0 && (
-                    <View style={styles.dreamMetaRow}>
-                      <Text style={styles.dreamMetaLabel}>Symbols:</Text>
-                      <Text style={styles.dreamMetaValue}>{symbols.join(', ')}</Text>
-                    </View>
-                  )}
-                  {feelings.length > 0 && (
-                    <View style={styles.dreamMetaRow}>
-                      <Text style={styles.dreamMetaLabel}>Feelings:</Text>
-                      <Text style={styles.dreamMetaValue}>{feelings.join(', ')}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Content - Expandable */}
-              {isExpanded ? (
-                <ScrollView 
-                  style={styles.transcriptScrollView}
-                  nestedScrollEnabled={true}
-                >
-                  <Text style={styles.transcriptContentFull}>
-                    {dream.content}
-                  </Text>
-                </ScrollView>
-              ) : (
-                <Text style={styles.transcriptContentPreview} numberOfLines={4}>
-                  {dream.content}
-                </Text>
-              )}
-
-              {/* Expand/Collapse Button */}
-              <TouchableOpacity 
-                style={styles.expandButton}
-                onPress={() => toggleDreamExpanded(dream.id)}
-              >
-                <Ionicons 
-                  name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-                  size={18} 
-                  color="#a855f7" 
-                />
-                <Text style={styles.expandButtonText}>
-                  {isExpanded ? 'Show Less' : 'View Full Interpretation'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          );
-        })}
-      </ScrollView>
-    );
-  };
-
   return (
     <View style={styles.container}>
       {/* Hero Image Section */}
@@ -666,7 +549,10 @@ export default function Journal() {
           onDelete={(id, type) => setDeleteConfirm({ id, type })}
         />
       ) : activeTab === 'dreams' ? (
-        renderDreamsTab()
+        <DreamsTab 
+          dreams={dreams}
+          onDelete={(id, type) => setDeleteConfirm({ id, type })}
+        />
       ) : (
         <ScrollView
           style={styles.entriesContainer}
