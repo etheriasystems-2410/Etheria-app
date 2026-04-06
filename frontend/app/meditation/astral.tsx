@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ImageBackground,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -118,16 +119,21 @@ export default function AstralTravel() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Astral Travel Practice</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <ImageBackground 
+      source={require('../../assets/backgrounds/astral-bg.jpg')}
+      style={styles.container}
+      imageStyle={styles.backgroundImage}
+    >
+      <View style={styles.backgroundOverlay}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Astral Travel Practice</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.warningCard}>
           <Ionicons name="warning" size={32} color="#f59e0b" />
           <Text style={styles.warningTitle}>Important Guidelines</Text>
@@ -201,7 +207,8 @@ export default function AstralTravel() {
         }}
         feature="Astral Travel Practice"
       />
-    </View>
+      </View>
+    </ImageBackground>
   );
 }
 
@@ -210,12 +217,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f0321',
   },
+  backgroundImage: {
+    opacity: 0.25,
+  },
+  backgroundOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 3, 33, 0.75)',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#1a0033',
+    backgroundColor: 'rgba(26, 0, 51, 0.8)',
     borderBottomWidth: 1,
     borderBottomColor: '#2d1b4e',
   },
