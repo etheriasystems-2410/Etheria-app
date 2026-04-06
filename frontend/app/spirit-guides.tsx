@@ -449,8 +449,6 @@ export default function SpiritGuides() {
 
       // Get session token for authentication
       const sessionToken = await AsyncStorage.getItem('session_token');
-      
-      console.log('Saving chat to journal:', { sessionToken: !!sessionToken, messagesCount: messages.length });
 
       const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
         method: 'POST',
@@ -461,13 +459,31 @@ export default function SpiritGuides() {
         body: JSON.stringify(journalEntry),
       });
 
-      console.log('Journal save response:', response.status);
-
       if (response.ok) {
-        Alert.alert('Saved!', 'Chat transcript saved to your journal.');
+        // Spirit Guide acknowledges the save with a personalized message
+        const acknowledgments: { [key: string]: string } = {
+          'Fire': `Our conversation has been preserved in your journal, like embers kept warm for reflection. May these words ignite your path when you revisit them. 🔥`,
+          'Water': `I have gently placed our exchange into your journal's waters. Return to it whenever you need to flow with these insights again. 💧`,
+          'Earth': `Our wisdom has been grounded in your journal, planted like seeds for future growth. May it nourish your journey ahead. 🌿`,
+          'Air': `Our words have been carried into your journal on the wind. They await you there, ready to inspire new thoughts whenever you return. 💨`,
+        };
+        
+        const guideAcknowledgment = acknowledgments[selectedGuide.element] || 
+          `Our conversation has been saved to your journal. Return to it whenever you seek guidance from our exchange.`;
+        
+        // Add the acknowledgment as a new message from the guide
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: guideAcknowledgment,
+          hasAudio: false,
+        }]);
+        
+        // Scroll to show the new message
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
       } else {
         const error = await response.json();
-        console.log('Journal save error:', error);
         Alert.alert('Error', error.detail || 'Could not save to journal. Please try again.');
       }
     } catch (error) {
