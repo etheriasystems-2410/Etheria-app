@@ -107,6 +107,16 @@ function ProtectedLayout() {
         }}
       />
       <Drawer.Screen
+        name="astral-training"
+        options={{
+          drawerLabel: 'Astral Travel Self-Study',
+          title: 'Astral Travel Self-Study',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="planet" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="training"
         options={{
           drawerLabel: t('psychicTraining'),

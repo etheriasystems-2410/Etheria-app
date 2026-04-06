@@ -356,7 +356,7 @@ export default function BinauralMeditation() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/meditation')} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Binaural Meditation</Text>

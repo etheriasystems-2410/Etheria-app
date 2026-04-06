@@ -6,11 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { BackgroundImage } from '../../components/BackgroundImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../contexts/AuthContext';
-import { Paywall } from '../../components/Paywall';
+import { useAuth } from '../contexts/AuthContext';
+import { Paywall } from '../components/Paywall';
 
 interface AstralLevel {
   id: string;
@@ -125,9 +124,7 @@ export default function AstralTravel() {
       overlayColor="rgba(15, 3, 33, 0.7)"
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/meditation')} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Astral Travel Self-Study</Text>
         <View style={{ width: 24 }} />
       </View>

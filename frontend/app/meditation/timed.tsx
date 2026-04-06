@@ -195,7 +195,7 @@ export default function TimedMeditation() {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Meditations</Text>
+        <Text style={styles.headerTitle}>Timed Meditation with Ambient Sounds</Text>
         <View style={{ width: 24 }} />
       </View>
 

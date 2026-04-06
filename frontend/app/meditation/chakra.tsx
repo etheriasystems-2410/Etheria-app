@@ -406,7 +406,7 @@ export default function ChakraMeditation() {
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {showSession ? (isRealignAll ? 'Chakra Realignment' : selectedChakra?.name) : 'Meditations'}
+          {showSession ? (isRealignAll ? 'Chakra Realignment' : selectedChakra?.name) : 'Chakra Meditations'}
         </Text>
         <View style={{ width: 24 }} />
       </View>
