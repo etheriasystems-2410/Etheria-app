@@ -163,6 +163,17 @@ const translations = {
     selectLanguage: 'Select Language',
     languageChanged: 'Language changed successfully',
     
+    // Support/Contact
+    contact: 'Contact',
+    feedbackBugReports: 'Feedback & Bug Reports',
+    emailUs: 'Email Us',
+    visitWebsite: 'Visit Our Website',
+    whatsappSupport: 'WhatsApp Support',
+    chatDirectly: 'Chat with us directly',
+    followFacebook: 'Follow on Facebook',
+    followInstagram: 'Follow on Instagram',
+    followTiktok: 'Follow on TikTok',
+    
     // Misc
     comingSoon: 'Coming Soon',
     featureNotAvailable: 'This feature is not available yet',
@@ -304,6 +315,17 @@ const translations = {
     // Languages
     selectLanguage: 'Seleccionar Idioma',
     languageChanged: 'Idioma cambiado exitosamente',
+    
+    // Support/Contact
+    contact: 'Contacto',
+    feedbackBugReports: 'Comentarios y Errores',
+    emailUs: 'Envíanos un Email',
+    visitWebsite: 'Visita Nuestro Sitio',
+    whatsappSupport: 'Soporte WhatsApp',
+    chatDirectly: 'Chatea con nosotros',
+    followFacebook: 'Síguenos en Facebook',
+    followInstagram: 'Síguenos en Instagram',
+    followTiktok: 'Síguenos en TikTok',
     
     // Misc
     comingSoon: 'Próximamente',
@@ -447,6 +469,17 @@ const translations = {
     selectLanguage: 'Sélectionner la Langue',
     languageChanged: 'Langue changée avec succès',
     
+    // Support/Contact
+    contact: 'Contact',
+    feedbackBugReports: 'Commentaires et Bugs',
+    emailUs: 'Envoyez-nous un Email',
+    visitWebsite: 'Visitez Notre Site',
+    whatsappSupport: 'Support WhatsApp',
+    chatDirectly: 'Discutez avec nous',
+    followFacebook: 'Suivez sur Facebook',
+    followInstagram: 'Suivez sur Instagram',
+    followTiktok: 'Suivez sur TikTok',
+    
     // Misc
     comingSoon: 'Bientôt Disponible',
     featureNotAvailable: "Cette fonctionnalité n'est pas encore disponible",
@@ -588,6 +621,17 @@ const translations = {
     // Languages
     selectLanguage: 'Sprache Auswählen',
     languageChanged: 'Sprache erfolgreich geändert',
+    
+    // Support/Contact
+    contact: 'Kontakt',
+    feedbackBugReports: 'Feedback & Fehler',
+    emailUs: 'E-Mail senden',
+    visitWebsite: 'Unsere Website besuchen',
+    whatsappSupport: 'WhatsApp Support',
+    chatDirectly: 'Direkt mit uns chatten',
+    followFacebook: 'Folgen auf Facebook',
+    followInstagram: 'Folgen auf Instagram',
+    followTiktok: 'Folgen auf TikTok',
     
     // Misc
     comingSoon: 'Demnächst',
@@ -731,6 +775,17 @@ const translations = {
     selectLanguage: 'Seleziona Lingua',
     languageChanged: 'Lingua cambiata con successo',
     
+    // Support/Contact
+    contact: 'Contatto',
+    feedbackBugReports: 'Feedback e Bug',
+    emailUs: 'Inviaci un\'Email',
+    visitWebsite: 'Visita il Nostro Sito',
+    whatsappSupport: 'Supporto WhatsApp',
+    chatDirectly: 'Chatta con noi',
+    followFacebook: 'Seguici su Facebook',
+    followInstagram: 'Seguici su Instagram',
+    followTiktok: 'Seguici su TikTok',
+    
     // Misc
     comingSoon: 'Prossimamente',
     featureNotAvailable: 'Questa funzionalità non è ancora disponibile',
@@ -872,6 +927,17 @@ const translations = {
     // Languages
     selectLanguage: 'Selecionar Idioma',
     languageChanged: 'Idioma alterado com sucesso',
+    
+    // Support/Contact
+    contact: 'Contato',
+    feedbackBugReports: 'Feedback e Bugs',
+    emailUs: 'Envie um Email',
+    visitWebsite: 'Visite Nosso Site',
+    whatsappSupport: 'Suporte WhatsApp',
+    chatDirectly: 'Converse conosco',
+    followFacebook: 'Siga no Facebook',
+    followInstagram: 'Siga no Instagram',
+    followTiktok: 'Siga no TikTok',
     
     // Misc
     comingSoon: 'Em Breve',
@@ -1015,6 +1081,17 @@ const translations = {
     selectLanguage: '言語を選択',
     languageChanged: '言語が正常に変更されました',
     
+    // Support/Contact
+    contact: '連絡先',
+    feedbackBugReports: 'フィードバックとバグ',
+    emailUs: 'メールを送る',
+    visitWebsite: 'ウェブサイトを訪問',
+    whatsappSupport: 'WhatsAppサポート',
+    chatDirectly: '直接チャット',
+    followFacebook: 'Facebookでフォロー',
+    followInstagram: 'Instagramでフォロー',
+    followTiktok: 'TikTokでフォロー',
+    
     // Misc
     comingSoon: '近日公開',
     featureNotAvailable: 'この機能はまだ利用できません',
@@ -1157,6 +1234,17 @@ const translations = {
     selectLanguage: '언어 선택',
     languageChanged: '언어가 성공적으로 변경되었습니다',
     
+    // Support/Contact
+    contact: '연락처',
+    feedbackBugReports: '피드백 및 버그',
+    emailUs: '이메일 보내기',
+    visitWebsite: '웹사이트 방문',
+    whatsappSupport: 'WhatsApp 지원',
+    chatDirectly: '직접 채팅',
+    followFacebook: 'Facebook 팔로우',
+    followInstagram: 'Instagram 팔로우',
+    followTiktok: 'TikTok 팔로우',
+    
     // Misc
     comingSoon: '곧 출시',
     featureNotAvailable: '이 기능은 아직 사용할 수 없습니다',
@@ -1298,6 +1386,17 @@ const translations = {
     // Languages
     selectLanguage: '选择语言',
     languageChanged: '语言更改成功',
+    
+    // Support/Contact
+    contact: '联系',
+    feedbackBugReports: '反馈和错误',
+    emailUs: '发送邮件',
+    visitWebsite: '访问网站',
+    whatsappSupport: 'WhatsApp支持',
+    chatDirectly: '直接聊天',
+    followFacebook: '关注Facebook',
+    followInstagram: '关注Instagram',
+    followTiktok: '关注TikTok',
     
     // Misc
     comingSoon: '即将推出',

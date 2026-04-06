@@ -4,13 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
-import { LanguageProvider } from '../contexts/LanguageContext';
+import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 import { useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
 
 function ProtectedLayout() {
   const { isAuthenticated, loading } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const segments = useSegments();
   const router = useRouter();
 
@@ -58,8 +59,8 @@ function ProtectedLayout() {
       <Drawer.Screen
         name="index"
         options={{
-          drawerLabel: 'Home',
-          title: 'Explore Etheria',
+          drawerLabel: t('home'),
+          title: t('welcomeMessage'),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
@@ -68,8 +69,8 @@ function ProtectedLayout() {
       <Drawer.Screen
         name="training"
         options={{
-          drawerLabel: 'Psychic Training',
-          title: 'Psychic Training',
+          drawerLabel: t('psychicTraining'),
+          title: t('psychicTraining'),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="school" size={size} color={color} />
           ),
@@ -78,8 +79,8 @@ function ProtectedLayout() {
       <Drawer.Screen
         name="oracle"
         options={{
-          drawerLabel: 'Oracle Divination',
-          title: 'Oracle Divination',
+          drawerLabel: t('oracleTitle'),
+          title: t('oracleTitle'),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="sparkles" size={size} color={color} />
           ),
@@ -88,8 +89,8 @@ function ProtectedLayout() {
       <Drawer.Screen
         name="spirit-guides"
         options={{
-          drawerLabel: 'Spirit Guides',
-          title: 'Spirit Guides',
+          drawerLabel: t('spiritGuidesTitle'),
+          title: t('spiritGuidesTitle'),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles" size={size} color={color} />
           ),
@@ -98,8 +99,8 @@ function ProtectedLayout() {
       <Drawer.Screen
         name="meditation"
         options={{
-          drawerLabel: 'Meditation',
-          title: 'Meditation Hub',
+          drawerLabel: t('meditationTitle'),
+          title: t('meditationTitle'),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="fitness" size={size} color={color} />
           ),
@@ -108,8 +109,8 @@ function ProtectedLayout() {
       <Drawer.Screen
         name="journal"
         options={{
-          drawerLabel: 'Journal',
-          title: 'My Journal',
+          drawerLabel: t('journalTitle'),
+          title: t('journalTitle'),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="book" size={size} color={color} />
           ),
@@ -118,8 +119,8 @@ function ProtectedLayout() {
       <Drawer.Screen
         name="settings"
         options={{
-          drawerLabel: 'Settings',
-          title: 'Settings',
+          drawerLabel: t('settingsTitle'),
+          title: t('settingsTitle'),
           drawerIcon: ({ color, size}) => (
             <Ionicons name="settings" size={size} color={color} />
           ),

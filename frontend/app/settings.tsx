@@ -447,14 +447,14 @@ export default function Settings() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Contact</Text>
+        <Text style={styles.sectionTitle}>{t('contact')}</Text>
         
         <TouchableOpacity 
           style={styles.settingItem}
           onPress={() => router.push('/feedback')}
         >
           <Ionicons name="chatbubble-ellipses" size={24} color="#ec4899" />
-          <Text style={styles.settingText}>Feedback & Bug Reports</Text>
+          <Text style={styles.settingText}>{t('feedbackBugReports')}</Text>
           <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
         </TouchableOpacity>
 
@@ -464,7 +464,7 @@ export default function Settings() {
         >
           <Ionicons name="mail" size={24} color="#b794f6" />
           <View style={styles.settingTextContainer}>
-            <Text style={styles.settingText}>Email Us</Text>
+            <Text style={styles.settingText}>{t('emailUs')}</Text>
             <Text style={styles.settingSubtext}>etheriasystems@gmail.com</Text>
           </View>
           <Ionicons name="open-outline" size={20} color="#9f7aea" />
@@ -476,7 +476,7 @@ export default function Settings() {
         >
           <Ionicons name="globe" size={24} color="#b794f6" />
           <View style={styles.settingTextContainer}>
-            <Text style={styles.settingText}>Visit Our Website</Text>
+            <Text style={styles.settingText}>{t('visitWebsite')}</Text>
             <Text style={styles.settingSubtext}>www.etheriasystems.online</Text>
           </View>
           <Ionicons name="open-outline" size={20} color="#9f7aea" />
@@ -488,8 +488,8 @@ export default function Settings() {
         >
           <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
           <View style={styles.settingTextContainer}>
-            <Text style={styles.settingText}>WhatsApp Support</Text>
-            <Text style={styles.settingSubtext}>Chat with us directly</Text>
+            <Text style={styles.settingText}>{t('whatsappSupport')}</Text>
+            <Text style={styles.settingSubtext}>{t('chatDirectly')}</Text>
           </View>
           <Ionicons name="open-outline" size={20} color="#9f7aea" />
         </TouchableOpacity>
@@ -500,7 +500,7 @@ export default function Settings() {
         >
           <Ionicons name="logo-facebook" size={24} color="#1877F2" />
           <View style={styles.settingTextContainer}>
-            <Text style={styles.settingText}>Follow on Facebook</Text>
+            <Text style={styles.settingText}>{t('followFacebook')}</Text>
             <Text style={styles.settingSubtext}>@EtheriaSystems</Text>
           </View>
           <Ionicons name="open-outline" size={20} color="#9f7aea" />
@@ -511,7 +511,7 @@ export default function Settings() {
           onPress={() => Linking.openURL('https://www.etheriasystems.online/privacy')}
         >
           <Ionicons name="shield-checkmark" size={24} color="#b794f6" />
-          <Text style={styles.settingText}>Privacy Policy</Text>
+          <Text style={styles.settingText}>{t('privacyPolicy')}</Text>
           <Ionicons name="open-outline" size={20} color="#9f7aea" />
         </TouchableOpacity>
 
@@ -520,14 +520,14 @@ export default function Settings() {
           onPress={() => Linking.openURL('https://www.etheriasystems.online/terms')}
         >
           <Ionicons name="document-text" size={24} color="#b794f6" />
-          <Text style={styles.settingText}>Terms of Service</Text>
+          <Text style={styles.settingText}>{t('termsOfService')}</Text>
           <Ionicons name="open-outline" size={20} color="#9f7aea" />
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out" size={24} color="#ef4444" />
-        <Text style={styles.logoutText}>Logout</Text>
+        <Text style={styles.logoutText}>{t('logout')}</Text>
       </TouchableOpacity>
 
       <Text style={styles.version}>Version 1.0.0</Text>
