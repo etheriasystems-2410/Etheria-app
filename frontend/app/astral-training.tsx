@@ -118,11 +118,7 @@ export default function AstralTravel() {
   }
 
   return (
-    <BackgroundImage 
-      source={require('../../assets/backgrounds/astral-bg.jpg')}
-      opacity={0.3}
-      overlayColor="rgba(15, 3, 33, 0.7)"
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Astral Travel Self-Study</Text>
@@ -203,7 +199,7 @@ export default function AstralTravel() {
         }}
         feature="Astral Travel Practice"
       />
-    </BackgroundImage>
+    </View>
   );
 }
 
