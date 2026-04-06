@@ -902,12 +902,12 @@ export default function Journal() {
             )}
 
             <Text style={styles.label}>Category</Text>
-            <View style={styles.categoriesRow}>
+            <View style={styles.categoriesGrid}>
               {categories.map((cat) => (
                 <TouchableOpacity
                   key={cat.id}
                   style={[
-                    styles.categoryChip,
+                    styles.categoryChipWithLabel,
                     selectedCategory === cat.id && {
                       backgroundColor: cat.color,
                       borderColor: cat.color,
@@ -920,6 +920,12 @@ export default function Journal() {
                     size={20}
                     color={selectedCategory === cat.id ? '#fff' : '#c4b5fd'}
                   />
+                  <Text style={[
+                    styles.categoryChipLabel,
+                    selectedCategory === cat.id && styles.categoryChipLabelSelected
+                  ]}>
+                    {cat.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -1133,6 +1139,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
   categoryChip: {
     width: 48,
     height: 48,
@@ -1142,6 +1153,25 @@ const styles = StyleSheet.create({
     borderColor: '#2d1b4e',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  categoryChipWithLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#2d1b4e',
+    borderWidth: 2,
+    borderColor: '#2d1b4e',
+    gap: 8,
+  },
+  categoryChipLabel: {
+    color: '#c4b5fd',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  categoryChipLabelSelected: {
+    color: '#fff',
   },
   titleInput: {
     backgroundColor: '#2d1b4e',
