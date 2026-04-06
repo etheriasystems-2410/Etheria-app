@@ -435,6 +435,21 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: Journal page UI structure verified. Page loads correctly with proper navigation, header with 'My Journal' title, and add button functionality. Entry limit UI components are implemented in code (limitBanner, premiumBanner, modalLimitWarning) with proper styling and logic. Authentication required for full testing of limit functionality. UI elements for free user limits (yellow/orange banner), premium unlimited access (green banner with infinity icon), and modal warnings are properly implemented. Minor: Could not fully test entry limit scenarios due to authentication challenges with test credentials, but code review confirms proper implementation of all required UI components."
+      - working: true
+        agent: "main"
+        comment: "✅ ENHANCED: Journal now has 3 tabs - Entries, Readings, Progress. Readings tab displays saved Oracle/Spirit Guide readings with date, time, reading type, spread type, and user's question/wisdom sought. The Oracle Save to Journal modal prompts user for their question before saving. Backend endpoints POST /api/journal/entries and POST /api/journal/save both work correctly."
+
+  - task: "Oracle Save to Journal with Question Prompt"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/oracle.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "✅ IMPLEMENTED: Oracle reading can now be saved to journal. A modal prompts user to enter their question/wisdom sought before saving. Saves to journal with full metadata (spread_type, cards, question, date/time)."
 
   - task: "Prize Drawing and Gift Code System"
     implemented: true
