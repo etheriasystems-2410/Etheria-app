@@ -76,6 +76,7 @@ export default function Journal() {
   const [activeTab, setActiveTab] = useState<'entries' | 'readings' | 'transcripts' | 'progress'>('entries');
   const [readings, setReadings] = useState<JournalEntry[]>([]);
   const [transcripts, setTranscripts] = useState<JournalEntry[]>([]);
+  const [expandedTranscripts, setExpandedTranscripts] = useState<Set<string>>(new Set());
 
   const categories = [
     { id: 'meditation', label: 'Meditation', icon: 'fitness', color: '#8b5cf6' },
@@ -596,6 +597,18 @@ export default function Journal() {
       );
     }
 
+    const toggleExpanded = (id: string) => {
+      setExpandedTranscripts(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+          newSet.delete(id);
+        } else {
+          newSet.add(id);
+        }
+        return newSet;
+      });
+    };
+
     return (
       <ScrollView style={styles.readingsContainer} contentContainerStyle={styles.readingsContent}>
         {transcripts.map((transcript) => {
@@ -603,6 +616,7 @@ export default function Journal() {
           const guideElement = transcript.metadata?.guide_element || '';
           const messagesCount = transcript.metadata?.messages_count || 0;
           const transcriptDate = new Date(transcript.date);
+          const isExpanded = expandedTranscripts.has(transcript.id);
 
           // Get element color
           const elementColors: { [key: string]: string } = {
@@ -645,10 +659,36 @@ export default function Journal() {
               {/* Transcript Title */}
               <Text style={styles.readingTitle}>{transcript.title}</Text>
 
-              {/* Content Preview */}
-              <Text style={styles.transcriptContentPreview} numberOfLines={6}>
-                {transcript.content}
-              </Text>
+              {/* Content - Expandable */}
+              {isExpanded ? (
+                <ScrollView 
+                  style={styles.transcriptScrollView}
+                  nestedScrollEnabled={true}
+                >
+                  <Text style={styles.transcriptContentFull}>
+                    {transcript.content}
+                  </Text>
+                </ScrollView>
+              ) : (
+                <Text style={styles.transcriptContentPreview} numberOfLines={4}>
+                  {transcript.content}
+                </Text>
+              )}
+
+              {/* Expand/Collapse Button */}
+              <TouchableOpacity 
+                style={styles.expandButton}
+                onPress={() => toggleExpanded(transcript.id)}
+              >
+                <Ionicons 
+                  name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                  size={18} 
+                  color="#a855f7" 
+                />
+                <Text style={styles.expandButtonText}>
+                  {isExpanded ? 'Show Less' : 'View Full Chat'}
+                </Text>
+              </TouchableOpacity>
             </View>
           );
         })}
@@ -1382,6 +1422,33 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     fontStyle: 'italic',
+  },
+  transcriptScrollView: {
+    maxHeight: 400,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  transcriptContentFull: {
+    color: '#c4b5fd',
+    fontSize: 13,
+    lineHeight: 22,
+    padding: 12,
+  },
+  expandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#2d1b4e',
+    marginTop: 8,
+  },
+  expandButtonText: {
+    color: '#a855f7',
+    fontSize: 14,
+    fontWeight: '600',
   },
   // Training completion styles
   completionCard: {
