@@ -246,10 +246,38 @@ export default function SpiritGuides() {
     }
   };
 
+  // Greetings in all supported languages
+  const getGreeting = (guideName: string, element: string, lang: string): string => {
+    const greetings: Record<string, string> = {
+      en: `Greetings, seeker. I am ${guideName}, guide of ${element}. How may I illuminate your path?`,
+      es: `Saludos, buscador. Soy ${guideName}, guía del ${element}. ¿Cómo puedo iluminar tu camino?`,
+      fr: `Salutations, chercheur. Je suis ${guideName}, guide de ${element}. Comment puis-je éclairer votre chemin?`,
+      de: `Grüße, Suchender. Ich bin ${guideName}, Führer des ${element}. Wie kann ich deinen Weg erhellen?`,
+      it: `Saluti, cercatore. Sono ${guideName}, guida del ${element}. Come posso illuminare il tuo cammino?`,
+      pt: `Saudações, buscador. Eu sou ${guideName}, guia do ${element}. Como posso iluminar seu caminho?`,
+      ja: `ご挨拶申し上げます、探求者よ。私は${guideName}、${element}の導き手です。あなたの道をどのように照らしましょうか？`,
+      ko: `인사드립니다, 탐구자여. 저는 ${element}의 안내자 ${guideName}입니다. 어떻게 당신의 길을 밝혀드릴까요?`,
+      zh: `问候，寻道者。我是${guideName}，${element}的引导者。我该如何照亮你的道路？`,
+    };
+    return greetings[lang] || greetings.en;
+  };
+
+  // Element names in different languages
+  const getElementName = (element: string, lang: string): string => {
+    const elements: Record<string, Record<string, string>> = {
+      Fire: { en: 'Fire', es: 'Fuego', fr: 'Feu', de: 'Feuer', it: 'Fuoco', pt: 'Fogo', ja: '火', ko: '불', zh: '火' },
+      Water: { en: 'Water', es: 'Agua', fr: 'Eau', de: 'Wasser', it: 'Acqua', pt: 'Água', ja: '水', ko: '물', zh: '水' },
+      Earth: { en: 'Earth', es: 'Tierra', fr: 'Terre', de: 'Erde', it: 'Terra', pt: 'Terra', ja: '地', ko: '땅', zh: '土' },
+      Air: { en: 'Air', es: 'Aire', fr: 'Air', de: 'Luft', it: 'Aria', pt: 'Ar', ja: '風', ko: '공기', zh: '风' },
+    };
+    return elements[element]?.[lang] || elements[element]?.en || element;
+  };
+
   const selectGuide = (guide: Guide) => {
     setSelectedGuide(guide);
     setAudioError(null);
-    const greeting = `Greetings, seeker. I am ${guide.name}, guide of ${guide.element}. How may I illuminate your path?`;
+    const elementName = getElementName(guide.element, languageCode);
+    const greeting = getGreeting(guide.name, elementName, languageCode);
     setMessages([
       {
         role: 'assistant',
