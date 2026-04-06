@@ -236,6 +236,45 @@ export default function Oracle() {
     }
   };
 
+  const saveToJournal = async () => {
+    if (!currentReading) return;
+    try {
+      const cardSummary = currentReading.cards.map(card => 
+        `${card.position}: ${card.card.name} - ${card.interpretation}`
+      ).join('\n\n');
+
+      const journalEntry = {
+        title: `Oracle Reading: ${selectedSpread?.name || 'Reading'}`,
+        content: `Spread: ${selectedSpread?.name}\nDate: ${new Date().toLocaleDateString()}\n\n${cardSummary}`,
+        category: 'divination',
+        entry_type: 'oracle',
+        metadata: {
+          spread_type: selectedSpread?.name,
+          cards: currentReading.cards.map(c => ({
+            position: c.position,
+            card_name: c.card.name,
+            element: c.card.element,
+          })),
+        },
+      };
+
+      const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(journalEntry),
+      });
+
+      if (response.ok) {
+        Alert.alert('Saved!', 'Reading saved to your journal.');
+      } else {
+        Alert.alert('Error', 'Could not save to journal. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving to journal:', error);
+      Alert.alert('Error', 'Could not save to journal. Please try again.');
+    }
+  };
+
   const loadHistory = async () => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/oracle/readings`);
@@ -667,6 +706,13 @@ export default function Oracle() {
               )}
 
               <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.journalButton]}
+                  onPress={saveToJournal}
+                >
+                  <Ionicons name="book" size={20} color="#fff" />
+                  <Text style={styles.modalButtonText}>Save to Journal</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.saveButton]}
                   onPress={saveReading}
@@ -1157,6 +1203,9 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#7c3aed',
+  },
+  journalButton: {
+    backgroundColor: '#10b981',
   },
   closeButton: {
     backgroundColor: '#2d1b4e',

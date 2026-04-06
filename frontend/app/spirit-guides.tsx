@@ -422,6 +422,45 @@ export default function SpiritGuides() {
     }
   };
 
+  const saveChatToJournal = async () => {
+    if (!selectedGuide || messages.length < 2) {
+      Alert.alert('No Chat', 'Start a conversation first before saving to journal.');
+      return;
+    }
+
+    try {
+      const chatContent = messages.map(msg => 
+        `${msg.role === 'user' ? 'You' : selectedGuide.name}: ${msg.content}`
+      ).join('\n\n');
+
+      const journalEntry = {
+        title: `Spirit Guide Chat: ${selectedGuide.name}`,
+        content: `Guide: ${selectedGuide.name} (${selectedGuide.element})\nDate: ${new Date().toLocaleDateString()}\n\n${chatContent}`,
+        category: 'spirit_guide',
+        entry_type: 'spirit_guide',
+        metadata: {
+          guide_name: selectedGuide.name,
+          messages_count: messages.length,
+        },
+      };
+
+      const response = await fetch(`${BACKEND_URL}/api/journal/entries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(journalEntry),
+      });
+
+      if (response.ok) {
+        Alert.alert('Saved!', 'Chat saved to your journal.');
+      } else {
+        Alert.alert('Error', 'Could not save to journal. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving to journal:', error);
+      Alert.alert('Error', 'Could not save to journal. Please try again.');
+    }
+  };
+
   // Show paywall for free users
   if (!hasAccess) {
     return (
@@ -661,6 +700,13 @@ export default function SpiritGuides() {
           >
             <Ionicons name="people" size={18} color="#b794f6" />
             <Text style={styles.switchGuideText}>Switch</Text>
+          </TouchableOpacity>
+          {/* Save to Journal Button */}
+          <TouchableOpacity
+            style={styles.saveJournalButton}
+            onPress={saveChatToJournal}
+          >
+            <Ionicons name="book" size={18} color="#10b981" />
           </TouchableOpacity>
           {/* Mute Toggle Button */}
           <TouchableOpacity
@@ -1015,6 +1061,15 @@ const styles = StyleSheet.create({
     color: '#9f7aea',
     fontSize: 12,
     textDecorationLine: 'underline',
+  },
+  saveJournalButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
   messagesContainer: {
     flex: 1,

@@ -28,6 +28,26 @@ interface JournalEntry {
   date: string;
   created_at?: string;
   mood?: string;
+  entry_type?: 'manual' | 'oracle' | 'spirit_guide' | 'training';
+  metadata?: {
+    spread_type?: string;
+    cards?: any[];
+    guide_name?: string;
+    messages_count?: number;
+    lesson_id?: string;
+    module_name?: string;
+  };
+}
+
+interface TrainingProgress {
+  total_lessons: number;
+  completed_lessons: number;
+  modules: {
+    name: string;
+    category: string;
+    total: number;
+    completed: number;
+  }[];
 }
 
 interface JournalStatus {
@@ -51,20 +71,57 @@ export default function Journal() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [journalStatus, setJournalStatus] = useState<JournalStatus | null>(null);
+  const [trainingProgress, setTrainingProgress] = useState<TrainingProgress | null>(null);
+  const [activeTab, setActiveTab] = useState<'entries' | 'progress'>('entries');
 
   const categories = [
     { id: 'meditation', label: 'Meditation', icon: 'fitness', color: '#8b5cf6' },
     { id: 'psychic', label: 'Psychic Training', icon: 'school', color: '#3b82f6' },
-    { id: 'divination', label: 'Divination', icon: 'sparkles', color: '#db2777' },
+    { id: 'divination', label: 'Oracle Reading', icon: 'sparkles', color: '#db2777' },
+    { id: 'spirit_guide', label: 'Spirit Guide', icon: 'chatbubbles', color: '#ec4899' },
     { id: 'general', label: 'General', icon: 'book', color: '#10b981' },
   ];
 
   useEffect(() => {
     loadEntries();
+    loadTrainingProgress();
     if (isAuthenticated) {
       fetchJournalStatus();
     }
   }, [isAuthenticated]);
+
+  const loadTrainingProgress = async () => {
+    try {
+      const completedLessons = await AsyncStorage.getItem('completedLessons');
+      const completed = completedLessons ? JSON.parse(completedLessons) : [];
+      
+      // Fetch modules from backend
+      const response = await fetch(`${BACKEND_URL}/api/training/modules`);
+      if (response.ok) {
+        const modules = await response.json();
+        
+        const moduleProgress = modules.map((module: any) => ({
+          name: module.title,
+          category: module.category,
+          total: module.lessons?.length || 0,
+          completed: module.lessons?.filter((l: any) => 
+            completed.includes(`${module.id}-${l.id}`)
+          ).length || 0,
+        }));
+
+        const totalLessons = moduleProgress.reduce((sum: number, m: any) => sum + m.total, 0);
+        const completedCount = moduleProgress.reduce((sum: number, m: any) => sum + m.completed, 0);
+
+        setTrainingProgress({
+          total_lessons: totalLessons,
+          completed_lessons: completedCount,
+          modules: moduleProgress,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading training progress:', error);
+    }
+  };
 
   const fetchJournalStatus = async () => {
     try {
@@ -203,6 +260,81 @@ export default function Journal() {
     return categories.find((c) => c.id === categoryId) || categories[0];
   };
 
+  // Get entry type icon
+  const getEntryTypeIcon = (entry: JournalEntry) => {
+    if (entry.entry_type === 'oracle') return 'sparkles';
+    if (entry.entry_type === 'spirit_guide') return 'chatbubbles';
+    if (entry.entry_type === 'training') return 'school';
+    return 'book';
+  };
+
+  // Render progress tab
+  const renderProgressTab = () => {
+    if (!trainingProgress) {
+      return (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color="#a855f7" />
+          <Text style={styles.emptyText}>Loading progress...</Text>
+        </View>
+      );
+    }
+
+    const progressPercent = trainingProgress.total_lessons > 0 
+      ? Math.round((trainingProgress.completed_lessons / trainingProgress.total_lessons) * 100)
+      : 0;
+
+    return (
+      <ScrollView style={styles.progressContainer}>
+        {/* Overall Progress Card */}
+        <View style={styles.overallProgressCard}>
+          <View style={styles.progressHeader}>
+            <Ionicons name="trophy" size={32} color="#fbbf24" />
+            <Text style={styles.progressTitle}>Training Progress</Text>
+          </View>
+          <View style={styles.progressStats}>
+            <Text style={styles.progressPercent}>{progressPercent}%</Text>
+            <Text style={styles.progressSubtext}>
+              {trainingProgress.completed_lessons} of {trainingProgress.total_lessons} lessons completed
+            </Text>
+          </View>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: `${progressPercent}%` }]} />
+          </View>
+        </View>
+
+        {/* Module Progress */}
+        <Text style={styles.modulesHeader}>Module Progress</Text>
+        {trainingProgress.modules.map((module, index) => {
+          const modulePercent = module.total > 0 
+            ? Math.round((module.completed / module.total) * 100)
+            : 0;
+          const categoryColor = module.category === 'beginner' ? '#10b981' 
+            : module.category === 'intermediate' ? '#f59e0b' : '#ef4444';
+
+          return (
+            <View key={index} style={styles.moduleCard}>
+              <View style={styles.moduleHeader}>
+                <View style={[styles.moduleCategoryBadge, { backgroundColor: categoryColor }]}>
+                  <Text style={styles.moduleCategoryText}>
+                    {module.category.charAt(0).toUpperCase() + module.category.slice(1)}
+                  </Text>
+                </View>
+                <Text style={styles.modulePercent}>{modulePercent}%</Text>
+              </View>
+              <Text style={styles.moduleName}>{module.name}</Text>
+              <View style={styles.moduleProgressContainer}>
+                <View style={[styles.moduleProgressBar, { width: `${modulePercent}%`, backgroundColor: categoryColor }]} />
+              </View>
+              <Text style={styles.moduleLessons}>
+                {module.completed} / {module.total} lessons
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -216,11 +348,33 @@ export default function Journal() {
         </TouchableOpacity>
       </View>
 
-      {/* Entry Limit Status Banner */}
-      {isAuthenticated && journalStatus && !journalStatus.unlimited && (
-        <View style={styles.limitBanner}>
-          <Ionicons name="information-circle" size={20} color="#f59e0b" />
-          <Text style={styles.limitText}>
+      {/* Tab Selector */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'entries' && styles.activeTab]}
+          onPress={() => setActiveTab('entries')}
+        >
+          <Ionicons name="book" size={20} color={activeTab === 'entries' ? '#a855f7' : '#9f7aea'} />
+          <Text style={[styles.tabText, activeTab === 'entries' && styles.activeTabText]}>Entries</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'progress' && styles.activeTab]}
+          onPress={() => setActiveTab('progress')}
+        >
+          <Ionicons name="trending-up" size={20} color={activeTab === 'progress' ? '#a855f7' : '#9f7aea'} />
+          <Text style={[styles.tabText, activeTab === 'progress' && styles.activeTabText]}>Progress</Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'progress' ? (
+        renderProgressTab()
+      ) : (
+        <>
+          {/* Entry Limit Status Banner */}
+          {isAuthenticated && journalStatus && !journalStatus.unlimited && (
+            <View style={styles.limitBanner}>
+              <Ionicons name="information-circle" size={20} color="#f59e0b" />
+              <Text style={styles.limitText}>
             {journalStatus.entries_remaining === 0 
               ? "Weekly limit reached! Upgrade for unlimited entries."
               : `${journalStatus.entries_remaining} of ${journalStatus.weekly_limit} entries remaining this week`
@@ -279,6 +433,7 @@ export default function Journal() {
           })
         )}
       </ScrollView>
+        </>
       )}
 
       <Modal visible={showNewEntry} animationType="slide" transparent>
@@ -598,5 +753,136 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#ef4444',
     fontSize: 13,
+  },
+  // Tab styles
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: '#1a0a2e',
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  activeTab: {
+    backgroundColor: '#2d1b4e',
+  },
+  tabText: {
+    color: '#9f7aea',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  activeTabText: {
+    color: '#a855f7',
+    fontWeight: '600',
+  },
+  // Progress styles
+  progressContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  overallProgressCard: {
+    backgroundColor: '#1a0a2e',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  progressTitle: {
+    color: '#e9d5ff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  progressStats: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  progressPercent: {
+    color: '#fbbf24',
+    fontSize: 48,
+    fontWeight: 'bold',
+  },
+  progressSubtext: {
+    color: '#9f7aea',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: '#2d1b4e',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#a855f7',
+    borderRadius: 4,
+  },
+  modulesHeader: {
+    color: '#e9d5ff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  moduleCard: {
+    backgroundColor: '#1a0a2e',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  moduleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  moduleCategoryBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  moduleCategoryText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modulePercent: {
+    color: '#c4b5fd',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  moduleName: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 12,
+  },
+  moduleProgressContainer: {
+    height: 6,
+    backgroundColor: '#2d1b4e',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  moduleProgressBar: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  moduleLessons: {
+    color: '#9f7aea',
+    fontSize: 12,
   },
 });
