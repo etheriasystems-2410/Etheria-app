@@ -717,6 +717,29 @@ async def get_journal_entries(request: Request, limit: int = 50):
         logging.error(f"Error fetching entries: {e}")
         return []
 
+@api_router.delete("/journal/entries/{entry_id}")
+async def delete_journal_entry(entry_id: str, request: Request):
+    """Delete a journal entry"""
+    try:
+        user = await get_current_user(request)
+        user_id = user['user_id']
+        
+        # Find and delete the entry (only if it belongs to the user)
+        result = await db.journal_entries.delete_one({
+            "_id": entry_id,
+            "user_id": user_id
+        })
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Entry not found")
+        
+        return {"success": True, "message": "Entry deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting journal entry: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete entry")
+
 @api_router.get("/journal/status")
 async def get_journal_status(request: Request):
     """Get journal entry status for current user (entries used/remaining this week)"""

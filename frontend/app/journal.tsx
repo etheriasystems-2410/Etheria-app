@@ -263,6 +263,48 @@ export default function Journal() {
     }
   };
 
+  const deleteEntry = async (entryId: string, entryType: 'entry' | 'reading' | 'transcript') => {
+    Alert.alert(
+      'Delete Entry',
+      'Are you sure you want to delete this entry? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const sessionToken = await AsyncStorage.getItem('session_token');
+              const response = await fetch(`${BACKEND_URL}/api/journal/entries/${entryId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': sessionToken ? `Bearer ${sessionToken}` : '',
+                },
+              });
+
+              if (response.ok) {
+                // Remove from appropriate state
+                if (entryType === 'entry') {
+                  setEntries(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
+                } else if (entryType === 'reading') {
+                  setReadings(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
+                } else if (entryType === 'transcript') {
+                  setTranscripts(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
+                }
+                Alert.alert('Deleted', 'Entry has been deleted.');
+              } else {
+                Alert.alert('Error', 'Failed to delete entry. Please try again.');
+              }
+            } catch (error) {
+              console.error('Error deleting entry:', error);
+              Alert.alert('Error', 'Failed to delete entry. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const loadEntries = async () => {
     setLoading(true);
     try {
@@ -525,13 +567,21 @@ export default function Journal() {
                   <Ionicons name={readingIcon as any} size={14} color="#fff" />
                   <Text style={styles.readingTypeText}>{readingType}</Text>
                 </View>
-                <View style={styles.readingDateContainer}>
-                  <Text style={styles.readingDate}>
-                    {format(readingDate, 'MMM d, yyyy')}
-                  </Text>
-                  <Text style={styles.readingTime}>
-                    {format(readingDate, 'h:mm a')}
-                  </Text>
+                <View style={styles.readingHeaderRight}>
+                  <View style={styles.readingDateContainer}>
+                    <Text style={styles.readingDate}>
+                      {format(readingDate, 'MMM d, yyyy')}
+                    </Text>
+                    <Text style={styles.readingTime}>
+                      {format(readingDate, 'h:mm a')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => deleteEntry(reading._id || reading.id, 'reading')}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -635,13 +685,21 @@ export default function Journal() {
                   <Ionicons name="chatbubbles" size={14} color="#fff" />
                   <Text style={styles.readingTypeText}>Spirit Guide Chat</Text>
                 </View>
-                <View style={styles.readingDateContainer}>
-                  <Text style={styles.readingDate}>
-                    {format(transcriptDate, 'MMM d, yyyy')}
-                  </Text>
-                  <Text style={styles.readingTime}>
-                    {format(transcriptDate, 'h:mm a')}
-                  </Text>
+                <View style={styles.readingHeaderRight}>
+                  <View style={styles.readingDateContainer}>
+                    <Text style={styles.readingDate}>
+                      {format(transcriptDate, 'MMM d, yyyy')}
+                    </Text>
+                    <Text style={styles.readingTime}>
+                      {format(transcriptDate, 'h:mm a')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => deleteEntry(transcript._id || transcript.id, 'transcript')}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -800,9 +858,17 @@ export default function Journal() {
                       <Ionicons name={categoryInfo.icon as any} size={16} color="#fff" />
                       <Text style={styles.categoryText}>{categoryInfo.label}</Text>
                     </View>
-                    <Text style={styles.entryDate}>
-                      {format(new Date(entry.date), 'MMM d, yyyy')}
-                    </Text>
+                    <View style={styles.entryHeaderRight}>
+                      <Text style={styles.entryDate}>
+                        {format(new Date(entry.date), 'MMM d, yyyy')}
+                      </Text>
+                      <TouchableOpacity 
+                        style={styles.deleteButton}
+                        onPress={() => deleteEntry(entry._id || entry.id, 'entry')}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                   <Text style={styles.entryTitle}>{entry.title}</Text>
                   <Text style={styles.entryContent} numberOfLines={3}>
@@ -959,6 +1025,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  entryHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  deleteButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+  },
+  readingHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   categoryBadge: {
     flexDirection: 'row',
