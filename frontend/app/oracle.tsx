@@ -614,7 +614,11 @@ export default function Oracle() {
                         ]}
                       >
                         <Image
-                          source={{ uri: currentReading.cards[currentCardIndex].card.image_url }}
+                          source={{ 
+                            uri: currentReading.cards[currentCardIndex].card.image_base64 
+                              ? `data:image/png;base64,${currentReading.cards[currentCardIndex].card.image_base64}`
+                              : currentReading.cards[currentCardIndex].card.image_url 
+                          }}
                           style={styles.cardImage}
                           contentFit="cover"
                           transition={300}
