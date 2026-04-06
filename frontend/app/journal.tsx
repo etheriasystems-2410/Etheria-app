@@ -77,6 +77,7 @@ export default function Journal() {
   const [readings, setReadings] = useState<JournalEntry[]>([]);
   const [transcripts, setTranscripts] = useState<JournalEntry[]>([]);
   const [expandedTranscripts, setExpandedTranscripts] = useState<Set<string>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: 'entry' | 'reading' | 'transcript' } | null>(null);
 
   const categories = [
     { id: 'meditation', label: 'Meditation', icon: 'fitness', color: '#8b5cf6' },
@@ -263,46 +264,44 @@ export default function Journal() {
     }
   };
 
-  const deleteEntry = async (entryId: string, entryType: 'entry' | 'reading' | 'transcript') => {
-    Alert.alert(
-      'Delete Entry',
-      'Are you sure you want to delete this entry? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const sessionToken = await AsyncStorage.getItem('session_token');
-              const response = await fetch(`${BACKEND_URL}/api/journal/entries/${entryId}`, {
-                method: 'DELETE',
-                headers: {
-                  'Authorization': sessionToken ? `Bearer ${sessionToken}` : '',
-                },
-              });
+  const deleteEntry = (entryId: string, entryType: 'entry' | 'reading' | 'transcript') => {
+    // Show confirmation modal
+    setDeleteConfirm({ id: entryId, type: entryType });
+  };
 
-              if (response.ok) {
-                // Remove from appropriate state
-                if (entryType === 'entry') {
-                  setEntries(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
-                } else if (entryType === 'reading') {
-                  setReadings(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
-                } else if (entryType === 'transcript') {
-                  setTranscripts(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
-                }
-                Alert.alert('Deleted', 'Entry has been deleted.');
-              } else {
-                Alert.alert('Error', 'Failed to delete entry. Please try again.');
-              }
-            } catch (error) {
-              console.error('Error deleting entry:', error);
-              Alert.alert('Error', 'Failed to delete entry. Please try again.');
-            }
-          },
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    
+    const { id: entryId, type: entryType } = deleteConfirm;
+    
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${BACKEND_URL}/api/journal/entries/${entryId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': sessionToken ? `Bearer ${sessionToken}` : '',
         },
-      ]
-    );
+      });
+
+      if (response.ok) {
+        // Remove from appropriate state
+        if (entryType === 'entry') {
+          setEntries(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
+        } else if (entryType === 'reading') {
+          setReadings(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
+        } else if (entryType === 'transcript') {
+          setTranscripts(prev => prev.filter(e => e.id !== entryId && e._id !== entryId));
+        }
+        setDeleteConfirm(null);
+      } else {
+        Alert.alert('Error', 'Failed to delete entry. Please try again.');
+        setDeleteConfirm(null);
+      }
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      Alert.alert('Error', 'Failed to delete entry. Please try again.');
+      setDeleteConfirm(null);
+    }
   };
 
   const loadEntries = async () => {
@@ -964,6 +963,36 @@ export default function Journal() {
           </View>
         </View>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal visible={deleteConfirm !== null} animationType="fade" transparent>
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalContent}>
+            <View style={styles.deleteModalIcon}>
+              <Ionicons name="trash" size={40} color="#ef4444" />
+            </View>
+            <Text style={styles.deleteModalTitle}>Delete Entry?</Text>
+            <Text style={styles.deleteModalText}>
+              Are you sure you want to delete this entry? This action cannot be undone.
+            </Text>
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.deleteModalCancel]}
+                onPress={() => setDeleteConfirm(null)}
+              >
+                <Text style={styles.deleteModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.deleteModalConfirm]}
+                onPress={confirmDelete}
+              >
+                <Ionicons name="trash" size={18} color="#fff" />
+                <Text style={styles.deleteModalConfirmText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1581,5 +1610,77 @@ const styles = StyleSheet.create({
   },
   entriesContent: {
     paddingBottom: 32,
+  },
+  // Delete confirmation modal styles
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  deleteModalContent: {
+    backgroundColor: '#1a0033',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  deleteModalIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  deleteModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginBottom: 12,
+  },
+  deleteModalText: {
+    fontSize: 15,
+    color: '#c4b5fd',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  deleteModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  deleteModalButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  deleteModalCancel: {
+    backgroundColor: '#2d1b4e',
+    borderWidth: 1,
+    borderColor: '#4a3b6e',
+  },
+  deleteModalCancelText: {
+    color: '#c4b5fd',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteModalConfirm: {
+    backgroundColor: '#ef4444',
+  },
+  deleteModalConfirmText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
