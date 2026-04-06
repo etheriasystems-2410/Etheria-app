@@ -50,6 +50,8 @@ export default function Settings() {
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [showPictureModal, setShowPictureModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkModalData, setLinkModalData] = useState({ title: '', url: '' });
 
   // Load profile picture on mount
   useEffect(() => {
@@ -175,6 +177,23 @@ export default function Settings() {
   const handleEmailPress = () => {
     // Show modal with email address instead of trying to open mailto
     setShowEmailModal(true);
+  };
+
+  const handleOpenLink = async (url: string, title: string) => {
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        // Show modal with the URL
+        setLinkModalData({ title, url });
+        setShowLinkModal(true);
+      }
+    } catch (error) {
+      // Show modal with the URL if opening fails
+      setLinkModalData({ title, url });
+      setShowLinkModal(true);
+    }
   };
 
   const tryOpenEmail = async () => {
@@ -665,7 +684,7 @@ export default function Settings() {
 
         <TouchableOpacity 
           style={styles.settingItem}
-          onPress={() => Linking.openURL('https://etheriasystems.online/privacy')}
+          onPress={() => handleOpenLink('https://etheriasystems.online/privacy', 'Privacy Policy')}
         >
           <Ionicons name="shield-checkmark" size={24} color="#b794f6" />
           <Text style={styles.settingText}>{t('privacyPolicy')}</Text>
@@ -674,7 +693,7 @@ export default function Settings() {
 
         <TouchableOpacity 
           style={styles.settingItem}
-          onPress={() => Linking.openURL('https://etheriasystems.online/terms')}
+          onPress={() => handleOpenLink('https://etheriasystems.online/terms', 'Terms of Service')}
         >
           <Ionicons name="document-text" size={24} color="#b794f6" />
           <Text style={styles.settingText}>{t('termsOfService')}</Text>
@@ -896,6 +915,53 @@ export default function Settings() {
             <TouchableOpacity 
               style={styles.cancelButton}
               onPress={() => setShowEmailModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* External Link Modal */}
+      <Modal
+        visible={showLinkModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowLinkModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{linkModalData.title}</Text>
+              <TouchableOpacity onPress={() => setShowLinkModal(false)}>
+                <Ionicons name="close" size={24} color="#e9d5ff" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.emailModalContent}>
+              <Ionicons name="link" size={48} color="#a855f7" />
+              <Text style={styles.emailModalTitle}>Visit Link</Text>
+              <Text style={styles.emailModalAddress}>{linkModalData.url}</Text>
+              <Text style={styles.emailModalHint}>Copy the URL above to open in your browser</Text>
+              
+              <TouchableOpacity 
+                style={styles.emailOpenButton}
+                onPress={async () => {
+                  try {
+                    await Linking.openURL(linkModalData.url);
+                    setShowLinkModal(false);
+                  } catch (e) {
+                    console.log('Could not open link');
+                  }
+                }}
+              >
+                <Ionicons name="open-outline" size={20} color="#fff" />
+                <Text style={styles.emailOpenButtonText}>Open in Browser</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => setShowLinkModal(false)}
             >
               <Text style={styles.cancelButtonText}>Close</Text>
             </TouchableOpacity>
