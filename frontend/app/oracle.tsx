@@ -24,6 +24,7 @@ import { AudioPlayerManager, setupAudioMode } from '../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');
+const ORACLE_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/qnwv0w54_36736.jpg';
 
 interface CardReading {
   card: {
@@ -388,10 +389,18 @@ export default function Oracle() {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Ionicons name="sparkles" size={60} color="#b794f6" />
-            <Text style={styles.title}>Oracle Divination</Text>
-            <Text style={styles.subtitle}>Choose your card spread</Text>
+          {/* Hero Image Section */}
+          <View style={styles.heroSection}>
+            <Image
+              source={{ uri: ORACLE_HERO_IMAGE }}
+              style={styles.heroImage}
+              contentFit="cover"
+            />
+            <View style={styles.heroOverlay}>
+              <Ionicons name="sparkles" size={50} color="#b794f6" />
+              <Text style={styles.heroTitle}>Oracle Divination</Text>
+              <Text style={styles.heroSubtitle}>Choose your card spread</Text>
+            </View>
           </View>
 
           <View style={styles.spreadsContainer}>
@@ -858,7 +867,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f0321',
   },
   scrollContent: {
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 20,
+  },
+  heroSection: {
+    height: 200,
+    position: 'relative',
+    marginHorizontal: -12,
+    marginBottom: 16,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: '#c4b5fd',
+    marginTop: 6,
+    textAlign: 'center',
   },
   backButton: {
     flexDirection: 'row',

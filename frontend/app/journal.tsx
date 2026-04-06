@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
@@ -18,6 +19,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const JOURNAL_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/zw3j6sl3_36734.jpg';
 
 interface JournalEntry {
   id: string;
@@ -922,15 +924,26 @@ export default function Journal() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Journal</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowNewEntry(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
+      {/* Hero Image Section */}
+      <View style={styles.heroSection}>
+        <Image
+          source={{ uri: JOURNAL_HERO_IMAGE }}
+          style={styles.heroImage}
+          contentFit="cover"
+        />
+        <View style={styles.heroOverlay}>
+          <View style={styles.heroContent}>
+            <Ionicons name="book" size={40} color="#e9d5ff" />
+            <Text style={styles.heroTitle}>My Journal</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowNewEntry(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Tab Selector */}
@@ -1185,6 +1198,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f0321',
+  },
+  heroSection: {
+    height: 140,
+    position: 'relative',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  heroContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
   },
   header: {
     flexDirection: 'row',
