@@ -144,6 +144,12 @@ function ProtectedLayout() {
           drawerItemStyle: { display: 'none' },
         }}
       />
+      <Drawer.Screen
+        name="files"
+        options={{
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
     </Drawer>
   );
 }
