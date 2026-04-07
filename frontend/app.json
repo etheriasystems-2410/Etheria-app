@@ -7,7 +7,6 @@
     "icon": "./assets/images/etheria-icon.png",
     "scheme": "etheria",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/etheria-icon.png",
       "resizeMode": "contain",
@@ -33,7 +32,6 @@
       },
       "package": "com.etheriasystems.etheria",
       "versionCode": 1,
-      "edgeToEdgeEnabled": true,
       "permissions": [
         "INTERNET",
         "RECORD_AUDIO",
@@ -70,7 +68,10 @@
           "color": "#7c3aed",
           "sounds": []
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-image",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true
