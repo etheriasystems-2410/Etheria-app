@@ -140,22 +140,39 @@ export default function Home() {
         ko: '영적 여정을 기록하세요',
         zh: '记录您的灵性之旅',
       },
+      dreams: {
+        en: 'Unlock the meaning of your dreams',
+        es: 'Descubre el significado de tus sueños',
+        fr: 'Découvrez la signification de vos rêves',
+        de: 'Entschlüsseln Sie die Bedeutung Ihrer Träume',
+        it: 'Scopri il significato dei tuoi sogni',
+        pt: 'Descubra o significado dos seus sonhos',
+        ja: '夢の意味を解き明かす',
+        ko: '꿈의 의미를 해석하세요',
+        zh: '解读您梦境的含义',
+      },
+      astral: {
+        en: 'Learn astral projection techniques',
+        es: 'Aprende técnicas de proyección astral',
+        fr: 'Apprenez les techniques de projection astrale',
+        de: 'Lerne Techniken der Astralprojektion',
+        it: 'Impara le tecniche di proiezione astrale',
+        pt: 'Aprenda técnicas de projeção astral',
+        ja: 'アストラル投射技術を学ぶ',
+        ko: '유체이탈 기술을 배우세요',
+        zh: '学习星体投射技术',
+      },
     };
     return descriptions[key]?.[languageCode] || descriptions[key]?.en || '';
   };
 
+  // Features ordered to match navigation menu
   const features = [
     {
-      title: t('psychicTraining'),
-      description: getFeatureDescription('training'),
-      icon: 'school' as const,
-      route: '/training',
-    },
-    {
-      title: t('oracleTitle'),
-      description: getFeatureDescription('oracle'),
-      icon: 'sparkles' as const,
-      route: '/oracle',
+      title: t('meditationTitle'),
+      description: getFeatureDescription('meditation'),
+      icon: 'fitness' as const,
+      route: '/meditation',
     },
     {
       title: t('spiritGuidesTitle'),
@@ -164,10 +181,28 @@ export default function Home() {
       route: '/spirit-guides',
     },
     {
-      title: t('meditationTitle'),
-      description: getFeatureDescription('meditation'),
-      icon: 'fitness' as const,
-      route: '/meditation',
+      title: t('oracleTitle'),
+      description: getFeatureDescription('oracle'),
+      icon: 'sparkles' as const,
+      route: '/oracle',
+    },
+    {
+      title: 'Dream Interpreter',
+      description: getFeatureDescription('dreams'),
+      icon: 'moon' as const,
+      route: '/dreams',
+    },
+    {
+      title: 'Astral Travel',
+      description: getFeatureDescription('astral'),
+      icon: 'planet' as const,
+      route: '/astral-training',
+    },
+    {
+      title: t('psychicTraining'),
+      description: getFeatureDescription('training'),
+      icon: 'school' as const,
+      route: '/training',
     },
     {
       title: t('journalTitle'),
