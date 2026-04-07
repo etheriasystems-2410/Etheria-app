@@ -2825,6 +2825,149 @@ async def redeem_gift_code(redeem_request: RedeemCodeRequest, request: Request):
         "expires_at": new_expires.isoformat()
     }
 
+
+@api_router.post("/promo-code/redeem")
+async def redeem_promo_code(redeem_request: RedeemCodeRequest, request: Request):
+    """Redeem a promotional code (including lifetime premium codes)"""
+    try:
+        user = await get_current_user(request)
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Please login to redeem a code")
+    
+    code = redeem_request.code.strip().upper()
+    now = datetime.now(timezone.utc)
+    
+    # First check promo_codes collection for special codes (like lifetime)
+    promo_doc = await db.promo_codes.find_one({
+        "code": code,
+        "is_active": True
+    })
+    
+    if promo_doc:
+        # Check if code is still valid
+        expires_at = promo_doc.get("expires_at")
+        if expires_at:
+            if isinstance(expires_at, str):
+                expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if now > expires_at:
+                raise HTTPException(status_code=400, detail="This promotional code has expired")
+        
+        # Check if user already redeemed this code
+        user_id = user.get("user_id")
+        if user_id in [str(r.get("user_id")) for r in promo_doc.get("redemptions", [])]:
+            raise HTTPException(status_code=400, detail="You have already redeemed this code")
+        
+        # Get grants from the promo code
+        grants = promo_doc.get("grants", {})
+        subscription_type = grants.get("subscription_type", "monthly")
+        
+        # Update user based on promo type
+        update_data = {
+            "is_premium": True,
+            "subscription_status": "promo_code",
+            "promo_code_redeemed": code,
+            "promo_code_redeemed_at": now.isoformat()
+        }
+        
+        if subscription_type == "lifetime":
+            # Lifetime premium - no expiration
+            update_data["subscription_type"] = "lifetime"
+            update_data["subscription_expires_at"] = None
+            message = "Congratulations! You now have LIFETIME premium access!"
+            expires_response = None
+        else:
+            # Standard time-limited promo
+            duration_days = grants.get("duration_days", 30)
+            new_expires = now + timedelta(days=duration_days)
+            update_data["subscription_expires_at"] = new_expires.isoformat()
+            message = f"Congratulations! You now have {duration_days} days of premium access!"
+            expires_response = new_expires.isoformat()
+        
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": update_data}
+        )
+        
+        # Record the redemption
+        await db.promo_codes.update_one(
+            {"_id": promo_doc["_id"]},
+            {
+                "$push": {
+                    "redemptions": {
+                        "user_id": user_id,
+                        "email": user.get("email"),
+                        "redeemed_at": now.isoformat()
+                    }
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": message,
+            "subscription_type": subscription_type,
+            "expires_at": expires_response
+        }
+    
+    # If not found in promo_codes, try gift_codes (existing weekly codes)
+    gift_doc = await db.gift_codes.find_one({
+        "code": code,
+        "is_active": True
+    })
+    
+    if gift_doc:
+        # Use the existing gift code redemption logic
+        week_end = gift_doc["week_end"]
+        if isinstance(week_end, str):
+            week_end = datetime.fromisoformat(week_end.replace('Z', '+00:00'))
+        if week_end.tzinfo is None:
+            week_end = week_end.replace(tzinfo=timezone.utc)
+        if now > week_end:
+            raise HTTPException(status_code=400, detail="This code has expired")
+        
+        user_id = user.get("user_id")
+        if user_id in [str(r.get("user_id")) for r in gift_doc.get("redemptions", [])]:
+            raise HTTPException(status_code=400, detail="You have already redeemed this code")
+        
+        new_expires = now + timedelta(days=30)
+        
+        await db.users.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "is_premium": True,
+                    "subscription_status": "gift_code",
+                    "subscription_expires_at": new_expires.isoformat(),
+                    "gift_code_redeemed_at": now.isoformat()
+                }
+            }
+        )
+        
+        await db.gift_codes.update_one(
+            {"_id": gift_doc["_id"]},
+            {
+                "$push": {
+                    "redemptions": {
+                        "user_id": user_id,
+                        "email": user.get("email"),
+                        "redeemed_at": now.isoformat()
+                    }
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": "Congratulations! You now have 1 month of premium access!",
+            "subscription_type": "monthly",
+            "expires_at": new_expires.isoformat()
+        }
+    
+    raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+
 # ==================== PRIZE DRAWING SYSTEM ====================
 
 @api_router.post("/prize-drawing/opt-in")
