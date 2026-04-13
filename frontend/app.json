@@ -9,8 +9,8 @@
     "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/images/etheria-cosmic.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#0a1628"
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
@@ -53,8 +53,8 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/etheria-cosmic.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#0a1628"
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
         }
       ],
       "expo-font",
