@@ -130,14 +130,14 @@ export default function BinauralMeditation() {
       const player = new AudioPlayerManager();
       await player.loadAndPlay(streamingUrl, {
         loop: true,
-        volume: 0.8,
+        volume: volume,  // Use current volume state instead of hardcoded value
       });
       
       audioPlayerRef.current = player;
       setIsPlaying(true);
       setSessionStartTime(Date.now());
       setSessionDuration(0);
-      console.log('Binaural beat playing from stream');
+      console.log('Binaural beat playing from stream with volume:', volume);
       
     } catch (error) {
       console.error('Error starting session:', error);
@@ -210,10 +210,15 @@ export default function BinauralMeditation() {
     }
   };
 
-  const handleVolumeChange = (newVolume: number) => {
+  const handleVolumeChange = async (newVolume: number) => {
     setVolume(newVolume);
     if (audioPlayerRef.current) {
-      audioPlayerRef.current.setVolume(newVolume);
+      try {
+        await audioPlayerRef.current.setVolume(newVolume);
+        console.log('Volume changed to:', newVolume);
+      } catch (e) {
+        console.error('Error changing volume:', e);
+      }
     }
   };
 

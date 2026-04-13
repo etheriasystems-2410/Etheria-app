@@ -72,12 +72,18 @@ export class AudioPlayerManager {
           updateInterval: 250,
         });
         
-        // Set volume if provided
+        // Set volume if provided - use async setVolume for SDK 55
         if (options?.volume !== undefined) {
           try {
-            this.nativePlayer.volume = options.volume;
+            if (typeof this.nativePlayer.setVolume === 'function') {
+              await this.nativePlayer.setVolume(options.volume);
+              console.log('Initial volume set via setVolume():', options.volume);
+            } else {
+              this.nativePlayer.volume = options.volume;
+              console.log('Initial volume set via property:', options.volume);
+            }
           } catch (e) {
-            console.log('Could not set volume:', e);
+            console.log('Could not set initial volume:', e);
           }
         }
         
@@ -346,14 +352,32 @@ export class AudioPlayerManager {
     return this.isLoadedFlag;
   }
 
-  setVolume(volume: number): void {
+  async setVolume(volume: number): Promise<void> {
+    // Clamp volume between 0 and 1
+    const clampedVolume = Math.max(0, Math.min(1, volume));
+    
     if (this.isWeb && this.webAudioElement) {
-      this.webAudioElement.volume = volume;
+      this.webAudioElement.volume = clampedVolume;
+      console.log('Web audio volume set to:', clampedVolume);
     } else if (this.nativePlayer) {
       try {
-        this.nativePlayer.volume = volume;
+        // SDK 55: Use setVolume() async method for AudioPlayer instances
+        if (typeof this.nativePlayer.setVolume === 'function') {
+          await this.nativePlayer.setVolume(clampedVolume);
+          console.log('Native audio volume set via setVolume():', clampedVolume);
+        } else {
+          // Fallback to direct property if setVolume is not available
+          this.nativePlayer.volume = clampedVolume;
+          console.log('Native audio volume set via property:', clampedVolume);
+        }
       } catch (e) {
-        // Ignore
+        console.log('Error setting volume:', e);
+        // Try direct property assignment as last resort
+        try {
+          this.nativePlayer.volume = clampedVolume;
+        } catch (e2) {
+          console.log('Fallback volume set also failed:', e2);
+        }
       }
     }
   }
