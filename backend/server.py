@@ -3614,6 +3614,115 @@ async def get_push_token_count():
         raise HTTPException(status_code=500, detail="Failed to get token count")
 
 
+# ==================== BI-WEEKLY CONTEST SYSTEM ====================
+from services.contest_service import BiWeeklyContestService, scheduled_contest_run
+
+@api_router.post("/contest/run")
+async def run_contest_manually(request: Request):
+    """Manually trigger the bi-weekly contest (admin only)"""
+    body = await request.json()
+    admin_secret = body.get("admin_secret")
+    
+    if admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    service = BiWeeklyContestService(
+        db=db,
+        emergent_llm_key=EMERGENT_LLM_KEY,
+        gmail_email=GMAIL_EMAIL,
+        gmail_password=GMAIL_APP_PASSWORD
+    )
+    
+    result = await service.run_contest(manual_trigger=True)
+    return result
+
+
+@api_router.get("/contest/history")
+async def get_contest_history(admin_secret: str, limit: int = 10):
+    """Get contest history (admin only)"""
+    if admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    service = BiWeeklyContestService(
+        db=db,
+        emergent_llm_key=EMERGENT_LLM_KEY,
+        gmail_email=GMAIL_EMAIL,
+        gmail_password=GMAIL_APP_PASSWORD
+    )
+    
+    history = await service.get_contest_history(limit)
+    return {"contests": history}
+
+
+@api_router.get("/contest/next")
+async def get_next_contest_date():
+    """Get the next scheduled contest date"""
+    service = BiWeeklyContestService(
+        db=db,
+        emergent_llm_key=EMERGENT_LLM_KEY,
+        gmail_email=GMAIL_EMAIL,
+        gmail_password=GMAIL_APP_PASSWORD
+    )
+    
+    next_date = await service.get_next_contest_date()
+    return {
+        "next_contest": next_date.isoformat(),
+        "next_contest_formatted": next_date.strftime("%B %d, %Y at %I:%M %p UTC")
+    }
+
+
+@api_router.get("/contest/eligible-count")
+async def get_eligible_user_count(request: Request):
+    """Get count of users eligible for the next contest"""
+    service = BiWeeklyContestService(
+        db=db,
+        emergent_llm_key=EMERGENT_LLM_KEY,
+        gmail_email=GMAIL_EMAIL,
+        gmail_password=GMAIL_APP_PASSWORD
+    )
+    
+    eligible = await service.get_eligible_users()
+    return {"eligible_count": len(eligible)}
+
+
+@api_router.get("/user/notifications")
+async def get_user_notifications(request: Request, unread_only: bool = False, limit: int = 20):
+    """Get notifications for the current user"""
+    try:
+        user = await get_current_user(request)
+        user_id = user.get("user_id")
+        
+        query = {"user_id": user_id}
+        if unread_only:
+            query["read"] = False
+        
+        notifications = await db.notifications.find(query).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        return {"notifications": notifications}
+    except HTTPException:
+        return {"notifications": []}
+
+
+@api_router.post("/user/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, request: Request):
+    """Mark a notification as read"""
+    try:
+        user = await get_current_user(request)
+        user_id = user.get("user_id")
+        
+        result = await db.notifications.update_one(
+            {"_id": notification_id, "user_id": user_id},
+            {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        
+        return {"success": True}
+    except HTTPException:
+        raise
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
