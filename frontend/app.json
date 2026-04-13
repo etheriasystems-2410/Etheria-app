@@ -8,7 +8,7 @@
     "scheme": "etheria",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/images/etheria-cosmic.png",
+      "image": "./assets/images/etheria-splash-new.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
@@ -52,7 +52,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/etheria-cosmic.png",
+          "image": "./assets/images/etheria-splash-new.png",
           "resizeMode": "contain",
           "backgroundColor": "#000000"
         }
