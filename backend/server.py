@@ -3561,13 +3561,13 @@ async def register_push_token(request: PushTokenRequest):
 async def send_push_notification(request: SendNotificationRequest):
     """Send push notification to users (admin only)"""
     try:
-        # Get target users
+        # Get target users with reasonable limit for batch processing
         if request.user_ids:
             tokens = await db.push_tokens.find(
                 {"user_id": {"$in": request.user_ids}}
-            ).to_list(None)
+            ).to_list(1000)  # Limit to 1000 tokens per batch
         else:
-            tokens = await db.push_tokens.find().to_list(None)
+            tokens = await db.push_tokens.find().to_list(1000)  # Limit to 1000 tokens per batch
         
         if not tokens:
             return {"success": False, "message": "No registered devices found"}
