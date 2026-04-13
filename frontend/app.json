@@ -4,11 +4,11 @@
     "slug": "etheria",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/etheria-main.png",
+    "icon": "./assets/images/etheria-cosmic.png",
     "scheme": "etheria",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/images/etheria-main.png",
+      "image": "./assets/images/etheria-cosmic.png",
       "resizeMode": "cover",
       "backgroundColor": "#0a1628"
     },
@@ -27,7 +27,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/etheria-main.png",
+        "foregroundImage": "./assets/images/etheria-cosmic.png",
         "backgroundColor": "#0a1628"
       },
       "package": "com.etheriasystems.etheria",
@@ -45,14 +45,14 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/etheria-main.png"
+      "favicon": "./assets/images/etheria-cosmic.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/etheria-main.png",
+          "image": "./assets/images/etheria-cosmic.png",
           "resizeMode": "cover",
           "backgroundColor": "#0a1628"
         }
@@ -63,7 +63,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/etheria-main.png",
+          "icon": "./assets/images/etheria-cosmic.png",
           "color": "#7c3aed",
           "sounds": []
         }
