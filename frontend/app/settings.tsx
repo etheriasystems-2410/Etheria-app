@@ -693,20 +693,20 @@ export default function Settings() {
 
         <TouchableOpacity 
           style={styles.settingItem}
-          onPress={() => handleOpenLink('https://etheriasystems.online/privacy', 'Privacy Policy')}
+          onPress={() => router.push('/privacy')}
         >
           <Ionicons name="shield-checkmark" size={24} color="#b794f6" />
           <Text style={styles.settingText}>{t('privacyPolicy')}</Text>
-          <Ionicons name="open-outline" size={20} color="#9f7aea" />
+          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.settingItem}
-          onPress={() => handleOpenLink('https://etheriasystems.online/terms', 'Terms of Service')}
+          onPress={() => router.push('/terms')}
         >
           <Ionicons name="document-text" size={24} color="#b794f6" />
           <Text style={styles.settingText}>{t('termsOfService')}</Text>
-          <Ionicons name="open-outline" size={20} color="#9f7aea" />
+          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
         </TouchableOpacity>
       </View>
 
