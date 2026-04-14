@@ -454,6 +454,26 @@ export default function Home() {
         ))}
       </View>
 
+      {/* Community Link */}
+      {isAuthenticated && (
+        <View style={styles.communitySection}>
+          <TouchableOpacity
+            style={styles.communityButton}
+            onPress={() => router.push('/community')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.communityIconContainer}>
+              <Ionicons name="people" size={28} color="#e9d5ff" />
+            </View>
+            <View style={styles.communityContent}>
+              <Text style={styles.communityTitle}>Join the Community</Text>
+              <Text style={styles.communityDescription}>Connect with fellow spiritual seekers</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#9f7aea" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
@@ -772,5 +792,41 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  // Community section styles
+  communitySection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  communityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a0033',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#2d1b4e',
+  },
+  communityIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#2d1b4e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  communityContent: {
+    flex: 1,
+  },
+  communityTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  communityDescription: {
+    fontSize: 14,
+    color: '#9f7aea',
   },
 });

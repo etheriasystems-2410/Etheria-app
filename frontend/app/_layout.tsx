@@ -137,22 +137,22 @@ function ProtectedLayout() {
         }}
       />
       <Drawer.Screen
-        name="settings"
-        options={{
-          drawerLabel: t('settingsTitle'),
-          title: t('settingsTitle'),
-          drawerIcon: ({ color, size}) => (
-            <Ionicons name="settings" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
         name="community"
         options={{
           drawerLabel: 'Community',
           title: 'Community',
           drawerIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="settings"
+        options={{
+          drawerLabel: t('settingsTitle'),
+          title: t('settingsTitle'),
+          drawerIcon: ({ color, size}) => (
+            <Ionicons name="settings" size={size} color={color} />
           ),
         }}
       />
@@ -164,6 +164,12 @@ function ProtectedLayout() {
       />
       <Drawer.Screen
         name="privacy"
+        options={{
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
+        name="community-guidelines"
         options={{
           drawerItemStyle: { display: 'none' },
         }}

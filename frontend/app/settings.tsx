@@ -696,6 +696,15 @@ export default function Settings() {
 
         <TouchableOpacity 
           style={styles.settingItem}
+          onPress={() => router.push('/community-guidelines')}
+        >
+          <Ionicons name="people-circle" size={24} color="#b794f6" />
+          <Text style={styles.settingText}>Community Guidelines</Text>
+          <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.settingItem}
           onPress={() => router.push('/terms')}
         >
           <Ionicons name="document-text" size={24} color="#b794f6" />

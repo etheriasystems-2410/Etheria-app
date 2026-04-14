@@ -852,7 +852,10 @@ async def promote_to_admin(user_id: str, token: Optional[str] = None):
         raise HTTPException(status_code=403, detail="Admin access required")
     
     # Only top-level admins can promote others
-    if admin.get("admin_level", 0) < 10:
+    admin_level = admin.get("admin_level", 0)
+    if isinstance(admin_level, str):
+        admin_level = 10 if admin_level in ["full", "top", "owner"] else 0
+    if admin_level < 10:
         raise HTTPException(status_code=403, detail="Only top-level admins can promote users")
     
     try:
@@ -893,7 +896,10 @@ async def demote_from_admin(user_id: str, token: Optional[str] = None):
         raise HTTPException(status_code=403, detail="Admin access required")
     
     # Only top-level admins can demote others
-    if admin.get("admin_level", 0) < 10:
+    admin_level = admin.get("admin_level", 0)
+    if isinstance(admin_level, str):
+        admin_level = 10 if admin_level in ["full", "top", "owner"] else 0
+    if admin_level < 10:
         raise HTTPException(status_code=403, detail="Only top-level admins can demote admins")
     
     try:
@@ -908,7 +914,10 @@ async def demote_from_admin(user_id: str, token: Optional[str] = None):
     if str(user["_id"]) == str(admin["_id"]):
         raise HTTPException(status_code=400, detail="Cannot demote yourself")
     
-    if user.get("admin_level", 0) >= 10:
+    user_admin_level = user.get("admin_level", 0)
+    if isinstance(user_admin_level, str):
+        user_admin_level = 10 if user_admin_level in ["full", "top", "owner"] else 0
+    if user_admin_level >= 10:
         raise HTTPException(status_code=400, detail="Cannot demote top-level admins")
     
     # Demote user
