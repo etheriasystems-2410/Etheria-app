@@ -1,12 +1,17 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Drawer } from 'expo-router/drawer';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Text } from 'react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 import { useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
+import { useFonts, Cinzel_700Bold, Cinzel_400Regular } from '@expo-google-fonts/cinzel';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Prevent splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
 
 function ProtectedLayout() {
   const { isAuthenticated, loading } = useAuth();
@@ -245,6 +250,25 @@ function ProtectedLayout() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Cinzel_700Bold,
+    Cinzel_400Regular,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#9f7aea" />
+      </View>
+    );
+  }
+
   return (
     <ThemeProvider>
       <LanguageProvider>
@@ -261,5 +285,11 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0a0014',
   },
 });
