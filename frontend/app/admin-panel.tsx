@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   RefreshControl,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -109,6 +111,14 @@ export default function AdminPanel() {
   const [customCode, setCustomCode] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [emailRecipient, setEmailRecipient] = useState({ email: '', name: '', user_id: '' });
+  
+  // AI Chat state
+  const [showAIChatModal, setShowAIChatModal] = useState(false);
+  const [aiChatType, setAIChatType] = useState<'contest' | 'moderator'>('contest');
+  const [aiChatMessages, setAIChatMessages] = useState<{role: string, content: string}[]>([]);
+  const [aiChatInput, setAIChatInput] = useState('');
+  const [aiChatLoading, setAIChatLoading] = useState(false);
+  const chatScrollRef = useRef<ScrollView>(null);
   
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -385,6 +395,58 @@ export default function AdminPanel() {
     fetchAllUsers(userSearchQuery);
   };
 
+  // AI Chat functions
+  const openAIChat = (type: 'contest' | 'moderator') => {
+    setAIChatType(type);
+    setAIChatMessages([]);
+    setAIChatInput('');
+    setShowAIChatModal(true);
+  };
+
+  const sendAIMessage = async () => {
+    if (!aiChatInput.trim() || aiChatLoading) return;
+    
+    const userMessage = aiChatInput.trim();
+    setAIChatInput('');
+    setAIChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setAIChatLoading(true);
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/admin/ai-chat?token=${authToken}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          ai_type: aiChatType
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setAIChatMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+        setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
+      } else {
+        setAIChatMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.detail || 'Failed to get response'}` }]);
+      }
+    } catch (err) {
+      setAIChatMessages(prev => [...prev, { role: 'assistant', content: 'Error: Failed to connect to AI' }]);
+    } finally {
+      setAIChatLoading(false);
+    }
+  };
+
+  const clearAIChat = async () => {
+    try {
+      await fetch(`${BACKEND_URL}/api/admin/ai-chat/clear?token=${authToken}&ai_type=${aiChatType}`, {
+        method: 'POST'
+      });
+      setAIChatMessages([]);
+    } catch (err) {
+      console.error('Error clearing chat:', err);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return '#10b981';
@@ -487,7 +549,7 @@ export default function AdminPanel() {
         ) : activeTab === 'users' ? (
           /* Users Tab */
           <View style={styles.section}>
-            {/* User Sub-tabs */}
+            {/* Sub-tabs */}
             <View style={styles.subTabs}>
               <TouchableOpacity
                 style={[styles.subTab, userSubTab === 'all' && styles.subTabActive]}
@@ -500,6 +562,13 @@ export default function AdminPanel() {
                 onPress={() => setUserSubTab('flagged')}
               >
                 <Text style={[styles.subTabText, userSubTab === 'flagged' && styles.subTabTextActive]}>Flagged</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.aiChatButton}
+                onPress={() => openAIChat('moderator')}
+              >
+                <Ionicons name="chatbubbles" size={16} color="#9f7aea" />
+                <Text style={styles.aiChatButtonText}>Chat with Moderator AI</Text>
               </TouchableOpacity>
             </View>
 
@@ -624,6 +693,16 @@ export default function AdminPanel() {
         ) : (
           /* Contest Tab */
           <View style={styles.section}>
+            {/* Chat with Contest AI Button */}
+            <TouchableOpacity
+              style={styles.aiChatButtonLarge}
+              onPress={() => openAIChat('contest')}
+            >
+              <Ionicons name="chatbubbles" size={20} color="#ffd700" />
+              <Text style={styles.aiChatButtonLargeText}>Chat with Contest AI</Text>
+              <Ionicons name="chevron-forward" size={18} color="#ffd700" />
+            </TouchableOpacity>
+
             {/* Code Generation */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>
@@ -957,6 +1036,116 @@ export default function AdminPanel() {
           </View>
         </View>
       </Modal>
+
+      {/* AI Chat Modal */}
+      <Modal visible={showAIChatModal} animationType="slide" transparent>
+        <KeyboardAvoidingView 
+          style={styles.aiChatModalContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.aiChatModal}>
+            {/* Header */}
+            <View style={styles.aiChatHeader}>
+              <View style={styles.aiChatHeaderInfo}>
+                <Ionicons 
+                  name={aiChatType === 'contest' ? 'trophy' : 'shield-checkmark'} 
+                  size={24} 
+                  color={aiChatType === 'contest' ? '#ffd700' : '#9f7aea'} 
+                />
+                <Text style={styles.aiChatTitle}>
+                  {aiChatType === 'contest' ? 'Contest AI' : 'Moderator AI'}
+                </Text>
+              </View>
+              <View style={styles.aiChatHeaderActions}>
+                <TouchableOpacity style={styles.aiChatClearBtn} onPress={clearAIChat}>
+                  <Ionicons name="trash-outline" size={20} color="#9f7aea" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.aiChatCloseBtn} onPress={() => setShowAIChatModal(false)}>
+                  <Ionicons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Messages */}
+            <ScrollView 
+              ref={chatScrollRef}
+              style={styles.aiChatMessages}
+              contentContainerStyle={styles.aiChatMessagesContent}
+            >
+              {aiChatMessages.length === 0 && (
+                <View style={styles.aiChatWelcome}>
+                  <Ionicons 
+                    name={aiChatType === 'contest' ? 'trophy' : 'shield-checkmark'} 
+                    size={50} 
+                    color={aiChatType === 'contest' ? '#ffd700' : '#9f7aea'} 
+                  />
+                  <Text style={styles.aiChatWelcomeTitle}>
+                    {aiChatType === 'contest' ? 'Contest AI Assistant' : 'Moderation AI Assistant'}
+                  </Text>
+                  <Text style={styles.aiChatWelcomeText}>
+                    {aiChatType === 'contest' 
+                      ? 'Ask me about the bi-weekly contest, winner selection, eligibility, or promo codes.'
+                      : 'Ask me about moderation policies, flagged content, suspension rules, or appeals.'}
+                  </Text>
+                </View>
+              )}
+              
+              {aiChatMessages.map((msg, index) => (
+                <View 
+                  key={index} 
+                  style={[
+                    styles.aiChatBubble,
+                    msg.role === 'user' ? styles.aiChatBubbleUser : styles.aiChatBubbleAI
+                  ]}
+                >
+                  {msg.role === 'assistant' && (
+                    <View style={styles.aiChatBubbleIcon}>
+                      <Ionicons 
+                        name={aiChatType === 'contest' ? 'trophy' : 'shield-checkmark'} 
+                        size={16} 
+                        color={aiChatType === 'contest' ? '#ffd700' : '#9f7aea'} 
+                      />
+                    </View>
+                  )}
+                  <Text style={[
+                    styles.aiChatBubbleText,
+                    msg.role === 'user' && styles.aiChatBubbleTextUser
+                  ]}>
+                    {msg.content}
+                  </Text>
+                </View>
+              ))}
+              
+              {aiChatLoading && (
+                <View style={[styles.aiChatBubble, styles.aiChatBubbleAI]}>
+                  <ActivityIndicator size="small" color="#9f7aea" />
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Input */}
+            <View style={styles.aiChatInputContainer}>
+              <TextInput
+                style={styles.aiChatInput}
+                placeholder="Type your message..."
+                placeholderTextColor="#6b7280"
+                value={aiChatInput}
+                onChangeText={setAIChatInput}
+                onSubmitEditing={sendAIMessage}
+                returnKeyType="send"
+                multiline
+              />
+              <TouchableOpacity 
+                style={[styles.aiChatSendBtn, (!aiChatInput.trim() || aiChatLoading) && styles.aiChatSendBtnDisabled]}
+                onPress={sendAIMessage}
+                disabled={!aiChatInput.trim() || aiChatLoading}
+              >
+                <Ionicons name="send" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1073,4 +1262,33 @@ const styles = StyleSheet.create({
   demoteBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   selfNote: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(159, 122, 234, 0.1)', padding: 14, borderRadius: 10, gap: 8 },
   selfNoteText: { flex: 1, color: '#9f7aea', fontSize: 13, fontStyle: 'italic' },
+  // AI Chat button styles
+  aiChatButton: { flexDirection: 'row', alignItems: 'center', marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(159, 122, 234, 0.15)', gap: 6 },
+  aiChatButtonText: { fontSize: 12, color: '#9f7aea', fontWeight: '500' },
+  aiChatButtonLarge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 215, 0, 0.1)', borderWidth: 1, borderColor: 'rgba(255, 215, 0, 0.3)', padding: 14, borderRadius: 12, marginBottom: 16, gap: 10 },
+  aiChatButtonLargeText: { flex: 1, fontSize: 15, color: '#ffd700', fontWeight: '600' },
+  // AI Chat Modal styles
+  aiChatModalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' },
+  aiChatModal: { flex: 1, backgroundColor: '#0a0014', marginTop: 40, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  aiChatHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#2d1b4e' },
+  aiChatHeaderInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  aiChatTitle: { fontSize: 18, fontWeight: '600', color: '#fff' },
+  aiChatHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  aiChatClearBtn: { padding: 6 },
+  aiChatCloseBtn: { padding: 4 },
+  aiChatMessages: { flex: 1 },
+  aiChatMessagesContent: { padding: 16, gap: 12 },
+  aiChatWelcome: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 },
+  aiChatWelcomeTitle: { fontSize: 20, fontWeight: '600', color: '#fff', marginTop: 16, marginBottom: 8 },
+  aiChatWelcomeText: { fontSize: 14, color: '#9f7aea', textAlign: 'center', lineHeight: 22 },
+  aiChatBubble: { maxWidth: '85%', padding: 12, borderRadius: 16 },
+  aiChatBubbleUser: { alignSelf: 'flex-end', backgroundColor: '#7c3aed' },
+  aiChatBubbleAI: { alignSelf: 'flex-start', backgroundColor: '#1a0033', borderWidth: 1, borderColor: '#2d1b4e', flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  aiChatBubbleIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#2d1b4e', justifyContent: 'center', alignItems: 'center' },
+  aiChatBubbleText: { fontSize: 14, color: '#e9d5ff', lineHeight: 22, flex: 1 },
+  aiChatBubbleTextUser: { color: '#fff' },
+  aiChatInputContainer: { flexDirection: 'row', padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: '#2d1b4e', backgroundColor: '#0a0014' },
+  aiChatInput: { flex: 1, backgroundColor: '#1a0033', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, color: '#fff', fontSize: 15, maxHeight: 100 },
+  aiChatSendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#7c3aed', justifyContent: 'center', alignItems: 'center' },
+  aiChatSendBtnDisabled: { opacity: 0.5 },
 });

@@ -13,6 +13,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 load_dotenv()
 
@@ -20,6 +23,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 # Will be set by server.py
 db = None
+llm_api_key = None
 
 GMAIL_EMAIL = os.getenv("GMAIL_EMAIL", "etheriasystems@gmail.com")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
@@ -27,6 +31,10 @@ GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
 def set_db(database):
     global db
     db = database
+
+def set_llm_key(key):
+    global llm_api_key
+    llm_api_key = key
 
 # Pydantic Models
 class CodeCreate(BaseModel):
@@ -411,3 +419,129 @@ async def send_code_to_user(data: SendCodeEmail, token: Optional[str] = None):
         return {"success": True, "message": f"Code email sent to {data.user_email}"}
     else:
         raise HTTPException(status_code=500, detail="Failed to send email")
+
+# AI Chat Models
+class AdminAIChatMessage(BaseModel):
+    message: str
+    ai_type: str  # "contest" or "moderator"
+
+# Store conversation history per admin session
+admin_chat_histories = {}
+
+@router.post("/ai-chat")
+async def admin_ai_chat(data: AdminAIChatMessage, token: Optional[str] = None):
+    """Chat with Contest AI or Moderation AI"""
+    admin = await get_admin_from_token(token)
+    if not admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    admin_id = str(admin["_id"])
+    chat_key = f"{admin_id}_{data.ai_type}"
+    
+    # Initialize chat history if not exists
+    if chat_key not in admin_chat_histories:
+        admin_chat_histories[chat_key] = []
+    
+    # Get system prompt based on AI type
+    if data.ai_type == "contest":
+        system_prompt = """You are the Etheria Contest AI Assistant. You manage the bi-weekly prize drawing contest for the Etheria spiritual meditation app.
+
+Your responsibilities include:
+- Explaining how the contest works (users enter by having active premium subscriptions)
+- Discussing winner selection criteria and eligibility
+- Explaining prize types (1-month premium or lifetime membership)
+- Helping admins understand contest statistics and entries
+- Answering questions about promotional codes
+
+Contest Rules:
+- Bi-weekly drawings (every 2 weeks)
+- Only active premium subscribers are eligible
+- Winners are selected randomly from eligible pool
+- Prizes: 1-month premium extension OR lifetime membership (admin decides)
+- Winners receive congratulations email with redemption code
+
+Be helpful, concise, and knowledgeable about the contest system."""
+
+    elif data.ai_type == "moderator":
+        system_prompt = """You are the Etheria AI Moderation Assistant. You help manage community moderation for the Etheria spiritual meditation app.
+
+Your responsibilities include:
+- Explaining moderation policies and guidelines
+- Discussing flagged content and user reports
+- Explaining the suspension/warning system
+- Helping admins understand moderation decisions
+- Providing guidance on appeals and edge cases
+
+Moderation System:
+- AI automatically reviews all posts, comments, and chat messages
+- Inappropriate content is flagged for review
+- Progressive discipline: Warning → 2-week suspension → 30-day suspension → Account cancellation
+- Users can flag content for manual review
+- Admins receive email notifications for flagged content
+- Appeal process available via email link
+
+Community Standards:
+- Respect and kindness required
+- No hate speech, harassment, or discrimination
+- No spam or promotional content
+- No harmful health/medical advice
+- Privacy must be respected
+
+Be helpful, fair, and knowledgeable about the moderation system."""
+    else:
+        raise HTTPException(status_code=400, detail="Invalid AI type. Use 'contest' or 'moderator'")
+    
+    try:
+        import uuid
+        
+        # Build the full prompt with context
+        full_prompt = ""
+        for msg in admin_chat_histories[chat_key][-10:]:
+            if msg["role"] == "user":
+                full_prompt += f"\nUser: {msg['content']}"
+            else:
+                full_prompt += f"\nAssistant: {msg['content']}"
+        full_prompt += f"\nUser: {data.message}\nAssistant:"
+        
+        chat = LlmChat(
+            api_key=llm_api_key,
+            session_id=f"admin-{data.ai_type}-{uuid.uuid4()}",
+            system_message=system_prompt
+        )
+        
+        # Get response
+        user_msg = UserMessage(text=data.message)
+        response_text = await chat.send_message(user_msg)
+        
+        # Save to history
+        admin_chat_histories[chat_key].append({"role": "user", "content": data.message})
+        admin_chat_histories[chat_key].append({"role": "assistant", "content": response_text})
+        
+        # Keep history manageable
+        if len(admin_chat_histories[chat_key]) > 50:
+            admin_chat_histories[chat_key] = admin_chat_histories[chat_key][-30:]
+        
+        return {
+            "success": True,
+            "response": response_text,
+            "ai_type": data.ai_type
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI chat error: {str(e)}")
+
+@router.post("/ai-chat/clear")
+async def clear_admin_ai_chat(ai_type: str, token: Optional[str] = None):
+    """Clear chat history for a specific AI"""
+    admin = await get_admin_from_token(token)
+    if not admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    admin_id = str(admin["_id"])
+    chat_key = f"{admin_id}_{ai_type}"
+    
+    if chat_key in admin_chat_histories:
+        admin_chat_histories[chat_key] = []
+    
+    return {"success": True, "message": f"Chat history cleared for {ai_type} AI"}
+
