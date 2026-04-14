@@ -312,25 +312,28 @@ export default function Home() {
           {getWelcomeText()}
         </Text>
 
-        <View style={[styles.pricingCard, { backgroundColor: theme.cardBackground }]}>
-          <Ionicons name="diamond" size={28} color="#ffd700" />
-          <Text style={styles.pricingTitle}>{getUnlockText()}</Text>
-          <Text style={styles.pricingText}>
-            {languageCode === 'en' ? (
-              <>Access everything Etheria has to offer for a monthly commitment of only{' '}
-              <Text style={styles.priceHighlight}>$3.99</Text>.</>
-            ) : (
-              <Text style={styles.priceHighlight}>$3.99/{t('perMonth').replace('/', '')}</Text>
-            )}
-          </Text>
-          <TouchableOpacity 
-            style={[styles.subscribeButton, { backgroundColor: theme.accent }]}
-            onPress={() => router.push('/settings')}
-          >
-            <Ionicons name="star" size={20} color="#1a0033" />
-            <Text style={styles.subscribeButtonText}>{getSubscribeText()}</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Hide subscription box for premium users */}
+        {!isPremium && (
+          <View style={[styles.pricingCard, { backgroundColor: theme.cardBackground }]}>
+            <Ionicons name="diamond" size={28} color="#ffd700" />
+            <Text style={styles.pricingTitle}>{getUnlockText()}</Text>
+            <Text style={styles.pricingText}>
+              {languageCode === 'en' ? (
+                <>Access everything Etheria has to offer for a monthly commitment of only{' '}
+                <Text style={styles.priceHighlight}>$3.99</Text>.</>
+              ) : (
+                <Text style={styles.priceHighlight}>$3.99/{t('perMonth').replace('/', '')}</Text>
+              )}
+            </Text>
+            <TouchableOpacity 
+              style={[styles.subscribeButton, { backgroundColor: theme.accent }]}
+              onPress={() => router.push('/settings')}
+            >
+              <Ionicons name="star" size={20} color="#1a0033" />
+              <Text style={styles.subscribeButtonText}>{getSubscribeText()}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Prize Drawing Section */}
         {isAuthenticated && (

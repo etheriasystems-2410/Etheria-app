@@ -576,13 +576,6 @@ export default function Journal() {
             </View>
           )}
 
-          {isPremium && (
-            <View style={styles.premiumBanner}>
-              <Ionicons name="infinite" size={20} color="#10b981" />
-              <Text style={styles.premiumText}>Unlimited journal entries</Text>
-            </View>
-          )}
-
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#b794f6" />

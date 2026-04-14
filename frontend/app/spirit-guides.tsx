@@ -577,7 +577,7 @@ export default function SpiritGuides() {
             style={styles.skipButton}
             onPress={() => setShowBirthdayInput(false)}
           >
-            <Text style={styles.skipButtonText}>Skip for now</Text>
+            <Text style={styles.skipButtonText}>Skip</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -719,18 +719,6 @@ export default function SpiritGuides() {
           <Text style={styles.chatHeaderElement}>
             Guide of {selectedGuide.element} • {selectedGuide.gender}
           </Text>
-          {/* Change Birthday Link */}
-          <TouchableOpacity 
-            style={styles.changeBirthdayLink}
-            onPress={() => {
-              setShowBirthdayInput(true);
-              setBirthMonth('');
-              setBirthDay('');
-            }}
-          >
-            <Ionicons name="calendar-outline" size={12} color="#9f7aea" />
-            <Text style={styles.changeBirthdayText}>Change birthday</Text>
-          </TouchableOpacity>
         </View>
         <View style={styles.chatHeaderRight}>
           {/* Switch Guide Button */}
@@ -891,14 +879,16 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     alignItems: 'center',
+    minWidth: 100,
   },
   inputLabel: {
     fontSize: 14,
     color: '#c4b5fd',
     marginBottom: 8,
+    textAlign: 'center',
   },
   birthdayInput: {
-    width: 80,
+    width: 90,
     height: 60,
     backgroundColor: '#2d1b4e',
     borderRadius: 12,
