@@ -768,8 +768,8 @@ async def get_flagged_users(token: Optional[str] = None, limit: int = 50):
             "flag_count": u.get("flag_count", 0),
             "suspension_count": u.get("suspension_count", 0),
             "account_status": u.get("account_status", "active"),
-            "suspension_end": u.get("suspension_end").isoformat() if u.get("suspension_end") else None,
-            "created_at": u.get("created_at").isoformat() if u.get("created_at") else None
+            "suspension_end": u.get("suspension_end").isoformat() if u.get("suspension_end") and hasattr(u.get("suspension_end"), 'isoformat') else str(u.get("suspension_end")) if u.get("suspension_end") else None,
+            "created_at": u.get("created_at").isoformat() if u.get("created_at") and hasattr(u.get("created_at"), 'isoformat') else str(u.get("created_at")) if u.get("created_at") else None
         })
     
     return {"users": formatted}

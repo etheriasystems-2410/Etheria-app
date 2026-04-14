@@ -221,13 +221,6 @@ export default function Home() {
       icon: 'book' as const,
       route: '/journal',
     },
-    {
-      title: 'Community',
-      description: getFeatureDescription('community'),
-      icon: 'people' as const,
-      route: '/community',
-      isPremium: true,
-    },
   ];
 
   // Welcome text translations
