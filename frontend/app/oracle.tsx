@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import HeaderBanner from '../components/HeaderBanner';
 import { Paywall } from '../components/Paywall';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -327,6 +328,9 @@ export default function Oracle() {
   if (!selectedSpread) {
     return (
       <View style={styles.container}>
+        {/* Header Banner */}
+        <HeaderBanner title="Oracle" height={100} />
+        
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Hero Image Section */}
           <View style={styles.heroSection}>

@@ -19,6 +19,7 @@ import { useLanguage, LANGUAGES, Language } from '../contexts/LanguageContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Paywall } from '../components/Paywall';
+import HeaderBanner from '../components/HeaderBanner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
@@ -387,6 +388,9 @@ export default function Settings() {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Header Banner */}
+      <HeaderBanner title="Settings" height={100} />
+      
       {/* Payment Processing Overlay */}
       {checkingPayment && (
         <View style={styles.processingOverlay}>

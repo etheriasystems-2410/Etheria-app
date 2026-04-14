@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import HeaderBanner from '../components/HeaderBanner';
 
 export default function CommunityGuidelines() {
   const router = useRouter();
@@ -16,6 +17,9 @@ export default function CommunityGuidelines() {
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header Banner */}
+      <HeaderBanner title="Guidelines" height={100} />
+      
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>

@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Paywall } from '../components/Paywall';
+import HeaderBanner from '../components/HeaderBanner';
 import { AudioPlayerManager } from '../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -607,6 +608,9 @@ export default function Training() {
 
   return (
     <View style={styles.container}>
+      {/* Header Banner */}
+      <HeaderBanner title="Training" height={100} />
+      
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Hero Image Section */}
         <View style={styles.heroSection}>

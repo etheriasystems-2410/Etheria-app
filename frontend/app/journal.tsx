@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import HeaderBanner from '../components/HeaderBanner';
 
 // Import modular journal components
 import { 
@@ -469,6 +470,9 @@ export default function Journal() {
 
   return (
     <View style={styles.container}>
+      {/* Header Banner */}
+      <HeaderBanner title="Journal" height={100} />
+      
       {/* Hero Image Section */}
       <View style={styles.heroSection}>
         <Image

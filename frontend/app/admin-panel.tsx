@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import HeaderBanner from '../components/HeaderBanner';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -418,6 +419,9 @@ export default function AdminPanel() {
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header Banner */}
+      <HeaderBanner title="Admin Panel" height={100} />
+      
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>

@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Paywall } from '../components/Paywall';
+import HeaderBanner from '../components/HeaderBanner';
 import { AudioPlayerManager, setupAudioMode } from '../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -587,6 +588,9 @@ export default function SpiritGuides() {
   if (!selectedGuide) {
     return (
       <View style={styles.container}>
+        {/* Header Banner */}
+        <HeaderBanner title="Spirit Guides" height={100} />
+        
         <ScrollView contentContainerStyle={styles.selectionContainer}>
           {/* Hero Image Section */}
           <View style={styles.heroSection}>

@@ -18,6 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Paywall } from '../components/Paywall';
+import HeaderBanner from '../components/HeaderBanner';
 import { Image } from 'expo-image';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -781,6 +782,9 @@ export default function Community() {
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header Banner */}
+      <HeaderBanner title="Community" height={100} />
+      
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
