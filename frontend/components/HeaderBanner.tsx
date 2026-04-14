@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
+import { useFonts, Cinzel_700Bold, Cinzel_400Regular } from '@expo-google-fonts/cinzel';
 
 const HEADER_BANNER_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/oz3admmj_47815.jpg';
 
@@ -10,6 +11,11 @@ interface HeaderBannerProps {
 }
 
 export default function HeaderBanner({ title = 'Etheria', height = 120 }: HeaderBannerProps) {
+  const [fontsLoaded] = useFonts({
+    Cinzel_700Bold,
+    Cinzel_400Regular,
+  });
+
   return (
     <View style={[styles.headerBanner, { height }]}>
       <Image
@@ -18,7 +24,11 @@ export default function HeaderBanner({ title = 'Etheria', height = 120 }: Header
         contentFit="cover"
       />
       <View style={styles.headerBannerOverlay}>
-        <Text style={styles.headerBannerTitle}>{title}</Text>
+        {fontsLoaded ? (
+          <Text style={styles.headerBannerTitle}>{title}</Text>
+        ) : (
+          <Text style={styles.headerBannerTitleFallback}>{title}</Text>
+        )}
       </View>
     </View>
   );
@@ -44,13 +54,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerBannerTitle: {
-    fontSize: 32,
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 28,
+    color: '#fff',
+    letterSpacing: 6,
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(159, 122, 234, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  headerBannerTitleFallback: {
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
-    letterSpacing: 4,
+    letterSpacing: 6,
     textTransform: 'uppercase',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    textShadowColor: 'rgba(159, 122, 234, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
 });
