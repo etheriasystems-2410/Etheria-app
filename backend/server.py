@@ -2195,8 +2195,11 @@ async def login(request: LoginRequest):
     response = JSONResponse(content={
         "user_id": user_doc["user_id"],
         "email": user_doc["email"],
-        "name": user_doc["name"],
+        "name": user_doc.get("name", ""),
+        "display_name": user_doc.get("display_name"),
         "picture": user_doc.get("picture"),
+        "is_admin": user_doc.get("is_admin", False),
+        "admin_level": user_doc.get("admin_level"),
         "session_token": session_token  # Include token for mobile apps
     })
     
