@@ -185,7 +185,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user_id: data.user_id,
         email: data.email,
         name: data.name,
-        picture: data.picture
+        picture: data.picture,
+        is_admin: data.is_admin,
+        admin_level: data.admin_level,
+        display_name: data.display_name
       });
     } catch (error) {
       console.error('Login error:', error);
