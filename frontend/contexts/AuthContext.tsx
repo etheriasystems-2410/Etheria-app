@@ -41,6 +41,7 @@ interface AuthContextType {
   refreshSubscription: () => Promise<void>;
   checkFeatureAccess: (feature: string) => boolean;
   refreshAuth: () => Promise<void>;
+  authToken: string | null;
 }
 
 const defaultFeatures = {
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   useEffect(() => {
     // CRITICAL: If returning from OAuth callback, skip the /me check.
@@ -83,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const sessionToken = await AsyncStorage.getItem('session_token');
       if (sessionToken) {
+        setAuthToken(sessionToken);
         const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
           headers: {
             'Authorization': `Bearer ${sessionToken}`
@@ -97,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetchSubscriptionStatus(sessionToken);
         } else {
           await AsyncStorage.removeItem('session_token');
+          setAuthToken(null);
         }
       }
     } catch (error) {
@@ -180,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (sessionToken) {
         await AsyncStorage.setItem('session_token', sessionToken);
+        setAuthToken(sessionToken);
         await fetchSubscriptionStatus(sessionToken);
       }
       
@@ -220,6 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const sessionToken = response.headers.get('set-cookie')?.split('session_token=')[1]?.split(';')[0];
       if (sessionToken) {
         await AsyncStorage.setItem('session_token', sessionToken);
+        setAuthToken(sessionToken);
         await fetchSubscriptionStatus(sessionToken);
       }
       
@@ -245,6 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await AsyncStorage.removeItem('session_token');
       setUser(null);
       setSubscription(null);
+      setAuthToken(null);
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -269,7 +276,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscription,
         refreshSubscription,
         checkFeatureAccess,
-        refreshAuth
+        refreshAuth,
+        authToken
       }}
     >
       {children}
