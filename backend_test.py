@@ -1,260 +1,338 @@
 #!/usr/bin/env python3
 """
-Backend Test Suite for Oracle Card AI Image Generation Feature
-Tests the POST /api/oracle/draw endpoint with AI-generated images
+Backend API Testing for Etheria Meditation App Admin Panel
+Testing actual admin endpoints that exist in the system
 """
 
 import requests
 import json
-import time
-import base64
+import sys
 from datetime import datetime
 
-# Backend URL from environment
+# Backend URL from frontend .env
 BACKEND_URL = "https://meditation-nexus.preview.emergentagent.com/api"
 
-def test_oracle_ai_image_generation():
-    """Test Oracle card AI image generation feature"""
-    print("🔮 TESTING ORACLE CARD AI IMAGE GENERATION")
-    print("=" * 60)
+# Test credentials from test_credentials.md
+ADMIN_EMAIL = "etheriasystems@gmail.com"
+ADMIN_PASSWORD = "$Tory2410"  # Using password from review request
+ADMIN_SECRET = "etheria_admin_secret_2026"
+
+def print_test_header(test_name):
+    print(f"\n{'='*60}")
+    print(f"🧪 TESTING: {test_name}")
+    print(f"{'='*60}")
+
+def print_result(success, message, response_data=None):
+    status = "✅ PASS" if success else "❌ FAIL"
+    print(f"{status}: {message}")
+    if response_data:
+        print(f"Response: {json.dumps(response_data, indent=2)}")
+    print("-" * 60)
+
+def test_admin_login():
+    """Test admin login to get authentication token"""
+    print_test_header("Admin Login Authentication")
     
-    # Test 1: Single card draw with image generation
-    print("\n1️⃣ Testing Single Card Draw with AI Image Generation")
-    print("-" * 50)
-    
-    start_time = time.time()
-    response = requests.post(f"{BACKEND_URL}/oracle/draw", timeout=60)
-    end_time = time.time()
-    
-    print(f"⏱️  Response time: {end_time - start_time:.2f} seconds")
-    print(f"📊 Status Code: {response.status_code}")
-    
-    if response.status_code == 200:
-        data = response.json()
-        print(f"✅ Response received successfully")
-        
-        # Verify response structure
-        assert "spread_type" in data, "Missing spread_type field"
-        assert "cards" in data, "Missing cards field"
-        assert "timestamp" in data, "Missing timestamp field"
-        assert data["spread_type"] == "single", "Expected single spread type"
-        assert len(data["cards"]) == 1, "Expected exactly 1 card"
-        
-        card_data = data["cards"][0]
-        assert "card" in card_data, "Missing card field"
-        assert "position" in card_data, "Missing position field"
-        assert "interpretation" in card_data, "Missing interpretation field"
-        
-        card = card_data["card"]
-        assert "name" in card, "Missing card name"
-        assert "element" in card, "Missing card element"
-        assert "description" in card, "Missing card description"
-        assert "keywords" in card, "Missing card keywords"
-        assert "image_prompt" in card, "Missing card image_prompt"
-        assert "image_base64" in card, "Missing image_base64 field"
-        
-        # Verify image_base64 is valid
-        image_base64 = card["image_base64"]
-        if image_base64:
-            print(f"🖼️  Image base64 length: {len(image_base64)} characters")
-            
-            # Decode base64 to verify it's valid
-            try:
-                image_data = base64.b64decode(image_base64)
-                print(f"🔍 Decoded image size: {len(image_data)} bytes")
-                
-                # Check if it's a PNG (starts with PNG signature)
-                if image_data.startswith(b'\x89PNG'):
-                    print("✅ Valid PNG image detected (starts with PNG signature)")
-                else:
-                    print(f"⚠️  Image format: First 8 bytes: {image_data[:8]}")
-                    
-            except Exception as e:
-                print(f"❌ Invalid base64 image data: {e}")
-                return False
-        else:
-            print("⚠️  No image_base64 returned (may be None)")
-        
-        print(f"🃏 Card drawn: {card['name']} ({card['element']})")
-        print(f"📝 Interpretation length: {len(card_data['interpretation'])} characters")
-        print(f"🎯 Position: {card_data['position']}")
-        
-        # Store card name for caching test
-        first_card_name = card['name']
-        
-    else:
-        print(f"❌ Single card draw failed: {response.status_code}")
-        print(f"Response: {response.text}")
-        return False
-    
-    # Test 2: Multi-card draw (3 cards) with images
-    print("\n2️⃣ Testing Multi-Card Draw (3 cards) with AI Images")
-    print("-" * 50)
-    
-    multi_card_payload = {
-        "card_count": 3,
-        "spread_type": "three_card",
-        "positions": ["Past", "Present", "Future"]
-    }
-    
-    start_time = time.time()
-    response = requests.post(f"{BACKEND_URL}/oracle/draw", 
-                           json=multi_card_payload, 
-                           timeout=90)
-    end_time = time.time()
-    
-    print(f"⏱️  Response time: {end_time - start_time:.2f} seconds")
-    print(f"📊 Status Code: {response.status_code}")
-    
-    if response.status_code == 200:
-        data = response.json()
-        print(f"✅ Multi-card response received successfully")
-        
-        # Verify response structure
-        assert data["spread_type"] == "three_card", "Expected three_card spread type"
-        assert len(data["cards"]) == 3, "Expected exactly 3 cards"
-        
-        for i, card_data in enumerate(data["cards"]):
-            card = card_data["card"]
-            print(f"🃏 Card {i+1}: {card['name']} ({card['element']}) - Position: {card_data['position']}")
-            
-            # Verify each card has image_base64
-            assert "image_base64" in card, f"Missing image_base64 in card {i+1}"
-            
-            image_base64 = card["image_base64"]
-            if image_base64:
-                print(f"   🖼️  Image base64 length: {len(image_base64)} characters")
-                
-                # Verify it's valid base64 and PNG
-                try:
-                    image_data = base64.b64decode(image_base64)
-                    if image_data.startswith(b'\x89PNG'):
-                        print(f"   ✅ Valid PNG image for {card['name']}")
-                    else:
-                        print(f"   ⚠️  Non-PNG image for {card['name']}")
-                except Exception as e:
-                    print(f"   ❌ Invalid base64 for {card['name']}: {e}")
-            else:
-                print(f"   ⚠️  No image for {card['name']}")
-        
-    else:
-        print(f"❌ Multi-card draw failed: {response.status_code}")
-        print(f"Response: {response.text}")
-        return False
-    
-    # Test 3: Image caching verification
-    print("\n3️⃣ Testing Image Caching (Draw same card again)")
-    print("-" * 50)
-    
-    # Draw multiple single cards to try to get the same card as before
-    cached_card_found = False
-    attempts = 0
-    max_attempts = 10
-    
-    while not cached_card_found and attempts < max_attempts:
-        attempts += 1
-        print(f"Attempt {attempts}: Drawing single card...")
-        
-        start_time = time.time()
-        response = requests.post(f"{BACKEND_URL}/oracle/draw", timeout=60)
-        end_time = time.time()
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/auth/login",
+            json={
+                "email": ADMIN_EMAIL,
+                "password": ADMIN_PASSWORD
+            },
+            timeout=30
+        )
         
         if response.status_code == 200:
             data = response.json()
-            card = data["cards"][0]["card"]
-            response_time = end_time - start_time
+            is_admin = data.get("is_admin", False)
+            token = data.get("session_token")
             
-            print(f"   🃏 Drew: {card['name']} (Response time: {response_time:.2f}s)")
-            
-            if card['name'] == first_card_name:
-                print(f"✅ Found cached card: {card['name']}")
-                print(f"⚡ Cached response time: {response_time:.2f} seconds")
-                
-                # Verify image is still present
-                if card.get("image_base64"):
-                    print("✅ Cached image present")
-                    cached_card_found = True
-                else:
-                    print("❌ Cached image missing")
-                break
+            if is_admin and token:
+                print_result(True, f"Admin login successful. Admin status: {is_admin}", {
+                    "is_admin": is_admin,
+                    "admin_level": data.get("admin_level"),
+                    "email": data.get("email"),
+                    "token_received": bool(token)
+                })
+                return token
+            else:
+                print_result(False, f"Login successful but admin status is {is_admin} or no token", data)
+                return None
         else:
-            print(f"   ❌ Draw failed: {response.status_code}")
-    
-    if not cached_card_found:
-        print(f"⚠️  Could not find cached card '{first_card_name}' in {max_attempts} attempts")
-        print("   This is normal due to randomness, but caching should work when same card is drawn")
-    
-    # Test 4: Verify PNG signature in base64 images
-    print("\n4️⃣ Testing PNG Signature Verification")
-    print("-" * 50)
-    
-    # Draw one more card to test PNG signature
-    response = requests.post(f"{BACKEND_URL}/oracle/draw", timeout=60)
-    
-    if response.status_code == 200:
-        data = response.json()
-        card = data["cards"][0]["card"]
-        image_base64 = card.get("image_base64")
-        
-        if image_base64:
-            try:
-                # Decode base64
-                image_data = base64.b64decode(image_base64)
-                
-                # Check PNG signature
-                if image_data.startswith(b'\x89PNG\r\n\x1a\n'):
-                    print("✅ Perfect PNG signature detected")
-                    print(f"   First 8 bytes: {image_data[:8].hex()}")
-                elif image_data.startswith(b'\x89PNG'):
-                    print("✅ PNG signature detected (partial)")
-                    print(f"   First 8 bytes: {image_data[:8].hex()}")
-                else:
-                    print(f"❌ Invalid PNG signature")
-                    print(f"   First 8 bytes: {image_data[:8].hex()}")
-                    print(f"   Expected PNG signature: 89504e470d0a1a0a")
-                
-                # Additional format checks
-                print(f"📊 Image statistics:")
-                print(f"   - Size: {len(image_data)} bytes")
-                print(f"   - Base64 length: {len(image_base64)} characters")
-                
-            except Exception as e:
-                print(f"❌ Error verifying PNG signature: {e}")
-        else:
-            print("❌ No image_base64 field in response")
-    else:
-        print(f"❌ PNG verification test failed: {response.status_code}")
-    
-    # Test 5: Check MongoDB caching collection
-    print("\n5️⃣ Testing MongoDB Image Cache Collection")
-    print("-" * 50)
-    print("ℹ️  Note: Cannot directly test MongoDB from here, but backend logs should show caching activity")
-    print("   Check backend logs for 'oracle_card_images' collection operations")
-    
-    print("\n🎉 ORACLE AI IMAGE GENERATION TESTING COMPLETE")
-    print("=" * 60)
-    return True
-
-def main():
-    """Run all Oracle AI image generation tests"""
-    print("🚀 Starting Oracle Card AI Image Generation Test Suite")
-    print(f"🌐 Backend URL: {BACKEND_URL}")
-    print(f"⏰ Test started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    try:
-        success = test_oracle_ai_image_generation()
-        
-        if success:
-            print("\n✅ ALL TESTS COMPLETED SUCCESSFULLY")
-            print("🔮 Oracle AI image generation feature is working correctly!")
-        else:
-            print("\n❌ SOME TESTS FAILED")
-            print("🔧 Please check the issues above and fix them")
+            print_result(False, f"Login failed with status {response.status_code}", {
+                "status_code": response.status_code,
+                "response": response.text
+            })
+            return None
             
     except Exception as e:
-        print(f"\n💥 CRITICAL ERROR: {e}")
-        import traceback
-        traceback.print_exc()
+        print_result(False, f"Login request failed: {str(e)}")
+        return None
+
+def test_admin_dashboard():
+    """Test admin dashboard endpoint"""
+    print_test_header("Admin Dashboard")
+    
+    try:
+        response = requests.get(
+            f"{BACKEND_URL}/admin/dashboard",
+            params={"admin_secret": ADMIN_SECRET},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            print_result(True, "Admin dashboard retrieved successfully", data)
+            return True
+        else:
+            print_result(False, f"Dashboard request failed with status {response.status_code}", {
+                "status_code": response.status_code,
+                "response": response.text
+            })
+            return False
+            
+    except Exception as e:
+        print_result(False, f"Dashboard request failed: {str(e)}")
+        return False
+
+def test_admin_participants():
+    """Test admin participants endpoint"""
+    print_test_header("Admin Participants List")
+    
+    try:
+        response = requests.get(
+            f"{BACKEND_URL}/admin/participants",
+            params={"admin_secret": ADMIN_SECRET},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            print_result(True, "Admin participants list retrieved successfully", {
+                "total_participants": data.get("total_participants"),
+                "participants_count": len(data.get("participants", [])),
+                "sample_participant": data.get("participants", [{}])[0] if data.get("participants") else None
+            })
+            return True
+        else:
+            print_result(False, f"Participants request failed with status {response.status_code}", {
+                "status_code": response.status_code,
+                "response": response.text
+            })
+            return False
+            
+    except Exception as e:
+        print_result(False, f"Participants request failed: {str(e)}")
+        return False
+
+def test_admin_generate_code():
+    """Test admin generate new code endpoint"""
+    print_test_header("Admin Generate New Code")
+    
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/admin/generate-new-code",
+            json={"admin_secret": ADMIN_SECRET},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            print_result(True, "New code generated successfully", data)
+            return True
+        else:
+            print_result(False, f"Generate code request failed with status {response.status_code}", {
+                "status_code": response.status_code,
+                "response": response.text
+            })
+            return False
+            
+    except Exception as e:
+        print_result(False, f"Generate code request failed: {str(e)}")
+        return False
+
+def test_all_users_endpoint(admin_token):
+    """Test admin all users endpoint"""
+    print_test_header("Admin All Users Endpoint")
+    
+    try:
+        response = requests.get(
+            f"{BACKEND_URL}/community/admin/all-users",
+            params={"token": admin_token},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            users = data.get("users", [])
+            admin_user = None
+            for user in users:
+                if user.get("email") == ADMIN_EMAIL:
+                    admin_user = user
+                    break
+            
+            print_result(True, f"All users retrieved successfully. Total: {data.get('total', 0)}", {
+                "total_users": data.get("total"),
+                "users_returned": len(users),
+                "admin_user_found": admin_user is not None,
+                "admin_user_details": admin_user if admin_user else "Not found"
+            })
+            return True
+        else:
+            print_result(False, f"All users request failed with status {response.status_code}", {
+                "status_code": response.status_code,
+                "response": response.text
+            })
+            return False
+            
+    except Exception as e:
+        print_result(False, f"All users request failed: {str(e)}")
+        return False
+
+def test_contest_status(admin_token):
+    """Test contest status endpoint"""
+    print_test_header("Contest Status")
+    
+    try:
+        response = requests.get(
+            f"{BACKEND_URL}/admin/contest/status",
+            params={"token": admin_token},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            print_result(True, "Contest status retrieved successfully", data)
+            return True
+        else:
+            print_result(False, f"Contest status request failed with status {response.status_code}", {
+                "status_code": response.status_code,
+                "response": response.text
+            })
+            return False
+            
+    except Exception as e:
+        print_result(False, f"Contest status request failed: {str(e)}")
+        return False
+
+def test_contest_generate_code(admin_token):
+    """Test contest generate code endpoint"""
+    print_test_header("Contest Generate Code")
+    
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/admin/contest/generate-code",
+            json={"code_type": "monthly"},
+            params={"token": admin_token},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            print_result(True, "Contest code generated successfully", data)
+            return True
+        else:
+            print_result(False, f"Contest generate code request failed with status {response.status_code}", {
+                "status_code": response.status_code,
+                "response": response.text
+            })
+            return False
+            
+    except Exception as e:
+        print_result(False, f"Contest generate code request failed: {str(e)}")
+        return False
+
+def test_contest_entries(admin_token):
+    """Test contest entries endpoint"""
+    print_test_header("Contest Entries")
+    
+    try:
+        response = requests.get(
+            f"{BACKEND_URL}/admin/contest/entries",
+            params={"token": admin_token},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            print_result(True, "Contest entries retrieved successfully", {
+                "contest": data.get("contest"),
+                "total_entries": len(data.get("entries", [])),
+                "total_eligible": data.get("total_eligible", 0)
+            })
+            return True
+        else:
+            print_result(False, f"Contest entries request failed with status {response.status_code}", {
+                "status_code": response.status_code,
+                "response": response.text
+            })
+            return False
+            
+    except Exception as e:
+        print_result(False, f"Contest entries request failed: {str(e)}")
+        return False
+
+def main():
+    """Run all admin panel tests"""
+    print(f"🚀 Starting Etheria Admin Panel Backend Tests")
+    print(f"Backend URL: {BACKEND_URL}")
+    print(f"Test Time: {datetime.now().isoformat()}")
+    
+    results = {}
+    
+    # Test 1: Admin Login
+    admin_token = test_admin_login()
+    results["admin_login"] = admin_token is not None
+    
+    if admin_token:
+        # Test 2: All Users Endpoint (equivalent to community/admin/all-users)
+        results["all_users_endpoint"] = test_all_users_endpoint(admin_token)
+        
+        # Test 3: Contest Status
+        results["contest_status"] = test_contest_status(admin_token)
+        
+        # Test 4: Contest Generate Code
+        results["contest_generate_code"] = test_contest_generate_code(admin_token)
+        
+        # Test 5: Contest Entries
+        results["contest_entries"] = test_contest_entries(admin_token)
+    else:
+        print("⚠️  Skipping token-based tests due to login failure")
+        results["all_users_endpoint"] = False
+        results["contest_status"] = False
+        results["contest_generate_code"] = False
+        results["contest_entries"] = False
+    
+    # Test 6: Admin Dashboard (using admin secret)
+    results["admin_dashboard"] = test_admin_dashboard()
+    
+    # Test 7: Admin Participants (using admin secret)
+    results["admin_participants"] = test_admin_participants()
+    
+    # Test 8: Admin Generate Code (using admin secret)
+    results["admin_generate_code"] = test_admin_generate_code()
+    
+    # Summary
+    print(f"\n{'='*60}")
+    print("🏁 TEST SUMMARY")
+    print(f"{'='*60}")
+    
+    passed = sum(1 for result in results.values() if result)
+    total = len(results)
+    
+    for test_name, result in results.items():
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"{status}: {test_name}")
+    
+    print(f"\nOverall: {passed}/{total} tests passed")
+    
+    if passed == total:
+        print("🎉 All admin panel tests PASSED!")
+        return 0
+    else:
+        print("⚠️  Some admin panel tests FAILED!")
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

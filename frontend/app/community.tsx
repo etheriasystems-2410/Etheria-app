@@ -36,6 +36,7 @@ interface Post {
   content: string;
   author_name: string;
   author_id: string;
+  is_admin?: boolean;
   category: string;
   created_at: string;
   comment_count: number;
@@ -47,6 +48,7 @@ interface Comment {
   content: string;
   author_name: string;
   author_id: string;
+  is_admin?: boolean;
   created_at: string;
   likes: number;
 }
@@ -56,6 +58,7 @@ interface ChatMessage {
   message: string;
   author_name: string;
   author_id: string;
+  is_admin?: boolean;
   created_at: string;
 }
 
@@ -518,7 +521,15 @@ export default function Community() {
                 {post.content}
               </Text>
               <View style={styles.postMeta}>
-                <Text style={styles.postAuthor}>{post.author_name}</Text>
+                <View style={styles.authorContainer}>
+                  {post.is_admin && (
+                    <View style={styles.adminBadge}>
+                      <Ionicons name="shield-checkmark" size={12} color="#ffd700" />
+                      <Text style={styles.adminBadgeText}>Admin</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.postAuthor, post.is_admin && styles.adminAuthor]}>{post.author_name}</Text>
+                </View>
                 <Text style={styles.postTime}>{formatTime(post.created_at)}</Text>
               </View>
               <View style={styles.postStats}>
@@ -553,7 +564,15 @@ export default function Community() {
         <View style={styles.postDetailHeader}>
           <Text style={styles.postDetailTitle}>{selectedPost?.title}</Text>
           <View style={styles.postMeta}>
-            <Text style={styles.postAuthor}>{selectedPost?.author_name}</Text>
+            <View style={styles.authorContainer}>
+              {selectedPost?.is_admin && (
+                <View style={styles.adminBadge}>
+                  <Ionicons name="shield-checkmark" size={12} color="#ffd700" />
+                  <Text style={styles.adminBadgeText}>Admin</Text>
+                </View>
+              )}
+              <Text style={[styles.postAuthor, selectedPost?.is_admin && styles.adminAuthor]}>{selectedPost?.author_name}</Text>
+            </View>
             <Text style={styles.postTime}>
               {selectedPost && formatTime(selectedPost.created_at)}
             </Text>
@@ -571,7 +590,13 @@ export default function Community() {
         {comments.map((comment) => (
           <View key={comment.id} style={styles.commentCard}>
             <View style={styles.commentHeader}>
-              <Text style={styles.commentAuthor}>{comment.author_name}</Text>
+              {comment.is_admin && (
+                <View style={styles.adminBadgeSmall}>
+                  <Ionicons name="shield-checkmark" size={10} color="#ffd700" />
+                  <Text style={styles.adminBadgeTextSmall}>Admin</Text>
+                </View>
+              )}
+              <Text style={[styles.commentAuthor, comment.is_admin && styles.adminAuthor]}>{comment.author_name}</Text>
               <Text style={styles.commentTime}>{formatTime(comment.created_at)}</Text>
             </View>
             <Text style={styles.commentContent}>{comment.content}</Text>
@@ -640,10 +665,19 @@ export default function Community() {
           return (
             <View style={[
               styles.chatBubble,
-              isOwnMessage ? styles.chatBubbleOwn : styles.chatBubbleOther
+              isOwnMessage ? styles.chatBubbleOwn : styles.chatBubbleOther,
+              item.is_admin && !isOwnMessage && styles.chatBubbleAdmin
             ]}>
               {!isOwnMessage && (
-                <Text style={styles.chatAuthor}>{item.author_name}</Text>
+                <View style={styles.chatAuthorRow}>
+                  {item.is_admin && (
+                    <View style={styles.adminBadgeChat}>
+                      <Ionicons name="shield-checkmark" size={10} color="#ffd700" />
+                      <Text style={styles.adminBadgeChatText}>Admin</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.chatAuthor, item.is_admin && styles.adminAuthor]}>{item.author_name}</Text>
+                </View>
               )}
               <Text style={styles.chatText}>{item.message}</Text>
               <Text style={styles.chatTime}>{formatTime(item.created_at)}</Text>
@@ -1213,5 +1247,75 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: '#fff',
     fontSize: 15,
+  },
+  // Admin badge styles
+  authorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  adminBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+  },
+  adminBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffd700',
+    textTransform: 'uppercase',
+  },
+  adminBadgeSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+    marginRight: 6,
+  },
+  adminBadgeTextSmall: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#ffd700',
+    textTransform: 'uppercase',
+  },
+  adminAuthor: {
+    color: '#ffd700',
+    fontWeight: '600',
+  },
+  // Chat admin styles
+  chatAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  adminBadgeChat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  adminBadgeChatText: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#ffd700',
+    textTransform: 'uppercase',
+  },
+  chatBubbleAdmin: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    backgroundColor: '#251040',
   },
 });

@@ -481,6 +481,18 @@ frontend:
         agent: "testing"
         comment: "❌ TESTED: Prize Drawing and Gift Code UI has mixed results. ✅ WORKING: Paywall code entry works perfectly - 'Have a code?' option expands correctly, accepts test codes like 'TEST123'. ❌ NOT WORKING: 1) Monthly Prize Drawing section not visible on homepage after login with test user (stripetest@etheria.com), 2) 'Have a promotional code?' option not found in settings page. Backend APIs work but frontend UI components may have visibility conditions or authentication issues preventing display."
 
+  - task: "Admin Panel Endpoints Testing"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py, /app/backend/routes/community.py, /app/backend/routes/admin_contest.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "🔧 ADMIN PANEL TESTING COMPLETE: Mixed results found. ✅ WORKING (7/8 endpoints): 1) Admin login with etheriasystems@gmail.com/$Tory2410 returns is_admin:true and session_token, 2) Contest status endpoint returns codes_stats and contest data, 3) Contest generate-code creates mystical promo codes (FREE-STELLAR-STAR-706), 4) Contest entries returns eligible users list, 5) Admin dashboard shows current codes and prize drawing stats, 6) Admin participants lists prize drawing participants, 7) Admin generate new code creates mystical codes (ASTRAL-FLAME-40). ❌ CRITICAL ISSUE (1/8 endpoints): GET /api/community/admin/all-users fails with 403 'Admin access required' despite valid admin token. ROOT CAUSE: Authentication mismatch - community routes use get_user_from_token() looking for 'auth_token' field on user document, but main auth system uses 'session_token' in separate user_sessions collection. Admin_contest routes work because get_admin_from_token() tries both auth methods. NEEDS FIX: Update community.py get_user_from_token() to handle session_token like admin_contest.py does."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
@@ -518,3 +530,5 @@ agent_communication:
     message: "🎨 AI IMAGE GENERATION FOR ORACLE CARDS IMPLEMENTED: Added LlmImage (gpt-image-1) integration to POST /api/oracle/draw. Images are generated on-demand from descriptive prompts for each of 27 cards and cached in MongoDB (oracle_card_images collection). Frontend updated to display base64 images. Initial curl test successful - image_base64 field is being returned. NEEDS TESTING: Verify full flow works including frontend display and caching logic."
   - agent: "testing"
     message: "🎨 ORACLE AI IMAGE GENERATION TESTING COMPLETE: All 4/4 test scenarios passed perfectly. ✅ SINGLE CARD DRAW: Returns valid image_base64 field with perfect PNG images (2-3MB, PNG signature 89504e470d0a1a0a verified). ✅ MULTI-CARD DRAW: 3-card spreads all include valid PNG images for each card. ✅ IMAGE CACHING: Working effectively - cached responses 1.3-1.5s vs 20s for new generation, MongoDB oracle_card_images collection functional. ✅ PNG VERIFICATION: All images have perfect PNG signatures and valid base64 encoding. EMERGENT_LLM_KEY properly configured, OpenAI gpt-image-1 model generating high-quality mystical oracle card images. Feature fully functional and production-ready."
+  - agent: "testing"
+    message: "🔧 ADMIN PANEL ENDPOINTS TESTING COMPLETE: Tested admin endpoints as requested in review. ✅ WORKING (7/8): Admin login (etheriasystems@gmail.com/$Tory2410 returns is_admin:true), contest status (codes_stats data), contest generate-code (mystical promo codes), contest entries (eligible users), admin dashboard (current codes/stats), admin participants (prize drawing list), admin generate new code (mystical codes). ❌ CRITICAL ISSUE (1/8): GET /api/community/admin/all-users fails with 403 despite valid admin token. ROOT CAUSE: Authentication mismatch between community routes (expects auth_token on user) vs main auth system (uses session_token in user_sessions collection). Admin_contest routes work because they handle both token types. NEEDS FIX: Update community.py get_user_from_token() function to match admin_contest.py authentication pattern."

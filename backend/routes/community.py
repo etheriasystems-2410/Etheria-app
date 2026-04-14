@@ -215,12 +215,20 @@ async def get_posts(category: str, token: Optional[str] = None, limit: int = 50,
         # Get comment count
         comment_count = await db.community_comments.count_documents({"post_id": str(post["_id"])})
         
+        # Check if author is admin
+        author_is_admin = False
+        if post.get("author_id"):
+            author = await db.users.find_one({"_id": ObjectId(post["author_id"])})
+            if author and author.get("is_admin"):
+                author_is_admin = True
+        
         formatted_posts.append({
             "id": str(post["_id"]),
             "title": post["title"],
             "content": post["content"],
             "author_name": post.get("author_name", "Anonymous"),
             "author_id": post.get("author_id"),
+            "is_admin": author_is_admin,
             "category": post["category"],
             "created_at": post["created_at"].isoformat() if post.get("created_at") else None,
             "comment_count": comment_count,
@@ -328,11 +336,19 @@ async def get_comments(post_id: str, token: Optional[str] = None, limit: int = 1
     
     formatted_comments = []
     for comment in comments:
+        # Check if author is admin
+        author_is_admin = False
+        if comment.get("author_id"):
+            author = await db.users.find_one({"_id": ObjectId(comment["author_id"])})
+            if author and author.get("is_admin"):
+                author_is_admin = True
+        
         formatted_comments.append({
             "id": str(comment["_id"]),
             "content": comment["content"],
             "author_name": comment.get("author_name", "Anonymous"),
             "author_id": comment.get("author_id"),
+            "is_admin": author_is_admin,
             "created_at": comment["created_at"].isoformat() if comment.get("created_at") else None,
             "likes": comment.get("likes", 0)
         })
@@ -476,11 +492,19 @@ async def get_chat_messages(room: str, token: Optional[str] = None, limit: int =
     
     formatted_messages = []
     for msg in messages:
+        # Check if author is admin
+        author_is_admin = False
+        if msg.get("author_id"):
+            author = await db.users.find_one({"_id": ObjectId(msg["author_id"])})
+            if author and author.get("is_admin"):
+                author_is_admin = True
+        
         formatted_messages.append({
             "id": str(msg["_id"]),
             "message": msg["message"],
             "author_name": msg.get("author_name", "Anonymous"),
             "author_id": msg.get("author_id"),
+            "is_admin": author_is_admin,
             "created_at": msg["created_at"].isoformat() if msg.get("created_at") else None
         })
     
@@ -746,4 +770,145 @@ async def get_user_flags(user_id: str, token: Optional[str] = None):
         })
     
     return {"flags": formatted}
+
+
+
+@router.get("/admin/all-users")
+async def get_all_users(token: Optional[str] = None, limit: int = 100, skip: int = 0, search: Optional[str] = None):
+    """Get all users for admin management"""
+    
+    admin = await get_user_from_token(token)
+    if not admin or not admin.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Build query
+    query = {}
+    if search:
+        query = {
+            "$or": [
+                {"email": {"$regex": search, "$options": "i"}},
+                {"name": {"$regex": search, "$options": "i"}},
+                {"display_name": {"$regex": search, "$options": "i"}}
+            ]
+        }
+    
+    # Get users
+    users = await db.users.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    
+    total_users = await db.users.count_documents(query)
+    
+    formatted = []
+    for u in users:
+        # Get subscription status
+        subscription = await db.subscriptions.find_one({"user_id": u.get("user_id")})
+        is_premium = (subscription and subscription.get("status") == "active") or u.get("lifetime_premium", False)
+        
+        formatted.append({
+            "id": str(u["_id"]),
+            "user_id": u.get("user_id"),
+            "email": u.get("email", ""),
+            "name": u.get("display_name") or u.get("name", ""),
+            "is_admin": u.get("is_admin", False),
+            "admin_level": u.get("admin_level", 0),
+            "is_premium": is_premium,
+            "is_lifetime": u.get("lifetime_premium", False),
+            "account_status": u.get("account_status", "active"),
+            "flag_count": u.get("flag_count", 0),
+            "created_at": u.get("created_at").isoformat() if u.get("created_at") else None
+        })
+    
+    return {
+        "users": formatted,
+        "total": total_users,
+        "limit": limit,
+        "skip": skip
+    }
+
+@router.post("/admin/user/{user_id}/promote-admin")
+async def promote_to_admin(user_id: str, token: Optional[str] = None):
+    """Promote a user to admin status"""
+    
+    admin = await get_user_from_token(token)
+    if not admin or not admin.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Only top-level admins can promote others
+    if admin.get("admin_level", 0) < 10:
+        raise HTTPException(status_code=403, detail="Only top-level admins can promote users")
+    
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("is_admin"):
+        raise HTTPException(status_code=400, detail="User is already an admin")
+    
+    # Promote user
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "is_admin": True,
+                "admin_level": 5,  # Standard admin level
+                "admin_promoted_by": str(admin["_id"]),
+                "admin_promoted_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "message": f"User {user.get('email')} has been promoted to admin"
+    }
+
+@router.post("/admin/user/{user_id}/demote-admin")
+async def demote_from_admin(user_id: str, token: Optional[str] = None):
+    """Remove admin status from a user"""
+    
+    admin = await get_user_from_token(token)
+    if not admin or not admin.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Only top-level admins can demote others
+    if admin.get("admin_level", 0) < 10:
+        raise HTTPException(status_code=403, detail="Only top-level admins can demote admins")
+    
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Don't allow demoting top-level admins or self
+    if str(user["_id"]) == str(admin["_id"]):
+        raise HTTPException(status_code=400, detail="Cannot demote yourself")
+    
+    if user.get("admin_level", 0) >= 10:
+        raise HTTPException(status_code=400, detail="Cannot demote top-level admins")
+    
+    # Demote user
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "is_admin": False,
+                "admin_level": 0
+            },
+            "$unset": {
+                "admin_promoted_by": "",
+                "admin_promoted_at": ""
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "message": f"User {user.get('email')} has been demoted from admin"
+    }
 

@@ -58,7 +58,22 @@ interface PromoCode {
   created_at: string;
 }
 
+interface AppUser {
+  id: string;
+  user_id: string;
+  email: string;
+  name: string;
+  is_admin: boolean;
+  admin_level: number;
+  is_premium: boolean;
+  is_lifetime: boolean;
+  account_status: string;
+  flag_count: number;
+  created_at: string;
+}
+
 type TabType = 'users' | 'contest';
+type UserSubTab = 'flagged' | 'all';
 
 export default function AdminPanel() {
   const { user, authToken } = useAuth();
@@ -66,14 +81,19 @@ export default function AdminPanel() {
   const insets = useSafeAreaInsets();
   
   const [activeTab, setActiveTab] = useState<TabType>('users');
+  const [userSubTab, setUserSubTab] = useState<UserSubTab>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
   // User moderation state
   const [flaggedUsers, setFlaggedUsers] = useState<FlaggedUser[]>([]);
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<FlaggedUser | null>(null);
+  const [selectedAppUser, setSelectedAppUser] = useState<AppUser | null>(null);
   const [userFlags, setUserFlags] = useState<UserFlag[]>([]);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showManageUserModal, setShowManageUserModal] = useState(false);
   
   // Contest state
   const [contestEntries, setContestEntries] = useState<ContestEntry[]>([]);
@@ -97,12 +117,16 @@ export default function AdminPanel() {
     if (user?.is_admin) {
       loadData();
     }
-  }, [user, activeTab]);
+  }, [user, activeTab, userSubTab]);
 
   const loadData = async () => {
     setLoading(true);
     if (activeTab === 'users') {
-      await fetchFlaggedUsers();
+      if (userSubTab === 'flagged') {
+        await fetchFlaggedUsers();
+      } else {
+        await fetchAllUsers();
+      }
     } else {
       await Promise.all([fetchContestStatus(), fetchContestEntries(), fetchPromoCodes()]);
     }
@@ -117,6 +141,21 @@ export default function AdminPanel() {
       const data = await response.json();
       if (response.ok) {
         setFlaggedUsers(data.users);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  };
+
+  const fetchAllUsers = async (search?: string) => {
+    try {
+      const searchParam = search || userSearchQuery ? `&search=${encodeURIComponent(search || userSearchQuery)}` : '';
+      const response = await fetch(
+        `${BACKEND_URL}/api/community/admin/all-users?token=${authToken}&limit=100${searchParam}`
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setAllUsers(data.users);
       }
     } catch (err) {
       console.error('Error:', err);
@@ -295,6 +334,56 @@ export default function AdminPanel() {
     }
   };
 
+  const promoteToAdmin = async (userId: string) => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/community/admin/user/${userId}/promote-admin?token=${authToken}`,
+        { method: 'POST' }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setSuccess(data.message || 'User promoted to admin');
+        setShowManageUserModal(false);
+        fetchAllUsers();
+      } else {
+        setError(data.detail || 'Failed to promote user');
+      }
+    } catch (err) {
+      setError('Failed to promote user');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const demoteFromAdmin = async (userId: string) => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/community/admin/user/${userId}/demote-admin?token=${authToken}`,
+        { method: 'POST' }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setSuccess(data.message || 'Admin privileges removed');
+        setShowManageUserModal(false);
+        fetchAllUsers();
+      } else {
+        setError(data.detail || 'Failed to demote user');
+      }
+    } catch (err) {
+      setError('Failed to demote user');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUserSearch = () => {
+    fetchAllUsers(userSearchQuery);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return '#10b981';
@@ -394,42 +483,138 @@ export default function AdminPanel() {
         ) : activeTab === 'users' ? (
           /* Users Tab */
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              <Ionicons name="flag" size={18} color="#f59e0b" /> Flagged Users
-            </Text>
-            {flaggedUsers.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="checkmark-circle" size={50} color="#10b981" />
-                <Text style={styles.emptyText}>No flagged users</Text>
+            {/* User Sub-tabs */}
+            <View style={styles.subTabs}>
+              <TouchableOpacity
+                style={[styles.subTab, userSubTab === 'all' && styles.subTabActive]}
+                onPress={() => setUserSubTab('all')}
+              >
+                <Text style={[styles.subTabText, userSubTab === 'all' && styles.subTabTextActive]}>All Users</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.subTab, userSubTab === 'flagged' && styles.subTabActive]}
+                onPress={() => setUserSubTab('flagged')}
+              >
+                <Text style={[styles.subTabText, userSubTab === 'flagged' && styles.subTabTextActive]}>Flagged</Text>
+              </TouchableOpacity>
+            </View>
+
+            {userSubTab === 'all' ? (
+              /* All Users Section */
+              <View>
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search by email or name..."
+                    placeholderTextColor="#6b7280"
+                    value={userSearchQuery}
+                    onChangeText={setUserSearchQuery}
+                    onSubmitEditing={handleUserSearch}
+                    returnKeyType="search"
+                  />
+                  <TouchableOpacity style={styles.searchButton} onPress={handleUserSearch}>
+                    <Ionicons name="search" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.sectionTitle}>
+                  <Ionicons name="people" size={18} color="#b794f6" /> All Users ({allUsers.length})
+                </Text>
+                
+                {allUsers.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="person-outline" size={50} color="#6b7280" />
+                    <Text style={styles.emptyText}>No users found</Text>
+                  </View>
+                ) : (
+                  allUsers.map((appUser) => (
+                    <TouchableOpacity
+                      key={appUser.id}
+                      style={[styles.userCard, appUser.is_admin && styles.adminUserCard]}
+                      onPress={() => {
+                        setSelectedAppUser(appUser);
+                        setShowManageUserModal(true);
+                      }}
+                    >
+                      <View style={styles.userInfo}>
+                        <View style={styles.userNameRow}>
+                          <Text style={styles.userName}>{appUser.name || 'Anonymous'}</Text>
+                          {appUser.is_admin && (
+                            <View style={styles.adminIndicator}>
+                              <Ionicons name="shield-checkmark" size={14} color="#ffd700" />
+                              <Text style={styles.adminIndicatorText}>Admin</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.userEmail}>{appUser.email}</Text>
+                        <View style={styles.userStats}>
+                          {appUser.is_premium && (
+                            <View style={[styles.statBadge, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                              <Ionicons name="diamond" size={12} color="#10b981" />
+                              <Text style={[styles.statText, { color: '#10b981' }]}>
+                                {appUser.is_lifetime ? 'Lifetime' : 'Premium'}
+                              </Text>
+                            </View>
+                          )}
+                          {appUser.flag_count > 0 && (
+                            <View style={styles.statBadge}>
+                              <Ionicons name="flag" size={12} color="#f59e0b" />
+                              <Text style={styles.statText}>{appUser.flag_count} flags</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(appUser.account_status) + '20' }]}>
+                        <Text style={[styles.statusText, { color: getStatusColor(appUser.account_status) }]}>
+                          {appUser.account_status}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )}
               </View>
             ) : (
-              flaggedUsers.map((flaggedUser) => (
-                <TouchableOpacity
-                  key={flaggedUser.id}
-                  style={styles.userCard}
-                  onPress={() => {
-                    setSelectedUser(flaggedUser);
-                    fetchUserFlags(flaggedUser.id);
-                    setShowUserModal(true);
-                  }}
-                >
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{flaggedUser.name || 'Unknown'}</Text>
-                    <Text style={styles.userEmail}>{flaggedUser.email}</Text>
-                    <View style={styles.userStats}>
-                      <View style={styles.statBadge}>
-                        <Ionicons name="flag" size={12} color="#f59e0b" />
-                        <Text style={styles.statText}>{flaggedUser.flag_count} flags</Text>
+              /* Flagged Users Section */
+              <View>
+                <Text style={styles.sectionTitle}>
+                  <Ionicons name="flag" size={18} color="#f59e0b" /> Flagged Users
+                </Text>
+                {flaggedUsers.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="checkmark-circle" size={50} color="#10b981" />
+                    <Text style={styles.emptyText}>No flagged users</Text>
+                  </View>
+                ) : (
+                  flaggedUsers.map((flaggedUser) => (
+                    <TouchableOpacity
+                      key={flaggedUser.id}
+                      style={styles.userCard}
+                      onPress={() => {
+                        setSelectedUser(flaggedUser);
+                        fetchUserFlags(flaggedUser.id);
+                        setShowUserModal(true);
+                      }}
+                    >
+                      <View style={styles.userInfo}>
+                        <Text style={styles.userName}>{flaggedUser.name || 'Unknown'}</Text>
+                        <Text style={styles.userEmail}>{flaggedUser.email}</Text>
+                        <View style={styles.userStats}>
+                          <View style={styles.statBadge}>
+                            <Ionicons name="flag" size={12} color="#f59e0b" />
+                            <Text style={styles.statText}>{flaggedUser.flag_count} flags</Text>
+                          </View>
+                        </View>
                       </View>
-                    </View>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(flaggedUser.account_status) + '20' }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(flaggedUser.account_status) }]}>
-                      {flaggedUser.account_status}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(flaggedUser.account_status) + '20' }]}>
+                        <Text style={[styles.statusText, { color: getStatusColor(flaggedUser.account_status) }]}>
+                          {flaggedUser.account_status}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
             )}
           </View>
         ) : (
@@ -666,6 +851,108 @@ export default function AdminPanel() {
           </View>
         </View>
       </Modal>
+
+      {/* Manage User Modal */}
+      <Modal visible={showManageUserModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Manage User</Text>
+              <TouchableOpacity onPress={() => setShowManageUserModal(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            {selectedAppUser && (
+              <ScrollView style={styles.modalBody}>
+                <View style={styles.userDetailCard}>
+                  <View style={styles.userDetailHeader}>
+                    {selectedAppUser.is_admin && (
+                      <View style={styles.adminBadgeLarge}>
+                        <Ionicons name="shield-checkmark" size={16} color="#ffd700" />
+                        <Text style={styles.adminBadgeLargeText}>Admin</Text>
+                      </View>
+                    )}
+                    <Text style={styles.userDetailName}>{selectedAppUser.name || 'Anonymous'}</Text>
+                    <Text style={styles.userDetailEmail}>{selectedAppUser.email}</Text>
+                  </View>
+
+                  <View style={styles.userDetailStats}>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Status:</Text>
+                      <Text style={[styles.detailValue, { color: getStatusColor(selectedAppUser.account_status) }]}>
+                        {selectedAppUser.account_status}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Subscription:</Text>
+                      <Text style={[styles.detailValue, { color: selectedAppUser.is_premium ? '#10b981' : '#6b7280' }]}>
+                        {selectedAppUser.is_lifetime ? 'Lifetime Premium' : selectedAppUser.is_premium ? 'Premium' : 'Free'}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Admin Level:</Text>
+                      <Text style={styles.detailValue}>{selectedAppUser.admin_level || 0}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Flags:</Text>
+                      <Text style={[styles.detailValue, selectedAppUser.flag_count > 0 && { color: '#f59e0b' }]}>
+                        {selectedAppUser.flag_count}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Joined:</Text>
+                      <Text style={styles.detailValue}>{formatDate(selectedAppUser.created_at)}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.actionButtons}>
+                  {!selectedAppUser.is_admin ? (
+                    <TouchableOpacity
+                      style={styles.promoteBtn}
+                      onPress={() => promoteToAdmin(selectedAppUser.id)}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                          <Text style={styles.promoteBtnText}>Promote to Admin</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  ) : selectedAppUser.email !== user?.email && selectedAppUser.admin_level < 10 ? (
+                    <TouchableOpacity
+                      style={styles.demoteBtn}
+                      onPress={() => demoteFromAdmin(selectedAppUser.id)}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Ionicons name="shield-outline" size={18} color="#fff" />
+                          <Text style={styles.demoteBtnText}>Remove Admin</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.selfNote}>
+                      <Ionicons name="information-circle" size={16} color="#9f7aea" />
+                      <Text style={styles.selfNoteText}>
+                        {selectedAppUser.email === user?.email 
+                          ? "You cannot modify your own admin status" 
+                          : "Top-level admins cannot be demoted"}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -755,4 +1042,31 @@ const styles = StyleSheet.create({
   emailButtons: { marginTop: 20 },
   sendWinnerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffd700', padding: 14, borderRadius: 10, gap: 8 },
   sendWinnerBtnText: { color: '#1a0033', fontSize: 15, fontWeight: '600' },
+  // New styles for user management
+  subTabs: { flexDirection: 'row', marginBottom: 16, gap: 8 },
+  subTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#2d1b4e' },
+  subTabActive: { backgroundColor: '#7c3aed' },
+  subTabText: { fontSize: 13, color: '#9f7aea', fontWeight: '500' },
+  subTabTextActive: { color: '#fff' },
+  searchContainer: { flexDirection: 'row', marginBottom: 16, gap: 10 },
+  searchInput: { flex: 1, backgroundColor: '#2d1b4e', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, color: '#fff', fontSize: 14 },
+  searchButton: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#7c3aed', justifyContent: 'center', alignItems: 'center' },
+  adminUserCard: { borderWidth: 1, borderColor: 'rgba(255, 215, 0, 0.3)' },
+  userNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  adminIndicator: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 215, 0, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, gap: 4 },
+  adminIndicatorText: { fontSize: 10, fontWeight: '700', color: '#ffd700' },
+  userDetailCard: { backgroundColor: '#2d1b4e', borderRadius: 12, padding: 16, marginBottom: 16 },
+  userDetailHeader: { alignItems: 'center', marginBottom: 16 },
+  adminBadgeLarge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 215, 0, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, gap: 6, marginBottom: 10 },
+  adminBadgeLargeText: { fontSize: 12, fontWeight: '700', color: '#ffd700' },
+  userDetailName: { fontSize: 18, fontWeight: '600', color: '#fff', marginBottom: 4 },
+  userDetailEmail: { fontSize: 14, color: '#9f7aea' },
+  userDetailStats: { gap: 8 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1a0033' },
+  promoteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffd700', padding: 14, borderRadius: 10, gap: 8 },
+  promoteBtnText: { color: '#1a0033', fontSize: 15, fontWeight: '600' },
+  demoteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ef4444', padding: 14, borderRadius: 10, gap: 8 },
+  demoteBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  selfNote: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(159, 122, 234, 0.1)', padding: 14, borderRadius: 10, gap: 8 },
+  selfNoteText: { flex: 1, color: '#9f7aea', fontSize: 13, fontStyle: 'italic' },
 });
