@@ -598,7 +598,7 @@ export default function SpiritGuides() {
             <View style={styles.heroOverlay}>
               <Ionicons name="chatbubbles" size={50} color="#b794f6" />
               <Text style={styles.heroTitle}>Spirit Guides</Text>
-              <Text style={styles.heroSubtitle}>Select your guide to begin</Text>
+              <Text style={styles.heroSubtitle}>Select your guide</Text>
             </View>
           </View>
           
@@ -721,17 +721,6 @@ export default function SpiritGuides() {
           </Text>
         </View>
         <View style={styles.chatHeaderRight}>
-          {/* Switch Guide Button */}
-          <TouchableOpacity
-            style={styles.switchGuideButton}
-            onPress={() => {
-              setSelectedGuide(null);
-              setMessages([]);
-            }}
-          >
-            <Ionicons name="people" size={18} color="#b794f6" />
-            <Text style={styles.switchGuideText}>Switch</Text>
-          </TouchableOpacity>
           {/* Save to Journal Button */}
           <TouchableOpacity
             style={styles.saveJournalButton}
@@ -751,6 +740,20 @@ export default function SpiritGuides() {
             />
           </TouchableOpacity>
         </View>
+      </View>
+      
+      {/* Switch Guide Button - Centered below header */}
+      <View style={styles.switchButtonContainer}>
+        <TouchableOpacity
+          style={styles.switchGuideButton}
+          onPress={() => {
+            setSelectedGuide(null);
+            setMessages([]);
+          }}
+        >
+          <Ionicons name="people" size={16} color="#b794f6" />
+          <Text style={styles.switchGuideText}>Switch Guide</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Audio Status Banner */}
@@ -874,21 +877,23 @@ const styles = StyleSheet.create({
   },
   birthdayInputs: {
     flexDirection: 'row',
-    gap: 20,
+    gap: 30,
     marginBottom: 32,
+    justifyContent: 'center',
   },
   inputGroup: {
     alignItems: 'center',
-    minWidth: 100,
+    minWidth: 120,
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#c4b5fd',
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: 'center',
+    fontWeight: '500',
   },
   birthdayInput: {
-    width: 90,
+    width: 100,
     height: 60,
     backgroundColor: '#2d1b4e',
     borderRadius: 12,
@@ -1309,7 +1314,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#2d1b4e',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 16,
     gap: 6,
@@ -1320,5 +1325,12 @@ const styles = StyleSheet.create({
     color: '#b794f6',
     fontSize: 12,
     fontWeight: '500',
+  },
+  switchButtonContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#1a0033',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2d1b4e',
   },
 });
