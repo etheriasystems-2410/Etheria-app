@@ -18,6 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Paywall } from '../components/Paywall';
+import { Image } from 'expo-image';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -352,9 +353,16 @@ export default function Community() {
   const renderCategories = () => (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.headerSection}>
-        <View style={styles.headerIcon}>
-          <Ionicons name="people" size={40} color="#b794f6" />
+        {/* Hero Image */}
+        <View style={styles.heroImageContainer}>
+          <Image
+            source={require('../assets/images/community-hero.png')}
+            style={styles.heroImage}
+            contentFit="cover"
+          />
+          <View style={styles.heroOverlay} />
         </View>
+        
         <Text style={styles.headerTitle}>Community</Text>
         <Text style={styles.headerSubtitle}>Connect with fellow seekers</Text>
         
@@ -746,14 +754,26 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 16,
   },
-  headerIcon: {
-    width: 80,
+  heroImageContainer: {
+    width: '100%',
+    height: 200,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 20,
+    position: 'relative',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: '#2d1b4e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: 'transparent',
+    backgroundImage: 'linear-gradient(transparent, rgba(10, 0, 20, 0.9))',
   },
   headerTitle: {
     fontSize: 28,
