@@ -115,10 +115,10 @@ export default function Privacy() {
         {/* Return Button */}
         <TouchableOpacity
           style={styles.returnButton}
-          onPress={() => router.back()}
+          onPress={() => router.push('/settings')}
         >
           <Ionicons name="arrow-back" size={20} color="#fff" />
-          <Text style={styles.returnButtonText}>Return to App</Text>
+          <Text style={styles.returnButtonText}>Return to Settings</Text>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />

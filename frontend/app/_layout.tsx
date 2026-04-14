@@ -147,6 +147,28 @@ function ProtectedLayout() {
         }}
       />
       <Drawer.Screen
+        name="community"
+        options={{
+          drawerLabel: 'Community',
+          title: 'Community',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="terms"
+        options={{
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
+        name="privacy"
+        options={{
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
         name="auth/login"
         options={{
           drawerItemStyle: { display: 'none' },
