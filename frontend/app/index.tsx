@@ -854,6 +854,7 @@ const styles = StyleSheet.create({
   },
   communityContent: {
     flex: 1,
+    flexShrink: 1,
   },
   communityTitle: {
     fontSize: 17,
@@ -864,5 +865,6 @@ const styles = StyleSheet.create({
   communityDescription: {
     fontSize: 14,
     color: '#9f7aea',
+    flexWrap: 'wrap',
   },
 });

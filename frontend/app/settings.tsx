@@ -732,6 +732,40 @@ export default function Settings() {
         </View>
       )}
 
+      {/* Hidden Admin Setup - Only for owner email without admin status */}
+      {user?.email === 'etheriasystems@gmail.com' && !user?.is_admin && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Owner Setup</Text>
+          <TouchableOpacity 
+            style={[styles.settingItem, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}
+            onPress={async () => {
+              try {
+                const response = await fetch(`${BACKEND_URL}/api/admin/setup-owner`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email: user.email,
+                    admin_secret: 'etheria_admin_secret_2026'
+                  })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                  alert('Admin privileges granted! Please log out and log back in.');
+                } else {
+                  alert(data.detail || 'Failed to setup admin');
+                }
+              } catch (err) {
+                alert('Error setting up admin privileges');
+              }
+            }}
+          >
+            <Ionicons name="key" size={24} color="#f59e0b" />
+            <Text style={[styles.settingText, { color: '#f59e0b' }]}>Activate Admin Access</Text>
+            <Ionicons name="chevron-forward" size={20} color="#f59e0b" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out" size={24} color="#ef4444" />
         <Text style={styles.logoutText}>{t('logout')}</Text>

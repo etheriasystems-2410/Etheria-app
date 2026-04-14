@@ -3726,6 +3726,55 @@ async def mark_notification_read(notification_id: str, request: Request):
         raise
 
 
+# Secure Admin Setup Endpoint
+class AdminSetupRequest(BaseModel):
+    email: str
+    admin_secret: str
+
+@api_router.post("/admin/setup-owner")
+async def setup_owner_admin(request: AdminSetupRequest):
+    """
+    Secure endpoint to set up the owner as admin.
+    Requires the admin secret defined in environment variables.
+    """
+    # Check admin secret
+    expected_secret = os.getenv("ADMIN_SECRET", "etheria_admin_secret_2026")
+    if request.admin_secret != expected_secret:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
+    
+    # Only allow specific owner email
+    if request.email != "etheriasystems@gmail.com":
+        raise HTTPException(status_code=403, detail="This endpoint is for owner setup only")
+    
+    # Find user
+    user = await db.users.find_one({"email": request.email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found. Please create an account first.")
+    
+    # Check if already admin
+    if user.get("is_admin") and user.get("admin_level") == "full":
+        return {"success": True, "message": "User is already a full admin", "is_admin": True}
+    
+    # Set as full admin
+    await db.users.update_one(
+        {"email": request.email},
+        {
+            "$set": {
+                "is_admin": True,
+                "admin_level": "full",
+                "lifetime_premium": True,
+                "admin_setup_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {
+        "success": True, 
+        "message": "Admin privileges granted successfully",
+        "is_admin": True,
+        "admin_level": "full"
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
