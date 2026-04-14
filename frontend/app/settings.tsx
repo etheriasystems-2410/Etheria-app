@@ -710,6 +710,21 @@ export default function Settings() {
         </TouchableOpacity>
       </View>
 
+      {/* Admin Panel - Only visible to admins */}
+      {user?.is_admin && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Administration</Text>
+          <TouchableOpacity 
+            style={styles.settingItem}
+            onPress={() => router.push('/admin-panel')}
+          >
+            <Ionicons name="shield" size={24} color="#f59e0b" />
+            <Text style={styles.settingText}>Admin Panel</Text>
+            <Ionicons name="chevron-forward" size={20} color="#9f7aea" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out" size={24} color="#ef4444" />
         <Text style={styles.logoutText}>{t('logout')}</Text>

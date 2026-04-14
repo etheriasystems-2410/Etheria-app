@@ -228,6 +228,12 @@ function ProtectedLayout() {
           drawerItemStyle: { display: 'none' },
         }}
       />
+      <Drawer.Screen
+        name="admin-panel"
+        options={{
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
     </Drawer>
   );
 }

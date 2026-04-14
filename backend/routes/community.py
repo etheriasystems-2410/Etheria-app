@@ -9,7 +9,10 @@ from bson import ObjectId
 import os
 import re
 import uuid
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from emergentintegrations.llm.chat import LlmChat
+from services.moderation_service import process_flag, check_user_can_post
 
 router = APIRouter(prefix="/api/community", tags=["community"])
 
@@ -237,6 +240,11 @@ async def create_post(post: PostCreate, token: Optional[str] = None):
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     
+    # Check if user can post (not suspended/banned)
+    can_post, message = await check_user_can_post(db, str(user["_id"]))
+    if not can_post:
+        raise HTTPException(status_code=403, detail=message)
+    
     if post.category not in [c["id"] for c in CATEGORIES]:
         raise HTTPException(status_code=400, detail="Invalid category")
     
@@ -255,6 +263,15 @@ async def create_post(post: PostCreate, token: Optional[str] = None):
     
     if not approved:
         reason = title_moderation.reason or content_moderation.reason
+        # Process the flag - this will send emails, track flags, and potentially suspend
+        await process_flag(
+            db, 
+            str(user["_id"]), 
+            "post", 
+            post.content, 
+            "rejected", 
+            reason or "Content violates community guidelines"
+        )
         raise HTTPException(status_code=400, detail=f"Post not approved: {reason}")
     
     # Create post
@@ -272,18 +289,16 @@ async def create_post(post: PostCreate, token: Optional[str] = None):
     
     result = await db.community_posts.insert_one(post_doc)
     
-    # If flagged, store for admin review
+    # If flagged, process the flag (sends email, tracks warnings)
     if flagged:
-        await db.flagged_content.insert_one({
-            "content_type": "post",
-            "content_id": str(result.inserted_id),
-            "content": post.content,
-            "title": post.title,
-            "author_id": str(user["_id"]),
-            "reason": title_moderation.reason or content_moderation.reason,
-            "created_at": datetime.utcnow(),
-            "reviewed": False
-        })
+        await process_flag(
+            db,
+            str(user["_id"]),
+            "post",
+            post.content,
+            str(result.inserted_id),
+            title_moderation.reason or content_moderation.reason or "Flagged for review"
+        )
     
     return {
         "success": True,
@@ -335,6 +350,11 @@ async def create_comment(post_id: str, comment: CommentCreate, token: Optional[s
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     
+    # Check if user can post (not suspended/banned)
+    can_post, message = await check_user_can_post(db, str(user["_id"]))
+    if not can_post:
+        raise HTTPException(status_code=403, detail=message)
+    
     try:
         post = await db.community_posts.find_one({"_id": ObjectId(post_id)})
     except:
@@ -350,6 +370,15 @@ async def create_comment(post_id: str, comment: CommentCreate, token: Optional[s
     moderation = await moderate_content(comment.content, "comment")
     
     if not moderation.approved:
+        # Process flag for rejected comment
+        await process_flag(
+            db,
+            str(user["_id"]),
+            "comment",
+            comment.content,
+            "rejected",
+            moderation.reason or "Comment violates community guidelines"
+        )
         raise HTTPException(status_code=400, detail=f"Comment not approved: {moderation.reason}")
     
     comment_doc = {
@@ -366,16 +395,14 @@ async def create_comment(post_id: str, comment: CommentCreate, token: Optional[s
     result = await db.community_comments.insert_one(comment_doc)
     
     if moderation.flagged:
-        await db.flagged_content.insert_one({
-            "content_type": "comment",
-            "content_id": str(result.inserted_id),
-            "content": comment.content,
-            "post_id": post_id,
-            "author_id": str(user["_id"]),
-            "reason": moderation.reason,
-            "created_at": datetime.utcnow(),
-            "reviewed": False
-        })
+        await process_flag(
+            db,
+            str(user["_id"]),
+            "comment",
+            comment.content,
+            str(result.inserted_id),
+            moderation.reason or "Flagged for review"
+        )
     
     return {
         "success": True,
@@ -470,6 +497,11 @@ async def send_chat_message(room: str, chat: ChatMessage, token: Optional[str] =
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     
+    # Check if user can post (not suspended/banned)
+    can_post, message = await check_user_can_post(db, str(user["_id"]))
+    if not can_post:
+        raise HTTPException(status_code=403, detail=message)
+    
     if room not in [c["id"] for c in CATEGORIES]:
         raise HTTPException(status_code=400, detail="Invalid chat room")
     
@@ -483,6 +515,15 @@ async def send_chat_message(room: str, chat: ChatMessage, token: Optional[str] =
     moderation = await moderate_content(chat.message, "chat message")
     
     if not moderation.approved:
+        # Process flag for rejected chat - this will auto-delete
+        await process_flag(
+            db,
+            str(user["_id"]),
+            "chat",
+            chat.message,
+            "rejected",
+            moderation.reason or "Message violates community guidelines"
+        )
         raise HTTPException(status_code=400, detail=f"Message not approved: {moderation.reason}")
     
     message_doc = {
@@ -497,17 +538,17 @@ async def send_chat_message(room: str, chat: ChatMessage, token: Optional[str] =
     
     result = await db.community_chat.insert_one(message_doc)
     
+    # If flagged, process and auto-delete chat message
     if moderation.flagged:
-        await db.flagged_content.insert_one({
-            "content_type": "chat",
-            "content_id": str(result.inserted_id),
-            "content": chat.message,
-            "room": room,
-            "author_id": str(user["_id"]),
-            "reason": moderation.reason,
-            "created_at": datetime.utcnow(),
-            "reviewed": False
-        })
+        await process_flag(
+            db,
+            str(user["_id"]),
+            "chat",
+            chat.message,
+            str(result.inserted_id),
+            moderation.reason or "Flagged for review"
+        )
+        # Note: process_flag automatically deletes flagged chat messages
     
     return {
         "success": True,
@@ -582,3 +623,127 @@ async def review_flagged_content(flagged_id: str, action: str, token: Optional[s
     )
     
     return {"success": True, "action": action}
+
+@router.get("/admin/flagged-users")
+async def get_flagged_users(token: Optional[str] = None, limit: int = 50):
+    """Get users with flags or suspensions"""
+    from services.moderation_service import send_reactivation_notice, send_cancellation_notice
+    
+    user = await get_user_from_token(token)
+    if not user or not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get users with flags, suspensions, or cancellations
+    users = await db.users.find({
+        "$or": [
+            {"flag_count": {"$gt": 0}},
+            {"account_status": {"$in": ["suspended", "cancelled"]}},
+            {"suspension_count": {"$gt": 0}}
+        ]
+    }).limit(limit).to_list(length=limit)
+    
+    formatted = []
+    for u in users:
+        formatted.append({
+            "id": str(u["_id"]),
+            "email": u.get("email", ""),
+            "name": u.get("display_name") or u.get("name", ""),
+            "flag_count": u.get("flag_count", 0),
+            "suspension_count": u.get("suspension_count", 0),
+            "account_status": u.get("account_status", "active"),
+            "suspension_end": u.get("suspension_end").isoformat() if u.get("suspension_end") else None,
+            "created_at": u.get("created_at").isoformat() if u.get("created_at") else None
+        })
+    
+    return {"users": formatted}
+
+@router.post("/admin/user/{user_id}/action")
+async def admin_user_action(user_id: str, action: str, token: Optional[str] = None):
+    """Admin actions on users: reactivate, cancel, clear_flags"""
+    from services.moderation_service import send_reactivation_notice, send_cancellation_notice
+    
+    admin = await get_user_from_token(token)
+    if not admin or not admin.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if action not in ["reactivate", "cancel", "clear_flags"]:
+        raise HTTPException(status_code=400, detail="Invalid action. Use 'reactivate', 'cancel', or 'clear_flags'")
+    
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_email = user.get("email", "")
+    user_name = user.get("display_name") or user.get("name") or user_email.split("@")[0]
+    
+    if action == "reactivate":
+        await db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {
+                "$set": {
+                    "account_status": "active",
+                    "flag_count": 0
+                },
+                "$unset": {
+                    "suspension_start": "",
+                    "suspension_end": ""
+                }
+            }
+        )
+        await send_reactivation_notice(user_email, user_name)
+        return {"success": True, "message": f"User {user_email} reactivated"}
+    
+    elif action == "cancel":
+        await db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {
+                "$set": {
+                    "account_status": "cancelled",
+                    "cancelled_at": datetime.utcnow(),
+                    "cancellation_reason": "admin_action"
+                }
+            }
+        )
+        await send_cancellation_notice(user_email, user_name, "admin decision")
+        return {"success": True, "message": f"User {user_email} cancelled"}
+    
+    elif action == "clear_flags":
+        await db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {
+                "$set": {
+                    "flag_count": 0
+                }
+            }
+        )
+        return {"success": True, "message": f"Flags cleared for {user_email}"}
+
+@router.get("/admin/user-flags/{user_id}")
+async def get_user_flags(user_id: str, token: Optional[str] = None):
+    """Get all flags for a specific user"""
+    
+    admin = await get_user_from_token(token)
+    if not admin or not admin.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    flags = await db.user_flags.find(
+        {"user_id": user_id}
+    ).sort("created_at", -1).to_list(length=100)
+    
+    formatted = []
+    for f in flags:
+        formatted.append({
+            "id": str(f["_id"]),
+            "content_type": f.get("content_type"),
+            "content": f.get("content"),
+            "reason": f.get("reason"),
+            "status": f.get("status", "pending"),
+            "created_at": f.get("created_at").isoformat() if f.get("created_at") else None
+        })
+    
+    return {"flags": formatted}
+

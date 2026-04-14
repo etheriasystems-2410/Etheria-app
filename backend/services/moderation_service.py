@@ -1,0 +1,407 @@
+"""
+User Moderation Service - Handles flagging, warnings, suspensions, and bans
+"""
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime, timedelta
+from typing import Optional
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+ADMIN_EMAIL = "etheriasystems@gmail.com"
+GMAIL_EMAIL = os.getenv("GMAIL_EMAIL", "etheriasystems@gmail.com")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
+
+# Suspension durations
+FIRST_SUSPENSION_DAYS = 14  # 2 weeks
+SECOND_SUSPENSION_DAYS = 30  # 30 days
+FLAGS_BEFORE_SUSPENSION = 3
+
+async def send_email(to_email: str, subject: str, html_content: str, text_content: str = None):
+    """Send email using Gmail SMTP"""
+    if not GMAIL_APP_PASSWORD:
+        print(f"Email not sent (no password configured): {subject} to {to_email}")
+        return False
+    
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = GMAIL_EMAIL
+        msg['To'] = to_email
+        
+        if text_content:
+            part1 = MIMEText(text_content, 'plain')
+            msg.attach(part1)
+        
+        part2 = MIMEText(html_content, 'html')
+        msg.attach(part2)
+        
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
+            server.sendmail(GMAIL_EMAIL, to_email, msg.as_string())
+        
+        print(f"Email sent: {subject} to {to_email}")
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
+
+async def send_flagged_content_notification(
+    db,
+    user_id: str,
+    user_email: str,
+    user_name: str,
+    content_type: str,
+    content: str,
+    reason: str,
+    flag_id: str
+):
+    """Send notification to admin about flagged content"""
+    subject = "Flagged for Review"
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a0033; color: #e9d5ff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2d1b4e; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #b794f6; margin-bottom: 20px;">🚩 Content Flagged for Review</h2>
+            
+            <div style="background-color: #1a0033; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p><strong style="color: #9f7aea;">User:</strong> {user_name}</p>
+                <p><strong style="color: #9f7aea;">Email:</strong> {user_email}</p>
+                <p><strong style="color: #9f7aea;">User ID:</strong> {user_id}</p>
+                <p><strong style="color: #9f7aea;">Content Type:</strong> {content_type}</p>
+                <p><strong style="color: #9f7aea;">Flag ID:</strong> {flag_id}</p>
+            </div>
+            
+            <div style="background-color: #1a0033; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p><strong style="color: #9f7aea;">Reason:</strong></p>
+                <p style="color: #ef4444;">{reason}</p>
+            </div>
+            
+            <div style="background-color: #1a0033; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p><strong style="color: #9f7aea;">Flagged Content:</strong></p>
+                <p style="color: #c4b5fd; font-style: italic;">"{content[:500]}{'...' if len(content) > 500 else ''}"</p>
+            </div>
+            
+            <div style="background-color: #2d1b4e; padding: 15px; border-radius: 8px; border: 1px solid #7c3aed;">
+                <p style="color: #ffd700; font-weight: bold;">Take action in the Etheria Admin Panel</p>
+                <p style="color: #c4b5fd; font-size: 14px;">Go to Settings → Admin Panel to approve, warn, or ban this user.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    await send_email(ADMIN_EMAIL, subject, html_content)
+
+async def send_user_warning(user_email: str, user_name: str, flag_count: int, reason: str):
+    """Send warning to user about flagged content"""
+    subject = "Etheria Community Guidelines Warning"
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a0033; color: #e9d5ff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2d1b4e; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #f59e0b; margin-bottom: 20px;">⚠️ Community Guidelines Warning</h2>
+            
+            <p>Hello {user_name},</p>
+            
+            <p>Your recent content in the Etheria community has been flagged for violating our community guidelines.</p>
+            
+            <div style="background-color: #1a0033; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong style="color: #9f7aea;">Reason:</strong> {reason}</p>
+                <p><strong style="color: #9f7aea;">Warning Count:</strong> {flag_count} of {FLAGS_BEFORE_SUSPENSION}</p>
+            </div>
+            
+            <p style="color: #ef4444; font-weight: bold;">
+                After {FLAGS_BEFORE_SUSPENSION} warnings, your account will be suspended for {FIRST_SUSPENSION_DAYS} days.
+            </p>
+            
+            <p>Please review our community guidelines and ensure your future contributions align with our values of respect, kindness, and spiritual growth.</p>
+            
+            <p>If you believe this was a mistake, you may appeal by emailing <a href="mailto:{ADMIN_EMAIL}" style="color: #b794f6;">{ADMIN_EMAIL}</a></p>
+            
+            <p style="color: #9f7aea; margin-top: 30px;">Blessings,<br>The Etheria Team</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    await send_email(user_email, subject, html_content)
+
+async def send_suspension_notice(
+    user_email: str, 
+    user_name: str, 
+    suspension_days: int, 
+    suspension_number: int,
+    end_date: datetime
+):
+    """Send suspension notice to user"""
+    subject = f"Etheria Account Suspended - {suspension_days} Days"
+    
+    suspension_text = "first" if suspension_number == 1 else "second"
+    next_action = f"a {SECOND_SUSPENSION_DAYS}-day suspension" if suspension_number == 1 else "permanent account cancellation"
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a0033; color: #e9d5ff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2d1b4e; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #ef4444; margin-bottom: 20px;">🚫 Account Suspended</h2>
+            
+            <p>Hello {user_name},</p>
+            
+            <p>Due to repeated violations of our community guidelines, your Etheria account has been suspended.</p>
+            
+            <div style="background-color: #1a0033; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong style="color: #9f7aea;">Suspension Duration:</strong> {suspension_days} days</p>
+                <p><strong style="color: #9f7aea;">Suspension Type:</strong> {suspension_text.capitalize()} suspension</p>
+                <p><strong style="color: #9f7aea;">Account Reactivates:</strong> {end_date.strftime('%B %d, %Y')}</p>
+            </div>
+            
+            <p style="color: #f59e0b;">
+                ⚠️ Please note: If violations continue after reactivation, your account will face {next_action}.
+            </p>
+            
+            <div style="background-color: #1a0033; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #7c3aed;">
+                <p style="color: #ffd700; font-weight: bold;">Appeal Process</p>
+                <p>If you believe this suspension was made in error, you may appeal by emailing:</p>
+                <p><a href="mailto:{ADMIN_EMAIL}?subject=Suspension Appeal - {user_email}" style="color: #b794f6; font-size: 18px;">{ADMIN_EMAIL}</a></p>
+                <p style="font-size: 12px; color: #9f7aea;">Please include your email address and explain why you believe the suspension should be lifted.</p>
+            </div>
+            
+            <p style="color: #9f7aea; margin-top: 30px;">The Etheria Team</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    await send_email(user_email, subject, html_content)
+
+async def send_cancellation_notice(user_email: str, user_name: str, reason: str = "repeated violations"):
+    """Send account cancellation notice to user"""
+    subject = "Etheria Account Cancelled"
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a0033; color: #e9d5ff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2d1b4e; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #ef4444; margin-bottom: 20px;">Account Cancelled</h2>
+            
+            <p>Hello {user_name},</p>
+            
+            <p>We regret to inform you that your Etheria account has been permanently cancelled due to {reason}.</p>
+            
+            <p>This decision was made after careful review of your account activity and multiple warnings.</p>
+            
+            <div style="background-color: #1a0033; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #7c3aed;">
+                <p style="color: #ffd700; font-weight: bold;">Final Appeal</p>
+                <p>If you wish to appeal this decision, you may contact:</p>
+                <p><a href="mailto:{ADMIN_EMAIL}?subject=Account Cancellation Appeal - {user_email}" style="color: #b794f6;">{ADMIN_EMAIL}</a></p>
+            </div>
+            
+            <p style="color: #9f7aea; margin-top: 30px;">The Etheria Team</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    await send_email(user_email, subject, html_content)
+
+async def send_reactivation_notice(user_email: str, user_name: str):
+    """Send account reactivation notice to user"""
+    subject = "Etheria Account Reactivated"
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a0033; color: #e9d5ff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2d1b4e; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #10b981; margin-bottom: 20px;">✨ Account Reactivated</h2>
+            
+            <p>Hello {user_name},</p>
+            
+            <p>Great news! Your Etheria account has been reactivated.</p>
+            
+            <p>We hope you'll continue to be a positive member of our spiritual community. Please remember to follow our community guidelines to avoid future issues.</p>
+            
+            <p>Welcome back! 🙏</p>
+            
+            <p style="color: #9f7aea; margin-top: 30px;">Blessings,<br>The Etheria Team</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    await send_email(user_email, subject, html_content)
+
+async def process_flag(db, user_id: str, content_type: str, content: str, content_id: str, reason: str):
+    """Process a flagged content item - increment user flags, apply suspensions if needed"""
+    from bson import ObjectId
+    
+    # Get user
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        return {"success": False, "error": "User not found"}
+    
+    user_email = user.get("email", "")
+    user_name = user.get("display_name") or user.get("name") or user_email.split("@")[0]
+    
+    # Check if user is already permanently banned
+    if user.get("account_status") == "cancelled":
+        return {"success": True, "message": "User already banned", "action": "none"}
+    
+    # Check if user is currently suspended
+    if user.get("account_status") == "suspended":
+        suspension_end = user.get("suspension_end")
+        if suspension_end and datetime.utcnow() < suspension_end:
+            return {"success": True, "message": "User already suspended", "action": "none"}
+        else:
+            # Suspension ended, reactivate but keep flag count
+            await db.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$set": {"account_status": "active"}}
+            )
+    
+    # Increment flag count
+    current_flags = user.get("flag_count", 0) + 1
+    suspension_count = user.get("suspension_count", 0)
+    
+    # Create flag record
+    flag_record = {
+        "user_id": user_id,
+        "content_type": content_type,
+        "content_id": content_id,
+        "content": content,
+        "reason": reason,
+        "created_at": datetime.utcnow(),
+        "status": "pending"
+    }
+    flag_result = await db.user_flags.insert_one(flag_record)
+    flag_id = str(flag_result.inserted_id)
+    
+    # Send admin notification
+    await send_flagged_content_notification(
+        db, user_id, user_email, user_name, content_type, content, reason, flag_id
+    )
+    
+    # Delete flagged chat messages automatically
+    if content_type == "chat":
+        try:
+            await db.community_chat.delete_one({"_id": ObjectId(content_id)})
+        except:
+            pass
+    
+    # Check if suspension is needed
+    action_taken = "warning"
+    
+    if current_flags >= FLAGS_BEFORE_SUSPENSION:
+        suspension_count += 1
+        
+        if suspension_count == 1:
+            # First suspension - 2 weeks
+            suspension_days = FIRST_SUSPENSION_DAYS
+            suspension_end = datetime.utcnow() + timedelta(days=suspension_days)
+            
+            await db.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {
+                    "$set": {
+                        "flag_count": 0,  # Reset for next cycle
+                        "suspension_count": suspension_count,
+                        "account_status": "suspended",
+                        "suspension_start": datetime.utcnow(),
+                        "suspension_end": suspension_end
+                    }
+                }
+            )
+            
+            await send_suspension_notice(user_email, user_name, suspension_days, 1, suspension_end)
+            action_taken = "suspended_14_days"
+            
+        elif suspension_count == 2:
+            # Second suspension - 30 days
+            suspension_days = SECOND_SUSPENSION_DAYS
+            suspension_end = datetime.utcnow() + timedelta(days=suspension_days)
+            
+            await db.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {
+                    "$set": {
+                        "flag_count": 0,
+                        "suspension_count": suspension_count,
+                        "account_status": "suspended",
+                        "suspension_start": datetime.utcnow(),
+                        "suspension_end": suspension_end
+                    }
+                }
+            )
+            
+            await send_suspension_notice(user_email, user_name, suspension_days, 2, suspension_end)
+            action_taken = "suspended_30_days"
+            
+        else:
+            # Third+ offense - permanent ban
+            await db.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {
+                    "$set": {
+                        "account_status": "cancelled",
+                        "cancelled_at": datetime.utcnow(),
+                        "cancellation_reason": "repeated_violations"
+                    }
+                }
+            )
+            
+            await send_cancellation_notice(user_email, user_name)
+            action_taken = "cancelled"
+    else:
+        # Just a warning
+        await db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"flag_count": current_flags}}
+        )
+        
+        await send_user_warning(user_email, user_name, current_flags, reason)
+    
+    return {
+        "success": True,
+        "action": action_taken,
+        "flag_count": current_flags,
+        "suspension_count": suspension_count
+    }
+
+async def check_user_can_post(db, user_id: str):
+    """Check if user is allowed to post (not suspended or banned)"""
+    from bson import ObjectId
+    
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        return False, "User not found"
+    
+    status = user.get("account_status", "active")
+    
+    if status == "cancelled":
+        return False, "Your account has been cancelled due to community guideline violations."
+    
+    if status == "suspended":
+        suspension_end = user.get("suspension_end")
+        if suspension_end:
+            if datetime.utcnow() < suspension_end:
+                days_left = (suspension_end - datetime.utcnow()).days
+                return False, f"Your account is suspended. {days_left} days remaining."
+            else:
+                # Auto-reactivate
+                await db.users.update_one(
+                    {"_id": ObjectId(user_id)},
+                    {"$set": {"account_status": "active"}}
+                )
+                
+                user_email = user.get("email", "")
+                user_name = user.get("display_name") or user.get("name") or user_email.split("@")[0]
+                await send_reactivation_notice(user_email, user_name)
+                
+                return True, "Account reactivated"
+    
+    return True, "OK"
