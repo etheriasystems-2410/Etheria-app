@@ -8,6 +8,9 @@ interface User {
   email: string;
   name: string;
   picture?: string;
+  is_admin?: boolean;
+  admin_level?: string;
+  display_name?: string;
 }
 
 interface SubscriptionStatus {
