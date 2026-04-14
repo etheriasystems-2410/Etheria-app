@@ -29,8 +29,10 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/etheria-app-icon.png",
+        "backgroundImage": "./assets/images/etheria-app-icon.png",
         "backgroundColor": "#000000"
       },
+      "icon": "./assets/images/etheria-app-icon.png",
       "package": "com.etheriasystems.etheria",
       "versionCode": 1,
       "permissions": [
