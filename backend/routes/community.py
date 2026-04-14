@@ -165,12 +165,22 @@ If flagged but approved, it means human review is recommended but content can be
 
 # Helper to check premium status
 async def get_user_from_token(token: str):
-    """Get user from auth token"""
+    """Get user from auth token or session token"""
     if not token:
         return None
     
+    # First try direct auth_token on user
     user = await db.users.find_one({"auth_token": token})
-    return user
+    if user:
+        return user
+    
+    # Fallback: try session_token in user_sessions collection
+    session = await db.user_sessions.find_one({"session_token": token})
+    if session:
+        user = await db.users.find_one({"user_id": session["user_id"]})
+        return user
+    
+    return None
 
 async def check_premium(token: str) -> bool:
     """Check if user has premium access"""
@@ -803,6 +813,15 @@ async def get_all_users(token: Optional[str] = None, limit: int = 100, skip: int
         subscription = await db.subscriptions.find_one({"user_id": u.get("user_id")})
         is_premium = (subscription and subscription.get("status") == "active") or u.get("lifetime_premium", False)
         
+        # Handle created_at which might be datetime or string
+        created_at = u.get("created_at")
+        if created_at:
+            if hasattr(created_at, 'isoformat'):
+                created_at = created_at.isoformat()
+            # else it's already a string
+        else:
+            created_at = None
+        
         formatted.append({
             "id": str(u["_id"]),
             "user_id": u.get("user_id"),
@@ -814,7 +833,7 @@ async def get_all_users(token: Optional[str] = None, limit: int = 100, skip: int
             "is_lifetime": u.get("lifetime_premium", False),
             "account_status": u.get("account_status", "active"),
             "flag_count": u.get("flag_count", 0),
-            "created_at": u.get("created_at").isoformat() if u.get("created_at") else None
+            "created_at": created_at
         })
     
     return {
