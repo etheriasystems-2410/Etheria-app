@@ -4,7 +4,7 @@
     "slug": "etheria",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/etheria-cosmic.png",
+    "icon": "./assets/images/etheria-app-icon.png",
     "scheme": "etheria",
     "userInterfaceStyle": "dark",
     "splash": {
@@ -16,6 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.etheriasystems.etheria",
       "buildNumber": "1",
+      "icon": "./assets/images/etheria-app-icon.png",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Record voice memos for your spiritual journal",
         "NSCameraUsageDescription": "Capture moments for your spiritual journey",
@@ -27,8 +28,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/etheria-cosmic.png",
-        "backgroundColor": "#0a1628"
+        "foregroundImage": "./assets/images/etheria-app-icon.png",
+        "backgroundColor": "#000000"
       },
       "package": "com.etheriasystems.etheria",
       "versionCode": 1,
@@ -45,7 +46,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/etheria-cosmic.png"
+      "favicon": "./assets/images/etheria-app-icon.png"
     },
     "plugins": [
       "expo-router",
@@ -63,7 +64,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/etheria-cosmic.png",
+          "icon": "./assets/images/etheria-app-icon.png",
           "color": "#7c3aed",
           "sounds": []
         }
