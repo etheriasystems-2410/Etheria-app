@@ -3735,6 +3735,11 @@ set_community_db(db)
 set_community_llm_key(EMERGENT_LLM_KEY)
 app.include_router(community_router)
 
+# Import and register admin contest routes
+from routes.admin_contest import router as admin_contest_router, set_db as set_admin_contest_db
+set_admin_contest_db(db)
+app.include_router(admin_contest_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
