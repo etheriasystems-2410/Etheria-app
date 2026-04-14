@@ -9,6 +9,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/d3xhv7qx_47721.png';
+const HEADER_BANNER_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/oz3admmj_47815.jpg';
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function Home() {
@@ -271,6 +272,18 @@ export default function Home() {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Header Banner */}
+      <View style={styles.headerBanner}>
+        <Image
+          source={{ uri: HEADER_BANNER_IMAGE }}
+          style={styles.headerBannerImage}
+          contentFit="cover"
+        />
+        <View style={styles.headerBannerOverlay}>
+          <Text style={styles.headerBannerTitle}>Etheria</Text>
+        </View>
+      </View>
+
       {/* Auth Buttons - Show login/signup if not authenticated */}
       {!isAuthenticated ? (
         <View style={styles.authSection}>
@@ -482,6 +495,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f0321',
+  },
+  // Header Banner styles
+  headerBanner: {
+    height: 120,
+    width: '100%',
+    position: 'relative',
+  },
+  headerBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  headerBannerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(10, 0, 20, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerBannerTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   authSection: {
     padding: 12,
