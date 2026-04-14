@@ -44,8 +44,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerBannerTitle: {
-    fontFamily: 'Cinzel_700Bold',
     fontSize: 28,
+    fontWeight: 'bold',
     color: '#fff',
     letterSpacing: 6,
     textTransform: 'uppercase',
