@@ -21,6 +21,7 @@ import { Image } from 'expo-image';
 import { Paywall } from '../components/Paywall';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as WebBrowser from 'expo-web-browser';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -181,16 +182,24 @@ export default function Settings() {
 
   const handleOpenLink = async (url: string, title: string) => {
     try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (canOpen) {
-        await Linking.openURL(url);
+      // Use WebBrowser for in-app browser experience
+      if (Platform.OS !== 'web') {
+        await WebBrowser.openBrowserAsync(url, {
+          dismissButtonStyle: 'close',
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        });
       } else {
-        // Show modal with the URL
-        setLinkModalData({ title, url });
-        setShowLinkModal(true);
+        // For web, open in new tab
+        const canOpen = await Linking.canOpenURL(url);
+        if (canOpen) {
+          await Linking.openURL(url);
+        } else {
+          setLinkModalData({ title, url });
+          setShowLinkModal(true);
+        }
       }
     } catch (error) {
-      // Show modal with the URL if opening fails
+      // Fallback to showing modal with the URL
       setLinkModalData({ title, url });
       setShowLinkModal(true);
     }
