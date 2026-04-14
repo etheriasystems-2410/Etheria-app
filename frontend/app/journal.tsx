@@ -585,7 +585,6 @@ export default function Journal() {
             <View style={styles.emptyState}>
               <Ionicons name="book-outline" size={60} color="#9f7aea" />
               <Text style={styles.emptyText}>No entries yet</Text>
-              <Text style={styles.emptySubtext}>Start journaling your spiritual journey</Text>
             </View>
           ) : (
             entries.map((entry) => {
