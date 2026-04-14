@@ -182,7 +182,7 @@ export default function CommunityGuidelines() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>10. Contact Us</Text>
           <Text style={styles.paragraph}>
-            For questions about these guidelines or moderation decisions, please contact us at contact@etheriasystems.online
+            For questions about these guidelines or moderation decisions, please contact us at etheriasystems@gmail.com
           </Text>
         </View>
 

@@ -91,6 +91,10 @@ export default function Community() {
   const [showNewPostForm, setShowNewPostForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
+  // Flag state
+  const [flagging, setFlagging] = useState(false);
+  const [flagSuccess, setFlagSuccess] = useState<string | null>(null);
+  
   const chatScrollRef = useRef<FlatList>(null);
   const chatPollRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -325,6 +329,34 @@ export default function Community() {
     }
   };
 
+  const handleFlagContent = async (contentType: 'post' | 'comment' | 'chat', contentId: string) => {
+    if (flagging) return;
+    
+    setFlagging(true);
+    setFlagSuccess(null);
+    
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/community/flag/${contentType}/${contentId}?token=${authToken}`,
+        { method: 'POST' }
+      );
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to flag content');
+      }
+      
+      setFlagSuccess(data.message);
+      setTimeout(() => setFlagSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.message);
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setFlagging(false);
+    }
+  };
+
   const handleBack = () => {
     if (viewMode === 'post-detail') {
       setViewMode('posts');
@@ -544,6 +576,15 @@ export default function Community() {
                   <Ionicons name="chatbubble-outline" size={18} color="#9f7aea" />
                   <Text style={styles.statText}>{post.comment_count}</Text>
                 </View>
+                {post.author_id !== user?._id && (
+                  <TouchableOpacity
+                    style={styles.flagButton}
+                    onPress={() => handleFlagContent('post', post.id)}
+                    disabled={flagging}
+                  >
+                    <Ionicons name="flag-outline" size={16} color="#f59e0b" />
+                  </TouchableOpacity>
+                )}
               </View>
             </TouchableOpacity>
           ))}
@@ -598,6 +639,15 @@ export default function Community() {
               )}
               <Text style={[styles.commentAuthor, comment.is_admin && styles.adminAuthor]}>{comment.author_name}</Text>
               <Text style={styles.commentTime}>{formatTime(comment.created_at)}</Text>
+              {comment.author_id !== user?._id && (
+                <TouchableOpacity
+                  style={styles.flagButtonSmall}
+                  onPress={() => handleFlagContent('comment', comment.id)}
+                  disabled={flagging}
+                >
+                  <Ionicons name="flag-outline" size={14} color="#f59e0b" />
+                </TouchableOpacity>
+              )}
             </View>
             <Text style={styles.commentContent}>{comment.content}</Text>
           </View>
@@ -677,6 +727,13 @@ export default function Community() {
                     </View>
                   )}
                   <Text style={[styles.chatAuthor, item.is_admin && styles.adminAuthor]}>{item.author_name}</Text>
+                  <TouchableOpacity
+                    style={styles.flagButtonChat}
+                    onPress={() => handleFlagContent('chat', item.id)}
+                    disabled={flagging}
+                  >
+                    <Ionicons name="flag-outline" size={12} color="#f59e0b" />
+                  </TouchableOpacity>
                 </View>
               )}
               <Text style={styles.chatText}>{item.message}</Text>
@@ -743,6 +800,16 @@ export default function Community() {
       {viewMode === 'posts' && renderPosts()}
       {viewMode === 'post-detail' && renderPostDetail()}
       {viewMode === 'chat' && renderChat()}
+      
+      {/* Flag Success Notification */}
+      {flagSuccess && (
+        <View style={styles.flagSuccessContainer}>
+          <View style={styles.flagSuccessContent}>
+            <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+            <Text style={styles.flagSuccessText}>{flagSuccess}</Text>
+          </View>
+        </View>
+      )}
       
       {/* Paywall Modal */}
       <Paywall
@@ -1317,5 +1384,46 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 0, 0.3)',
     backgroundColor: '#251040',
+  },
+  // Flag button styles
+  flagButton: {
+    padding: 6,
+    marginLeft: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+  },
+  flagButtonSmall: {
+    padding: 4,
+    marginLeft: 'auto',
+    borderRadius: 4,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+  },
+  flagButtonChat: {
+    padding: 4,
+    marginLeft: 'auto',
+    borderRadius: 4,
+  },
+  flagSuccessContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 16,
+    right: 16,
+    zIndex: 100,
+  },
+  flagSuccessContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a3328',
+    borderWidth: 1,
+    borderColor: '#10b981',
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+  },
+  flagSuccessText: {
+    flex: 1,
+    color: '#10b981',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

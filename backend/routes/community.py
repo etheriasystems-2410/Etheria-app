@@ -590,6 +590,89 @@ async def send_chat_message(room: str, chat: ChatMessage, token: Optional[str] =
         "created_at": message_doc["created_at"].isoformat()
     }
 
+# User Flag Routes
+@router.post("/flag/{content_type}/{content_id}")
+async def flag_content_for_review(
+    content_type: str, 
+    content_id: str, 
+    reason: Optional[str] = None,
+    token: Optional[str] = None
+):
+    """User-initiated flag for AI moderation review"""
+    from services.moderation_service import process_flag
+    
+    user = await get_user_from_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    if content_type not in ["post", "comment", "chat"]:
+        raise HTTPException(status_code=400, detail="Invalid content type")
+    
+    # Get the content
+    content_text = ""
+    author_id = ""
+    title = None
+    
+    try:
+        if content_type == "post":
+            content = await db.community_posts.find_one({"_id": ObjectId(content_id)})
+            if content:
+                content_text = content.get("content", "")
+                author_id = content.get("author_id", "")
+                title = content.get("title")
+        elif content_type == "comment":
+            content = await db.community_comments.find_one({"_id": ObjectId(content_id)})
+            if content:
+                content_text = content.get("content", "")
+                author_id = content.get("author_id", "")
+        elif content_type == "chat":
+            content = await db.community_chat.find_one({"_id": ObjectId(content_id)})
+            if content:
+                content_text = content.get("message", "")
+                author_id = content.get("author_id", "")
+    except:
+        raise HTTPException(status_code=400, detail="Invalid content ID")
+    
+    if not content_text:
+        raise HTTPException(status_code=404, detail="Content not found")
+    
+    # Prevent self-flagging
+    if author_id == user.get("user_id"):
+        raise HTTPException(status_code=400, detail="You cannot flag your own content")
+    
+    # Check if already flagged by this user
+    existing_flag = await db.user_content_flags.find_one({
+        "content_id": content_id,
+        "flagged_by": user.get("user_id")
+    })
+    
+    if existing_flag:
+        raise HTTPException(status_code=400, detail="You have already flagged this content")
+    
+    # Record user flag
+    await db.user_content_flags.insert_one({
+        "content_type": content_type,
+        "content_id": content_id,
+        "flagged_by": user.get("user_id"),
+        "reason": reason or "User reported for review",
+        "created_at": datetime.utcnow()
+    })
+    
+    # Process through AI moderator
+    flag_reason = reason or "User-reported content for review"
+    await process_flag(
+        author_id,
+        content_type,
+        content_text,
+        content_id,
+        f"USER_REPORTED: {flag_reason}"
+    )
+    
+    return {
+        "success": True,
+        "message": "Content has been flagged and sent for review. Thank you for helping keep our community safe."
+    }
+
 # Admin Routes for reviewing flagged content
 @router.get("/admin/flagged")
 async def get_flagged_content(token: Optional[str] = None, limit: int = 50):
