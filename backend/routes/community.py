@@ -1,0 +1,584 @@
+"""
+Community Routes - AI Moderated Message Board and Chat
+"""
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import datetime
+from bson import ObjectId
+import os
+import re
+import uuid
+from emergentintegrations.llm.chat import LlmChat
+
+router = APIRouter(prefix="/api/community", tags=["community"])
+
+# Will be set by server.py
+db = None
+llm_api_key = None
+
+def set_db(database):
+    global db
+    db = database
+
+def set_llm_key(key):
+    global llm_api_key
+    llm_api_key = key
+
+# Categories for the community
+CATEGORIES = [
+    {
+        "id": "meditation",
+        "name": "Meditation & Mindfulness",
+        "description": "Share your meditation experiences and tips",
+        "icon": "leaf",
+        "color": "#10b981"
+    },
+    {
+        "id": "dreams",
+        "name": "Dream Interpretation",
+        "description": "Discuss and interpret dreams together",
+        "icon": "moon",
+        "color": "#8b5cf6"
+    },
+    {
+        "id": "oracle",
+        "name": "Oracle & Divination",
+        "description": "Share readings and seek guidance",
+        "icon": "eye",
+        "color": "#f59e0b"
+    },
+    {
+        "id": "spirit-guides",
+        "name": "Spirit Guides",
+        "description": "Connect with others about spiritual guidance",
+        "icon": "sparkles",
+        "color": "#ec4899"
+    },
+    {
+        "id": "general",
+        "name": "General Discussion",
+        "description": "Open discussions about spirituality",
+        "icon": "chatbubbles",
+        "color": "#6366f1"
+    }
+]
+
+# Pydantic Models
+class PostCreate(BaseModel):
+    category: str
+    title: str
+    content: str
+
+class CommentCreate(BaseModel):
+    content: str
+
+class ChatMessage(BaseModel):
+    room: str
+    message: str
+
+class ModerationResult(BaseModel):
+    approved: bool
+    flagged: bool
+    reason: Optional[str] = None
+    filtered_content: Optional[str] = None
+
+# AI Moderation Function
+async def moderate_content(content: str, content_type: str = "message") -> ModerationResult:
+    """Use AI to moderate content for inappropriate material"""
+    
+    if not llm_api_key:
+        # Fallback: basic keyword filtering if LLM not available
+        inappropriate_keywords = [
+            'hate', 'kill', 'violence', 'racist', 'sexist', 
+            'spam', 'scam', 'http://', 'https://', 'www.'
+        ]
+        content_lower = content.lower()
+        for keyword in inappropriate_keywords:
+            if keyword in content_lower:
+                return ModerationResult(
+                    approved=False,
+                    flagged=True,
+                    reason=f"Content contains potentially inappropriate material"
+                )
+        return ModerationResult(approved=True, flagged=False)
+    
+    try:
+        moderation_prompt = f"""You are a content moderator for a spiritual wellness community app. 
+Analyze the following {content_type} and determine if it's appropriate.
+
+Content to moderate:
+"{content}"
+
+Rules:
+1. Block explicit sexual content, hate speech, violence, harassment
+2. Block spam, advertisements, or promotional content
+3. Block sharing of personal contact info (phone numbers, addresses)
+4. Allow spiritual discussions, even if unconventional
+5. Allow honest questions and seeking guidance
+6. Be lenient with spiritual/metaphysical topics
+
+Respond in this exact format:
+APPROVED: [yes/no]
+FLAGGED: [yes/no]
+REASON: [brief reason if not approved or flagged]
+
+If flagged but approved, it means human review is recommended but content can be posted."""
+
+        # Create LlmChat instance for moderation
+        chat = LlmChat(
+            api_key=llm_api_key,
+            session_id=f"moderation-{uuid.uuid4()}",
+            system_message="You are a content moderator for a spiritual wellness community."
+        )
+        
+        response = await chat.chat(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": moderation_prompt}]
+        )
+        
+        response_text = response.get("message", "").upper()
+        
+        approved = "APPROVED: YES" in response_text
+        flagged = "FLAGGED: YES" in response_text
+        
+        # Extract reason if present
+        reason = None
+        if "REASON:" in response_text:
+            reason_match = re.search(r'REASON:\s*(.+?)(?:\n|$)', response_text, re.IGNORECASE)
+            if reason_match:
+                reason = reason_match.group(1).strip()
+        
+        return ModerationResult(
+            approved=approved,
+            flagged=flagged,
+            reason=reason
+        )
+        
+    except Exception as e:
+        print(f"Moderation error: {e}")
+        # Default to approved but flagged for review on error
+        return ModerationResult(approved=True, flagged=True, reason="Auto-flagged for review")
+
+# Helper to check premium status
+async def get_user_from_token(token: str):
+    """Get user from auth token"""
+    if not token:
+        return None
+    
+    user = await db.users.find_one({"auth_token": token})
+    return user
+
+async def check_premium(token: str) -> bool:
+    """Check if user has premium access"""
+    user = await get_user_from_token(token)
+    if not user:
+        return False
+    
+    subscription = await db.subscriptions.find_one({"user_id": str(user["_id"])})
+    if subscription and subscription.get("status") == "active":
+        return True
+    
+    # Check for lifetime premium
+    if user.get("lifetime_premium"):
+        return True
+        
+    return False
+
+# Routes
+@router.get("/categories")
+async def get_categories():
+    """Get all community categories"""
+    return {"categories": CATEGORIES}
+
+@router.get("/posts/{category}")
+async def get_posts(category: str, token: Optional[str] = None, limit: int = 50, skip: int = 0):
+    """Get posts in a category"""
+    
+    # Check premium access
+    if not await check_premium(token):
+        raise HTTPException(status_code=403, detail="Premium subscription required for community access")
+    
+    if category not in [c["id"] for c in CATEGORIES]:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    
+    posts = await db.community_posts.find(
+        {"category": category, "approved": True}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    
+    # Format posts
+    formatted_posts = []
+    for post in posts:
+        # Get comment count
+        comment_count = await db.community_comments.count_documents({"post_id": str(post["_id"])})
+        
+        formatted_posts.append({
+            "id": str(post["_id"]),
+            "title": post["title"],
+            "content": post["content"],
+            "author_name": post.get("author_name", "Anonymous"),
+            "author_id": post.get("author_id"),
+            "category": post["category"],
+            "created_at": post["created_at"].isoformat() if post.get("created_at") else None,
+            "comment_count": comment_count,
+            "likes": post.get("likes", 0)
+        })
+    
+    return {"posts": formatted_posts}
+
+@router.post("/posts")
+async def create_post(post: PostCreate, token: Optional[str] = None):
+    """Create a new post"""
+    
+    if not await check_premium(token):
+        raise HTTPException(status_code=403, detail="Premium subscription required for community access")
+    
+    user = await get_user_from_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    if post.category not in [c["id"] for c in CATEGORIES]:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    
+    if len(post.title.strip()) < 3:
+        raise HTTPException(status_code=400, detail="Title must be at least 3 characters")
+    
+    if len(post.content.strip()) < 10:
+        raise HTTPException(status_code=400, detail="Content must be at least 10 characters")
+    
+    # Moderate content
+    title_moderation = await moderate_content(post.title, "title")
+    content_moderation = await moderate_content(post.content, "post")
+    
+    approved = title_moderation.approved and content_moderation.approved
+    flagged = title_moderation.flagged or content_moderation.flagged
+    
+    if not approved:
+        reason = title_moderation.reason or content_moderation.reason
+        raise HTTPException(status_code=400, detail=f"Post not approved: {reason}")
+    
+    # Create post
+    post_doc = {
+        "category": post.category,
+        "title": post.title.strip(),
+        "content": post.content.strip(),
+        "author_id": str(user["_id"]),
+        "author_name": user.get("display_name") or user.get("name") or user.get("email", "").split("@")[0],
+        "created_at": datetime.utcnow(),
+        "approved": True,
+        "flagged": flagged,
+        "likes": 0
+    }
+    
+    result = await db.community_posts.insert_one(post_doc)
+    
+    # If flagged, store for admin review
+    if flagged:
+        await db.flagged_content.insert_one({
+            "content_type": "post",
+            "content_id": str(result.inserted_id),
+            "content": post.content,
+            "title": post.title,
+            "author_id": str(user["_id"]),
+            "reason": title_moderation.reason or content_moderation.reason,
+            "created_at": datetime.utcnow(),
+            "reviewed": False
+        })
+    
+    return {
+        "success": True,
+        "post_id": str(result.inserted_id),
+        "flagged": flagged,
+        "message": "Post created successfully" + (" (flagged for review)" if flagged else "")
+    }
+
+@router.get("/posts/{post_id}/comments")
+async def get_comments(post_id: str, token: Optional[str] = None, limit: int = 100):
+    """Get comments for a post"""
+    
+    if not await check_premium(token):
+        raise HTTPException(status_code=403, detail="Premium subscription required for community access")
+    
+    try:
+        post = await db.community_posts.find_one({"_id": ObjectId(post_id)})
+    except:
+        raise HTTPException(status_code=400, detail="Invalid post ID")
+    
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    comments = await db.community_comments.find(
+        {"post_id": post_id, "approved": True}
+    ).sort("created_at", 1).limit(limit).to_list(length=limit)
+    
+    formatted_comments = []
+    for comment in comments:
+        formatted_comments.append({
+            "id": str(comment["_id"]),
+            "content": comment["content"],
+            "author_name": comment.get("author_name", "Anonymous"),
+            "author_id": comment.get("author_id"),
+            "created_at": comment["created_at"].isoformat() if comment.get("created_at") else None,
+            "likes": comment.get("likes", 0)
+        })
+    
+    return {"comments": formatted_comments}
+
+@router.post("/posts/{post_id}/comments")
+async def create_comment(post_id: str, comment: CommentCreate, token: Optional[str] = None):
+    """Add a comment to a post"""
+    
+    if not await check_premium(token):
+        raise HTTPException(status_code=403, detail="Premium subscription required for community access")
+    
+    user = await get_user_from_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    try:
+        post = await db.community_posts.find_one({"_id": ObjectId(post_id)})
+    except:
+        raise HTTPException(status_code=400, detail="Invalid post ID")
+    
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    if len(comment.content.strip()) < 2:
+        raise HTTPException(status_code=400, detail="Comment must be at least 2 characters")
+    
+    # Moderate content
+    moderation = await moderate_content(comment.content, "comment")
+    
+    if not moderation.approved:
+        raise HTTPException(status_code=400, detail=f"Comment not approved: {moderation.reason}")
+    
+    comment_doc = {
+        "post_id": post_id,
+        "content": comment.content.strip(),
+        "author_id": str(user["_id"]),
+        "author_name": user.get("display_name") or user.get("name") or user.get("email", "").split("@")[0],
+        "created_at": datetime.utcnow(),
+        "approved": True,
+        "flagged": moderation.flagged,
+        "likes": 0
+    }
+    
+    result = await db.community_comments.insert_one(comment_doc)
+    
+    if moderation.flagged:
+        await db.flagged_content.insert_one({
+            "content_type": "comment",
+            "content_id": str(result.inserted_id),
+            "content": comment.content,
+            "post_id": post_id,
+            "author_id": str(user["_id"]),
+            "reason": moderation.reason,
+            "created_at": datetime.utcnow(),
+            "reviewed": False
+        })
+    
+    return {
+        "success": True,
+        "comment_id": str(result.inserted_id),
+        "message": "Comment added successfully"
+    }
+
+@router.post("/posts/{post_id}/like")
+async def like_post(post_id: str, token: Optional[str] = None):
+    """Like a post"""
+    
+    if not await check_premium(token):
+        raise HTTPException(status_code=403, detail="Premium subscription required")
+    
+    user = await get_user_from_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    try:
+        post = await db.community_posts.find_one({"_id": ObjectId(post_id)})
+    except:
+        raise HTTPException(status_code=400, detail="Invalid post ID")
+    
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Check if already liked
+    existing_like = await db.community_likes.find_one({
+        "post_id": post_id,
+        "user_id": str(user["_id"])
+    })
+    
+    if existing_like:
+        # Unlike
+        await db.community_likes.delete_one({"_id": existing_like["_id"]})
+        await db.community_posts.update_one(
+            {"_id": ObjectId(post_id)},
+            {"$inc": {"likes": -1}}
+        )
+        return {"success": True, "action": "unliked"}
+    else:
+        # Like
+        await db.community_likes.insert_one({
+            "post_id": post_id,
+            "user_id": str(user["_id"]),
+            "created_at": datetime.utcnow()
+        })
+        await db.community_posts.update_one(
+            {"_id": ObjectId(post_id)},
+            {"$inc": {"likes": 1}}
+        )
+        return {"success": True, "action": "liked"}
+
+# Chat Room Routes
+@router.get("/chat/{room}")
+async def get_chat_messages(room: str, token: Optional[str] = None, limit: int = 100):
+    """Get chat messages for a room"""
+    
+    if not await check_premium(token):
+        raise HTTPException(status_code=403, detail="Premium subscription required for community access")
+    
+    if room not in [c["id"] for c in CATEGORIES]:
+        raise HTTPException(status_code=400, detail="Invalid chat room")
+    
+    messages = await db.community_chat.find(
+        {"room": room, "approved": True}
+    ).sort("created_at", -1).limit(limit).to_list(length=limit)
+    
+    # Reverse to show oldest first
+    messages.reverse()
+    
+    formatted_messages = []
+    for msg in messages:
+        formatted_messages.append({
+            "id": str(msg["_id"]),
+            "message": msg["message"],
+            "author_name": msg.get("author_name", "Anonymous"),
+            "author_id": msg.get("author_id"),
+            "created_at": msg["created_at"].isoformat() if msg.get("created_at") else None
+        })
+    
+    return {"messages": formatted_messages, "room": room}
+
+@router.post("/chat/{room}")
+async def send_chat_message(room: str, chat: ChatMessage, token: Optional[str] = None):
+    """Send a chat message"""
+    
+    if not await check_premium(token):
+        raise HTTPException(status_code=403, detail="Premium subscription required for community access")
+    
+    user = await get_user_from_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    if room not in [c["id"] for c in CATEGORIES]:
+        raise HTTPException(status_code=400, detail="Invalid chat room")
+    
+    if len(chat.message.strip()) < 1:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    
+    if len(chat.message) > 500:
+        raise HTTPException(status_code=400, detail="Message too long (max 500 characters)")
+    
+    # Moderate content
+    moderation = await moderate_content(chat.message, "chat message")
+    
+    if not moderation.approved:
+        raise HTTPException(status_code=400, detail=f"Message not approved: {moderation.reason}")
+    
+    message_doc = {
+        "room": room,
+        "message": chat.message.strip(),
+        "author_id": str(user["_id"]),
+        "author_name": user.get("display_name") or user.get("name") or user.get("email", "").split("@")[0],
+        "created_at": datetime.utcnow(),
+        "approved": True,
+        "flagged": moderation.flagged
+    }
+    
+    result = await db.community_chat.insert_one(message_doc)
+    
+    if moderation.flagged:
+        await db.flagged_content.insert_one({
+            "content_type": "chat",
+            "content_id": str(result.inserted_id),
+            "content": chat.message,
+            "room": room,
+            "author_id": str(user["_id"]),
+            "reason": moderation.reason,
+            "created_at": datetime.utcnow(),
+            "reviewed": False
+        })
+    
+    return {
+        "success": True,
+        "message_id": str(result.inserted_id),
+        "created_at": message_doc["created_at"].isoformat()
+    }
+
+# Admin Routes for reviewing flagged content
+@router.get("/admin/flagged")
+async def get_flagged_content(token: Optional[str] = None, limit: int = 50):
+    """Get flagged content for admin review"""
+    
+    user = await get_user_from_token(token)
+    if not user or not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    flagged = await db.flagged_content.find(
+        {"reviewed": False}
+    ).sort("created_at", -1).limit(limit).to_list(length=limit)
+    
+    formatted = []
+    for item in flagged:
+        formatted.append({
+            "id": str(item["_id"]),
+            "content_type": item["content_type"],
+            "content_id": item["content_id"],
+            "content": item["content"],
+            "title": item.get("title"),
+            "author_id": item["author_id"],
+            "reason": item.get("reason"),
+            "created_at": item["created_at"].isoformat() if item.get("created_at") else None
+        })
+    
+    return {"flagged_content": formatted}
+
+@router.post("/admin/review/{flagged_id}")
+async def review_flagged_content(flagged_id: str, action: str, token: Optional[str] = None):
+    """Review and take action on flagged content"""
+    
+    user = await get_user_from_token(token)
+    if not user or not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if action not in ["approve", "remove"]:
+        raise HTTPException(status_code=400, detail="Invalid action. Use 'approve' or 'remove'")
+    
+    try:
+        flagged = await db.flagged_content.find_one({"_id": ObjectId(flagged_id)})
+    except:
+        raise HTTPException(status_code=400, detail="Invalid flagged content ID")
+    
+    if not flagged:
+        raise HTTPException(status_code=404, detail="Flagged content not found")
+    
+    if action == "remove":
+        # Remove the content
+        content_type = flagged["content_type"]
+        content_id = flagged["content_id"]
+        
+        if content_type == "post":
+            await db.community_posts.delete_one({"_id": ObjectId(content_id)})
+            await db.community_comments.delete_many({"post_id": content_id})
+        elif content_type == "comment":
+            await db.community_comments.delete_one({"_id": ObjectId(content_id)})
+        elif content_type == "chat":
+            await db.community_chat.delete_one({"_id": ObjectId(content_id)})
+    
+    # Mark as reviewed
+    await db.flagged_content.update_one(
+        {"_id": ObjectId(flagged_id)},
+        {"$set": {"reviewed": True, "action": action, "reviewed_by": str(user["_id"]), "reviewed_at": datetime.utcnow()}}
+    )
+    
+    return {"success": True, "action": action}

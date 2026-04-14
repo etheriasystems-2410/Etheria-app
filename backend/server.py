@@ -3726,6 +3726,12 @@ async def mark_notification_read(notification_id: str, request: Request):
 # Include the router in the main app
 app.include_router(api_router)
 
+# Import and register community routes
+from routes.community import router as community_router, set_db as set_community_db, set_llm_key as set_community_llm_key
+set_community_db(db)
+set_community_llm_key(EMERGENT_LLM_KEY)
+app.include_router(community_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

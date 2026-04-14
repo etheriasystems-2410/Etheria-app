@@ -140,6 +140,17 @@ export default function Home() {
         ko: '영적 여정을 기록하세요',
         zh: '记录您的灵性之旅',
       },
+      community: {
+        en: 'Connect with fellow seekers',
+        es: 'Conecta con otros buscadores',
+        fr: 'Connectez-vous avec d\'autres chercheurs',
+        de: 'Verbinde dich mit anderen Suchenden',
+        it: 'Connettiti con altri cercatori',
+        pt: 'Conecte-se com outros buscadores',
+        ja: '仲間の探求者とつながる',
+        ko: '동료 탐구자들과 연결하세요',
+        zh: '与其他求道者联系',
+      },
       dreams: {
         en: 'Unlock the meaning of your dreams',
         es: 'Descubre el significado de tus sueños',
@@ -209,6 +220,13 @@ export default function Home() {
       description: getFeatureDescription('journal'),
       icon: 'book' as const,
       route: '/journal',
+    },
+    {
+      title: 'Community',
+      description: getFeatureDescription('community'),
+      icon: 'people' as const,
+      route: '/community',
+      isPremium: true,
     },
   ];
 
