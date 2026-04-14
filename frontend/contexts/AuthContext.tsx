@@ -172,6 +172,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
       
+      console.log('LOGIN RESPONSE:', JSON.stringify(data, null, 2));
+      
       // Get session token from response body (for mobile) or cookie (for web)
       const sessionToken = data.session_token || 
         response.headers.get('set-cookie')?.split('session_token=')[1]?.split(';')[0];
@@ -181,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await fetchSubscriptionStatus(sessionToken);
       }
       
-      setUser({
+      const userObj = {
         user_id: data.user_id,
         email: data.email,
         name: data.name,
@@ -189,7 +191,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         is_admin: data.is_admin,
         admin_level: data.admin_level,
         display_name: data.display_name
-      });
+      };
+      
+      console.log('SETTING USER:', JSON.stringify(userObj, null, 2));
+      
+      setUser(userObj);
     } catch (error) {
       console.error('Login error:', error);
       throw error;
