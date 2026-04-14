@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -84,6 +85,11 @@ export default function Community() {
   const [error, setError] = useState<string | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
   
+  // Guidelines agreement state
+  const [hasAgreedToGuidelines, setHasAgreedToGuidelines] = useState<boolean | null>(null);
+  const [showGuidelines, setShowGuidelines] = useState(false);
+  const [agreeingToGuidelines, setAgreeingToGuidelines] = useState(false);
+  
   // Form states
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
@@ -99,10 +105,19 @@ export default function Community() {
   const chatScrollRef = useRef<FlatList>(null);
   const chatPollRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch categories on mount
+  // Check guidelines agreement on mount
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    checkGuidelinesAgreement();
+  }, [authToken]);
+
+  // Fetch categories on mount (only if agreed to guidelines)
+  useEffect(() => {
+    if (hasAgreedToGuidelines === true) {
+      fetchCategories();
+    } else if (hasAgreedToGuidelines === false) {
+      setShowGuidelines(true);
+    }
+  }, [hasAgreedToGuidelines]);
 
   // Poll for new chat messages
   useEffect(() => {
@@ -118,6 +133,49 @@ export default function Community() {
       }
     };
   }, [viewMode, selectedCategory]);
+
+  const checkGuidelinesAgreement = async () => {
+    if (!authToken) {
+      setHasAgreedToGuidelines(false);
+      return;
+    }
+    
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/community/guidelines-agreement?token=${authToken}`
+      );
+      const data = await response.json();
+      setHasAgreedToGuidelines(data.agreed === true);
+    } catch (err) {
+      console.error('Error checking guidelines:', err);
+      setHasAgreedToGuidelines(false);
+    }
+  };
+
+  const handleAgreeToGuidelines = async () => {
+    if (!authToken) return;
+    
+    setAgreeingToGuidelines(true);
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/community/guidelines-agreement?token=${authToken}`,
+        { method: 'POST' }
+      );
+      
+      if (response.ok) {
+        setHasAgreedToGuidelines(true);
+        setShowGuidelines(false);
+        fetchCategories();
+      } else {
+        setError('Failed to record agreement. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error agreeing to guidelines:', err);
+      setError('Failed to record agreement. Please try again.');
+    } finally {
+      setAgreeingToGuidelines(false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -814,6 +872,107 @@ export default function Community() {
           </View>
         </View>
       )}
+
+      {/* Guidelines Agreement Modal */}
+      <Modal visible={showGuidelines} animationType="slide" transparent={false}>
+        <SafeAreaView style={styles.guidelinesContainer}>
+          <HeaderBanner title="Guidelines" height={100} />
+          <ScrollView style={styles.guidelinesScroll} showsVerticalScrollIndicator={false}>
+            <View style={styles.guidelinesContent}>
+              <View style={styles.guidelinesHeader}>
+                <Ionicons name="people-circle" size={50} color="#9f7aea" />
+                <Text style={styles.guidelinesTitle}>Community Guidelines</Text>
+                <Text style={styles.guidelinesSubtitle}>
+                  Please read and agree to our community guidelines before participating.
+                </Text>
+              </View>
+
+              <View style={styles.guidelinesSection}>
+                <Text style={styles.guidelinesSectionTitle}>1. AI Moderation</Text>
+                <Text style={styles.guidelinesText}>
+                  Our community is monitored by an AI-powered moderation system that automatically reviews content for compliance with our guidelines.
+                </Text>
+              </View>
+
+              <View style={styles.guidelinesSection}>
+                <Text style={styles.guidelinesSectionTitle}>2. Community Standards</Text>
+                <Text style={styles.guidelinesText}>
+                  • Treat others with respect and kindness{'\n'}
+                  • No hate speech, discrimination, or harassment{'\n'}
+                  • No spam, advertisements, or promotional content{'\n'}
+                  • Keep discussions relevant and constructive{'\n'}
+                  • Respect others' spiritual beliefs and practices
+                </Text>
+              </View>
+
+              <View style={styles.guidelinesSection}>
+                <Text style={styles.guidelinesSectionTitle}>3. Suspension Policy</Text>
+                <Text style={styles.guidelinesText}>
+                  Violations result in progressive actions:{'\n'}
+                  • First offense: Written warning{'\n'}
+                  • Second offense (3+ flags): 2-week suspension{'\n'}
+                  • Third offense: 30-day suspension{'\n'}
+                  • Continued violations: Permanent account cancellation
+                </Text>
+              </View>
+
+              <View style={styles.guidelinesSection}>
+                <Text style={styles.guidelinesSectionTitle}>4. Appeals Process</Text>
+                <Text style={styles.guidelinesText}>
+                  If you believe a moderation action was taken in error, an appeal link will be included in the notification email. Appeals are typically reviewed within 3-5 business days.
+                </Text>
+              </View>
+
+              <View style={styles.guidelinesSection}>
+                <Text style={styles.guidelinesSectionTitle}>5. No Refunds Policy</Text>
+                <View style={styles.guidelinesWarning}>
+                  <Ionicons name="information-circle" size={20} color="#9f7aea" />
+                  <Text style={styles.guidelinesWarningText}>
+                    All subscription payments are final. No refunds will be issued for accounts suspended or cancelled due to violations of these guidelines.
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.guidelinesViewFull}
+                onPress={() => {
+                  setShowGuidelines(false);
+                  router.push('/community-guidelines');
+                }}
+              >
+                <Text style={styles.guidelinesViewFullText}>View Full Guidelines</Text>
+                <Ionicons name="open-outline" size={16} color="#9f7aea" />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+
+          <View style={styles.guidelinesFooter}>
+            <TouchableOpacity
+              style={styles.guidelinesDeclineBtn}
+              onPress={() => {
+                setShowGuidelines(false);
+                router.back();
+              }}
+            >
+              <Text style={styles.guidelinesDeclineText}>Decline</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.guidelinesAgreeBtn}
+              onPress={handleAgreeToGuidelines}
+              disabled={agreeingToGuidelines}
+            >
+              {agreeingToGuidelines ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={styles.guidelinesAgreeText}>I Agree</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
       
       {/* Paywall Modal */}
       <Paywall
@@ -1429,5 +1588,115 @@ const styles = StyleSheet.create({
     color: '#10b981',
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Guidelines Modal styles
+  guidelinesContainer: {
+    flex: 1,
+    backgroundColor: '#0a0014',
+  },
+  guidelinesScroll: {
+    flex: 1,
+  },
+  guidelinesContent: {
+    padding: 20,
+  },
+  guidelinesHeader: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2d1b4e',
+    marginBottom: 20,
+  },
+  guidelinesTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  guidelinesSubtitle: {
+    fontSize: 14,
+    color: '#9f7aea',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  guidelinesSection: {
+    marginBottom: 20,
+  },
+  guidelinesSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 10,
+  },
+  guidelinesText: {
+    fontSize: 14,
+    color: '#c4b5fd',
+    lineHeight: 22,
+  },
+  guidelinesWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(159, 122, 234, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(159, 122, 234, 0.3)',
+    padding: 14,
+    borderRadius: 12,
+    gap: 10,
+  },
+  guidelinesWarningText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#e9d5ff',
+    lineHeight: 20,
+  },
+  guidelinesViewFull: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 16,
+  },
+  guidelinesViewFullText: {
+    fontSize: 14,
+    color: '#9f7aea',
+    fontWeight: '500',
+  },
+  guidelinesFooter: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#2d1b4e',
+    backgroundColor: '#0a0014',
+  },
+  guidelinesDeclineBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#6b7280',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guidelinesDeclineText: {
+    fontSize: 16,
+    color: '#9ca3af',
+    fontWeight: '600',
+  },
+  guidelinesAgreeBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#7c3aed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  guidelinesAgreeText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
 });

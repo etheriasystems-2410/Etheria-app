@@ -28,6 +28,48 @@ def set_llm_key(key):
     global llm_api_key
     llm_api_key = key
 
+# Check if user has agreed to community guidelines
+@router.get("/guidelines-agreement")
+async def check_guidelines_agreement(token: Optional[str] = None):
+    """Check if user has agreed to community guidelines"""
+    user = await get_user_from_token(token)
+    if not user:
+        return {"agreed": False, "requires_auth": True}
+    
+    # Check if user has agreed
+    agreement = await db.community_guidelines_agreements.find_one({
+        "user_id": user.get("user_id")
+    })
+    
+    return {
+        "agreed": agreement is not None,
+        "agreed_at": agreement.get("agreed_at").isoformat() if agreement and agreement.get("agreed_at") else None
+    }
+
+@router.post("/guidelines-agreement")
+async def agree_to_guidelines(token: Optional[str] = None):
+    """Record user's agreement to community guidelines"""
+    user = await get_user_from_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    user_id = user.get("user_id")
+    
+    # Check if already agreed
+    existing = await db.community_guidelines_agreements.find_one({"user_id": user_id})
+    if existing:
+        return {"success": True, "message": "Already agreed to guidelines"}
+    
+    # Record agreement
+    await db.community_guidelines_agreements.insert_one({
+        "user_id": user_id,
+        "email": user.get("email"),
+        "agreed_at": datetime.utcnow(),
+        "version": "1.0"  # Can be used to re-prompt on guideline updates
+    })
+    
+    return {"success": True, "message": "Thank you for agreeing to our community guidelines"}
+
 # Categories for the community
 CATEGORIES = [
     {
