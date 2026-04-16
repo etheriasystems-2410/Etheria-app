@@ -1,338 +1,263 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for Etheria Meditation App Admin Panel
-Testing actual admin endpoints that exist in the system
+Backend API Testing Script for Etheria Admin Panel
+Tests the admin panel endpoints as requested in the review.
 """
 
-import requests
+import asyncio
+import aiohttp
 import json
 import sys
 from datetime import datetime
 
-# Backend URL from frontend .env
+# Backend URL from environment
 BACKEND_URL = "https://meditation-nexus.preview.emergentagent.com/api"
 
 # Test credentials from test_credentials.md
 ADMIN_EMAIL = "etheriasystems@gmail.com"
-ADMIN_PASSWORD = "$Tory2410"  # Using password from review request
-ADMIN_SECRET = "etheria_admin_secret_2026"
+ADMIN_PASSWORD = "$Tory2410"
 
-def print_test_header(test_name):
-    print(f"\n{'='*60}")
-    print(f"🧪 TESTING: {test_name}")
-    print(f"{'='*60}")
-
-def print_result(success, message, response_data=None):
-    status = "✅ PASS" if success else "❌ FAIL"
-    print(f"{status}: {message}")
-    if response_data:
-        print(f"Response: {json.dumps(response_data, indent=2)}")
-    print("-" * 60)
-
-def test_admin_login():
-    """Test admin login to get authentication token"""
-    print_test_header("Admin Login Authentication")
-    
-    try:
-        response = requests.post(
-            f"{BACKEND_URL}/auth/login",
-            json={
+class AdminPanelTester:
+    def __init__(self):
+        self.session = None
+        self.admin_token = None
+        self.test_results = []
+        
+    async def setup(self):
+        """Setup HTTP session"""
+        self.session = aiohttp.ClientSession()
+        
+    async def cleanup(self):
+        """Cleanup HTTP session"""
+        if self.session:
+            await self.session.close()
+            
+    def log_result(self, test_name, success, details):
+        """Log test result"""
+        status = "✅ PASS" if success else "❌ FAIL"
+        print(f"{status}: {test_name}")
+        if details:
+            print(f"   Details: {details}")
+        self.test_results.append({
+            "test": test_name,
+            "success": success,
+            "details": details,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    async def test_admin_login(self):
+        """Test admin login and get session token"""
+        try:
+            login_data = {
                 "email": ADMIN_EMAIL,
                 "password": ADMIN_PASSWORD
-            },
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            is_admin = data.get("is_admin", False)
-            token = data.get("session_token")
+            }
             
-            if is_admin and token:
-                print_result(True, f"Admin login successful. Admin status: {is_admin}", {
-                    "is_admin": is_admin,
-                    "admin_level": data.get("admin_level"),
-                    "email": data.get("email"),
-                    "token_received": bool(token)
-                })
-                return token
+            async with self.session.post(f"{BACKEND_URL}/auth/login", json=login_data) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    self.admin_token = data.get("session_token")
+                    is_admin = data.get("is_admin", False)
+                    
+                    if self.admin_token and is_admin:
+                        self.log_result("Admin Login", True, f"Token: {self.admin_token[:20]}..., is_admin: {is_admin}")
+                        return True
+                    else:
+                        self.log_result("Admin Login", False, f"Missing token or admin status. Token: {bool(self.admin_token)}, is_admin: {is_admin}")
+                        return False
+                else:
+                    error_text = await response.text()
+                    self.log_result("Admin Login", False, f"HTTP {response.status}: {error_text}")
+                    return False
+                    
+        except Exception as e:
+            self.log_result("Admin Login", False, f"Exception: {str(e)}")
+            return False
+            
+    async def test_all_users_endpoint(self):
+        """Test GET /api/community/admin/all-users endpoint"""
+        if not self.admin_token:
+            self.log_result("All Users Endpoint", False, "No admin token available")
+            return False
+            
+        try:
+            # Community routes expect token as query parameter, not Authorization header
+            async with self.session.get(f"{BACKEND_URL}/community/admin/all-users?token={self.admin_token}") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    users = data.get("users", [])
+                    total = data.get("total", 0)
+                    
+                    # Check if users are sorted by created_at descending (newest first)
+                    sorted_correctly = True
+                    if len(users) > 1:
+                        for i in range(len(users) - 1):
+                            current_date = users[i].get("created_at")
+                            next_date = users[i + 1].get("created_at")
+                            if current_date and next_date and current_date < next_date:
+                                sorted_correctly = False
+                                break
+                    
+                    # Check response format
+                    required_fields = ["id", "user_id", "email", "name", "is_admin", "is_premium", "account_status", "flag_count", "created_at"]
+                    format_correct = True
+                    missing_fields = []
+                    
+                    if users:
+                        first_user = users[0]
+                        for field in required_fields:
+                            if field not in first_user:
+                                format_correct = False
+                                missing_fields.append(field)
+                    
+                    success = format_correct and sorted_correctly
+                    details = f"Found {len(users)} users, total: {total}, sorted correctly: {sorted_correctly}, format correct: {format_correct}"
+                    if missing_fields:
+                        details += f", missing fields: {missing_fields}"
+                    
+                    self.log_result("All Users Endpoint", success, details)
+                    return success
+                    
+                else:
+                    error_text = await response.text()
+                    self.log_result("All Users Endpoint", False, f"HTTP {response.status}: {error_text}")
+                    return False
+                    
+        except Exception as e:
+            self.log_result("All Users Endpoint", False, f"Exception: {str(e)}")
+            return False
+            
+    async def test_setup_owner_endpoint(self):
+        """Test POST /api/admin/setup-owner endpoint"""
+        if not self.admin_token:
+            self.log_result("Setup Owner Endpoint", False, "No admin token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            setup_data = {
+                "email": ADMIN_EMAIL,
+                "admin_secret": "etheria_admin_secret_2026"
+            }
+            
+            async with self.session.post(f"{BACKEND_URL}/admin/setup-owner", json=setup_data, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    success = data.get("success", False)
+                    message = data.get("message", "")
+                    
+                    self.log_result("Setup Owner Endpoint", success, f"Message: {message}")
+                    return success
+                    
+                elif response.status == 400:
+                    # This might be expected if already setup
+                    error_data = await response.json()
+                    message = error_data.get("detail", "")
+                    if "already" in message.lower():
+                        self.log_result("Setup Owner Endpoint", True, f"Already setup: {message}")
+                        return True
+                    else:
+                        self.log_result("Setup Owner Endpoint", False, f"HTTP 400: {message}")
+                        return False
+                else:
+                    error_text = await response.text()
+                    self.log_result("Setup Owner Endpoint", False, f"HTTP {response.status}: {error_text}")
+                    return False
+                    
+        except Exception as e:
+            self.log_result("Setup Owner Endpoint", False, f"Exception: {str(e)}")
+            return False
+            
+    async def test_authentication_methods(self):
+        """Test different authentication methods to understand the issue"""
+        if not self.admin_token:
+            self.log_result("Authentication Methods Test", False, "No admin token available")
+            return False
+            
+        try:
+            # Test 1: Authorization header (Bearer token)
+            headers_bearer = {"Authorization": f"Bearer {self.admin_token}"}
+            
+            async with self.session.get(f"{BACKEND_URL}/community/admin/all-users", headers=headers_bearer) as response:
+                bearer_success = response.status == 200
+                bearer_error = await response.text() if response.status != 200 else "Success"
+            
+            # Test 2: Query parameter
+            async with self.session.get(f"{BACKEND_URL}/community/admin/all-users?token={self.admin_token}") as response:
+                query_success = response.status == 200
+                query_error = await response.text() if response.status != 200 else "Success"
+            
+            # Test 3: Check what the token looks like
+            token_info = f"Token starts with: {self.admin_token[:20]}..., length: {len(self.admin_token)}"
+            
+            details = f"Bearer auth: {bearer_success} ({bearer_error[:100]}), Query param: {query_success} ({query_error[:100]}), {token_info}"
+            
+            self.log_result("Authentication Methods Test", bearer_success or query_success, details)
+            return bearer_success or query_success
+            
+        except Exception as e:
+            self.log_result("Authentication Methods Test", False, f"Exception: {str(e)}")
+            return False
+            
+    async def run_all_tests(self):
+        """Run all admin panel tests"""
+        print("🔧 ADMIN PANEL ENDPOINTS TESTING")
+        print("=" * 50)
+        
+        await self.setup()
+        
+        try:
+            # Test 1: Admin login
+            login_success = await self.test_admin_login()
+            
+            if login_success:
+                # Test 2: Authentication methods analysis
+                await self.test_authentication_methods()
+                
+                # Test 3: All users endpoint
+                await self.test_all_users_endpoint()
+                
+                # Test 4: Setup owner endpoint
+                await self.test_setup_owner_endpoint()
             else:
-                print_result(False, f"Login successful but admin status is {is_admin} or no token", data)
-                return None
-        else:
-            print_result(False, f"Login failed with status {response.status_code}", {
-                "status_code": response.status_code,
-                "response": response.text
-            })
-            return None
+                print("❌ Cannot proceed with other tests - admin login failed")
+                
+        finally:
+            await self.cleanup()
             
-    except Exception as e:
-        print_result(False, f"Login request failed: {str(e)}")
-        return None
+        # Summary
+        print("\n" + "=" * 50)
+        print("📊 TEST SUMMARY")
+        print("=" * 50)
+        
+        passed = sum(1 for result in self.test_results if result["success"])
+        total = len(self.test_results)
+        
+        for result in self.test_results:
+            status = "✅" if result["success"] else "❌"
+            print(f"{status} {result['test']}")
+            
+        print(f"\nResults: {passed}/{total} tests passed")
+        
+        if passed < total:
+            print("\n🔍 FAILED TESTS ANALYSIS:")
+            for result in self.test_results:
+                if not result["success"]:
+                    print(f"❌ {result['test']}: {result['details']}")
+                    
+        return passed == total
 
-def test_admin_dashboard():
-    """Test admin dashboard endpoint"""
-    print_test_header("Admin Dashboard")
+async def main():
+    """Main test runner"""
+    tester = AdminPanelTester()
+    success = await tester.run_all_tests()
     
-    try:
-        response = requests.get(
-            f"{BACKEND_URL}/admin/dashboard",
-            params={"admin_secret": ADMIN_SECRET},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            print_result(True, "Admin dashboard retrieved successfully", data)
-            return True
-        else:
-            print_result(False, f"Dashboard request failed with status {response.status_code}", {
-                "status_code": response.status_code,
-                "response": response.text
-            })
-            return False
-            
-    except Exception as e:
-        print_result(False, f"Dashboard request failed: {str(e)}")
-        return False
-
-def test_admin_participants():
-    """Test admin participants endpoint"""
-    print_test_header("Admin Participants List")
-    
-    try:
-        response = requests.get(
-            f"{BACKEND_URL}/admin/participants",
-            params={"admin_secret": ADMIN_SECRET},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            print_result(True, "Admin participants list retrieved successfully", {
-                "total_participants": data.get("total_participants"),
-                "participants_count": len(data.get("participants", [])),
-                "sample_participant": data.get("participants", [{}])[0] if data.get("participants") else None
-            })
-            return True
-        else:
-            print_result(False, f"Participants request failed with status {response.status_code}", {
-                "status_code": response.status_code,
-                "response": response.text
-            })
-            return False
-            
-    except Exception as e:
-        print_result(False, f"Participants request failed: {str(e)}")
-        return False
-
-def test_admin_generate_code():
-    """Test admin generate new code endpoint"""
-    print_test_header("Admin Generate New Code")
-    
-    try:
-        response = requests.post(
-            f"{BACKEND_URL}/admin/generate-new-code",
-            json={"admin_secret": ADMIN_SECRET},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            print_result(True, "New code generated successfully", data)
-            return True
-        else:
-            print_result(False, f"Generate code request failed with status {response.status_code}", {
-                "status_code": response.status_code,
-                "response": response.text
-            })
-            return False
-            
-    except Exception as e:
-        print_result(False, f"Generate code request failed: {str(e)}")
-        return False
-
-def test_all_users_endpoint(admin_token):
-    """Test admin all users endpoint"""
-    print_test_header("Admin All Users Endpoint")
-    
-    try:
-        response = requests.get(
-            f"{BACKEND_URL}/community/admin/all-users",
-            params={"token": admin_token},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            users = data.get("users", [])
-            admin_user = None
-            for user in users:
-                if user.get("email") == ADMIN_EMAIL:
-                    admin_user = user
-                    break
-            
-            print_result(True, f"All users retrieved successfully. Total: {data.get('total', 0)}", {
-                "total_users": data.get("total"),
-                "users_returned": len(users),
-                "admin_user_found": admin_user is not None,
-                "admin_user_details": admin_user if admin_user else "Not found"
-            })
-            return True
-        else:
-            print_result(False, f"All users request failed with status {response.status_code}", {
-                "status_code": response.status_code,
-                "response": response.text
-            })
-            return False
-            
-    except Exception as e:
-        print_result(False, f"All users request failed: {str(e)}")
-        return False
-
-def test_contest_status(admin_token):
-    """Test contest status endpoint"""
-    print_test_header("Contest Status")
-    
-    try:
-        response = requests.get(
-            f"{BACKEND_URL}/admin/contest/status",
-            params={"token": admin_token},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            print_result(True, "Contest status retrieved successfully", data)
-            return True
-        else:
-            print_result(False, f"Contest status request failed with status {response.status_code}", {
-                "status_code": response.status_code,
-                "response": response.text
-            })
-            return False
-            
-    except Exception as e:
-        print_result(False, f"Contest status request failed: {str(e)}")
-        return False
-
-def test_contest_generate_code(admin_token):
-    """Test contest generate code endpoint"""
-    print_test_header("Contest Generate Code")
-    
-    try:
-        response = requests.post(
-            f"{BACKEND_URL}/admin/contest/generate-code",
-            json={"code_type": "monthly"},
-            params={"token": admin_token},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            print_result(True, "Contest code generated successfully", data)
-            return True
-        else:
-            print_result(False, f"Contest generate code request failed with status {response.status_code}", {
-                "status_code": response.status_code,
-                "response": response.text
-            })
-            return False
-            
-    except Exception as e:
-        print_result(False, f"Contest generate code request failed: {str(e)}")
-        return False
-
-def test_contest_entries(admin_token):
-    """Test contest entries endpoint"""
-    print_test_header("Contest Entries")
-    
-    try:
-        response = requests.get(
-            f"{BACKEND_URL}/admin/contest/entries",
-            params={"token": admin_token},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            print_result(True, "Contest entries retrieved successfully", {
-                "contest": data.get("contest"),
-                "total_entries": len(data.get("entries", [])),
-                "total_eligible": data.get("total_eligible", 0)
-            })
-            return True
-        else:
-            print_result(False, f"Contest entries request failed with status {response.status_code}", {
-                "status_code": response.status_code,
-                "response": response.text
-            })
-            return False
-            
-    except Exception as e:
-        print_result(False, f"Contest entries request failed: {str(e)}")
-        return False
-
-def main():
-    """Run all admin panel tests"""
-    print(f"🚀 Starting Etheria Admin Panel Backend Tests")
-    print(f"Backend URL: {BACKEND_URL}")
-    print(f"Test Time: {datetime.now().isoformat()}")
-    
-    results = {}
-    
-    # Test 1: Admin Login
-    admin_token = test_admin_login()
-    results["admin_login"] = admin_token is not None
-    
-    if admin_token:
-        # Test 2: All Users Endpoint (equivalent to community/admin/all-users)
-        results["all_users_endpoint"] = test_all_users_endpoint(admin_token)
-        
-        # Test 3: Contest Status
-        results["contest_status"] = test_contest_status(admin_token)
-        
-        # Test 4: Contest Generate Code
-        results["contest_generate_code"] = test_contest_generate_code(admin_token)
-        
-        # Test 5: Contest Entries
-        results["contest_entries"] = test_contest_entries(admin_token)
+    if success:
+        print("\n🎉 All admin panel tests passed!")
+        sys.exit(0)
     else:
-        print("⚠️  Skipping token-based tests due to login failure")
-        results["all_users_endpoint"] = False
-        results["contest_status"] = False
-        results["contest_generate_code"] = False
-        results["contest_entries"] = False
-    
-    # Test 6: Admin Dashboard (using admin secret)
-    results["admin_dashboard"] = test_admin_dashboard()
-    
-    # Test 7: Admin Participants (using admin secret)
-    results["admin_participants"] = test_admin_participants()
-    
-    # Test 8: Admin Generate Code (using admin secret)
-    results["admin_generate_code"] = test_admin_generate_code()
-    
-    # Summary
-    print(f"\n{'='*60}")
-    print("🏁 TEST SUMMARY")
-    print(f"{'='*60}")
-    
-    passed = sum(1 for result in results.values() if result)
-    total = len(results)
-    
-    for test_name, result in results.items():
-        status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status}: {test_name}")
-    
-    print(f"\nOverall: {passed}/{total} tests passed")
-    
-    if passed == total:
-        print("🎉 All admin panel tests PASSED!")
-        return 0
-    else:
-        print("⚠️  Some admin panel tests FAILED!")
-        return 1
+        print("\n⚠️  Some admin panel tests failed - see details above")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    asyncio.run(main())
