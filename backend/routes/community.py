@@ -1072,3 +1072,69 @@ async def demote_from_admin(user_id: str, token: Optional[str] = None):
         "message": f"User {user.get('email')} has been demoted from admin"
     }
 
+
+
+class TestFlagRequest(BaseModel):
+    user_id: str
+    content_type: str = "test"
+    content: str = "Test flag content"
+    reason: str = "Test flag for moderation system"
+
+@router.post("/admin/create-test-flag")
+async def create_test_flag(request: TestFlagRequest, token: Optional[str] = None):
+    """
+    Create a test flag to verify the email notification and moderation system.
+    This will send a real email notification to the admin.
+    """
+    from services.moderation_service import send_flagged_content_notification
+    
+    admin = await get_user_from_token(token)
+    if not admin or not admin.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get the target user
+    try:
+        user = await db.users.find_one({"_id": ObjectId(request.user_id)})
+    except:
+        # Try by user_id field
+        user = await db.users.find_one({"user_id": request.user_id})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_email = user.get("email", "")
+    user_name = user.get("display_name") or user.get("name") or user_email.split("@")[0]
+    
+    # Create a flag record
+    flag_record = {
+        "user_id": str(user["_id"]),
+        "content_type": request.content_type,
+        "content_id": f"test_{uuid.uuid4().hex[:8]}",
+        "content": request.content,
+        "reason": request.reason,
+        "created_at": datetime.utcnow(),
+        "status": "pending",
+        "is_test": True
+    }
+    
+    result = await db.user_flags.insert_one(flag_record)
+    flag_id = str(result.inserted_id)
+    
+    # Send the notification email
+    await send_flagged_content_notification(
+        db,
+        str(user["_id"]),
+        user_email,
+        user_name,
+        request.content_type,
+        request.content,
+        request.reason,
+        flag_id
+    )
+    
+    return {
+        "success": True,
+        "message": f"Test flag created for user {user_email}",
+        "flag_id": flag_id,
+        "note": "Check admin email for moderation notification. Reply with 'good', 'bad', 'okay', or 'cancel' to test."
+    }

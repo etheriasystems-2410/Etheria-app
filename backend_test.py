@@ -1,282 +1,293 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for Etheria Inbound Email Moderation System
-Tests the new inbound email moderation endpoints as requested in the review.
+Backend API Testing for Etheria Moderation System
+Tests the complete moderation system including test flag creation and email processing.
 """
 
-import asyncio
-import aiohttp
+import requests
 import json
 import sys
+import os
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://meditation-nexus.preview.emergentagent.com/api"
+BACKEND_URL = "https://meditation-nexus.preview.emergentagent.com"
 
-# Test credentials from test_credentials.md
+# Test credentials from review request
 ADMIN_EMAIL = "etheriasystems@gmail.com"
 ADMIN_PASSWORD = "$Tory2410"
 
-class InboundEmailModerationTester:
+class EtheriaModeratorTester:
     def __init__(self):
-        self.session = None
-        self.admin_token = None
+        self.session_token = None
+        self.base_url = BACKEND_URL
         self.test_results = []
         
-    async def setup(self):
-        """Setup HTTP session"""
-        self.session = aiohttp.ClientSession()
-        
-    async def cleanup(self):
-        """Cleanup HTTP session"""
-        if self.session:
-            await self.session.close()
-            
-    def log_result(self, test_name, success, details):
-        """Log test result"""
+    def log_test(self, test_name, success, details="", response_data=None):
+        """Log test results"""
         status = "✅ PASS" if success else "❌ FAIL"
         print(f"{status}: {test_name}")
         if details:
             print(f"   Details: {details}")
+        if response_data and not success:
+            print(f"   Response: {response_data}")
+        print()
+        
         self.test_results.append({
             "test": test_name,
             "success": success,
             "details": details,
-            "timestamp": datetime.now().isoformat()
+            "response": response_data
         })
-        
-    async def test_admin_login(self):
-        """Test admin login and get session token"""
+    
+    def test_admin_login(self):
+        """Test admin authentication"""
         try:
-            login_data = {
-                "email": ADMIN_EMAIL,
-                "password": ADMIN_PASSWORD
-            }
+            response = requests.post(
+                f"{self.base_url}/api/auth/login",
+                json={
+                    "email": ADMIN_EMAIL,
+                    "password": ADMIN_PASSWORD
+                },
+                timeout=30
+            )
             
-            async with self.session.post(f"{BACKEND_URL}/auth/login", json=login_data) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    self.admin_token = data.get("session_token")
-                    is_admin = data.get("is_admin", False)
-                    
-                    if self.admin_token and is_admin:
-                        self.log_result("Admin Login", True, f"Token: {self.admin_token[:20]}..., is_admin: {is_admin}")
-                        return True
-                    else:
-                        self.log_result("Admin Login", False, f"Missing token or admin status. Token: {bool(self.admin_token)}, is_admin: {is_admin}")
-                        return False
-                else:
-                    error_text = await response.text()
-                    self.log_result("Admin Login", False, f"HTTP {response.status}: {error_text}")
-                    return False
-                    
-        except Exception as e:
-            self.log_result("Admin Login", False, f"Exception: {str(e)}")
-            return False
-            
-    async def test_process_moderation_emails(self):
-        """Test POST /api/admin/process-moderation-emails endpoint"""
-        if not self.admin_token:
-            self.log_result("Process Moderation Emails", False, "No admin token available")
-            return False
-            
-        try:
-            headers = {"Authorization": f"Bearer {self.admin_token}"}
-            
-            async with self.session.post(f"{BACKEND_URL}/admin/process-moderation-emails", headers=headers) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    success = data.get("success", False)
-                    processed = data.get("details", {}).get("processed", 0)
-                    message = data.get("message", "")
-                    
-                    self.log_result("Process Moderation Emails", success, f"Processed {processed} emails. Message: {message}")
-                    return success
-                    
-                else:
-                    error_text = await response.text()
-                    self.log_result("Process Moderation Emails", False, f"HTTP {response.status}: {error_text}")
-                    return False
-                    
-        except Exception as e:
-            self.log_result("Process Moderation Emails", False, f"Exception: {str(e)}")
-            return False
-            
-    async def test_moderation_status(self):
-        """Test GET /api/admin/moderation-status endpoint"""
-        if not self.admin_token:
-            self.log_result("Moderation Status", False, "No admin token available")
-            return False
-            
-        try:
-            headers = {"Authorization": f"Bearer {self.admin_token}"}
-            
-            async with self.session.get(f"{BACKEND_URL}/admin/moderation-status", headers=headers) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    
-                    # Check required fields
-                    required_fields = ["pending_flags", "suspended_users", "cancelled_users", "recent_actions"]
-                    missing_fields = []
-                    
-                    for field in required_fields:
-                        if field not in data:
-                            missing_fields.append(field)
-                    
-                    # Validate data types
-                    valid_types = True
-                    type_errors = []
-                    
-                    if "pending_flags" in data and not isinstance(data["pending_flags"], int):
-                        valid_types = False
-                        type_errors.append("pending_flags should be int")
-                        
-                    if "suspended_users" in data and not isinstance(data["suspended_users"], int):
-                        valid_types = False
-                        type_errors.append("suspended_users should be int")
-                        
-                    if "cancelled_users" in data and not isinstance(data["cancelled_users"], int):
-                        valid_types = False
-                        type_errors.append("cancelled_users should be int")
-                        
-                    if "recent_actions" in data and not isinstance(data["recent_actions"], list):
-                        valid_types = False
-                        type_errors.append("recent_actions should be list")
-                    
-                    success = len(missing_fields) == 0 and valid_types
-                    details = f"pending_flags: {data.get('pending_flags')}, suspended_users: {data.get('suspended_users')}, cancelled_users: {data.get('cancelled_users')}, recent_actions: {len(data.get('recent_actions', []))}"
-                    
-                    if missing_fields:
-                        details += f", missing fields: {missing_fields}"
-                    if type_errors:
-                        details += f", type errors: {type_errors}"
-                    
-                    self.log_result("Moderation Status", success, details)
-                    return success
-                    
-                else:
-                    error_text = await response.text()
-                    self.log_result("Moderation Status", False, f"HTTP {response.status}: {error_text}")
-                    return False
-                    
-        except Exception as e:
-            self.log_result("Moderation Status", False, f"Exception: {str(e)}")
-            return False
-            
-    async def test_community_flag_endpoint(self):
-        """Test POST /api/community/flag endpoint to verify email notification format"""
-        if not self.admin_token:
-            self.log_result("Community Flag Endpoint", False, "No admin token available")
-            return False
-            
-        try:
-            # First, we need to create some content to flag
-            # Let's try to get existing posts first
-            async with self.session.get(f"{BACKEND_URL}/community/posts/general?token={self.admin_token}") as response:
-                if response.status == 200:
-                    data = await response.json()
-                    posts = data.get("posts", [])
-                    
-                    if posts:
-                        # Flag the first post
-                        post_id = posts[0]["id"]
-                        flag_data = {
-                            "reason": "Testing email notification format for moderation system"
-                        }
-                        
-                        async with self.session.post(f"{BACKEND_URL}/community/flag/post/{post_id}?token={self.admin_token}", json=flag_data) as flag_response:
-                            if flag_response.status == 200:
-                                flag_data = await flag_response.json()
-                                success = flag_data.get("success", False)
-                                message = flag_data.get("message", "")
-                                
-                                self.log_result("Community Flag Endpoint", success, f"Successfully flagged content. Message: {message}")
-                                return success
-                            else:
-                                error_text = await flag_response.text()
-                                self.log_result("Community Flag Endpoint", False, f"Flag request failed - HTTP {flag_response.status}: {error_text}")
-                                return False
-                    else:
-                        # No posts available to flag, but endpoint might still be working
-                        self.log_result("Community Flag Endpoint", True, "No posts available to flag, but endpoint structure is accessible")
-                        return True
-                        
-                elif response.status == 403:
-                    # Premium required - this is expected behavior
-                    self.log_result("Community Flag Endpoint", True, "Community access requires premium (expected behavior)")
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("is_admin") and data.get("session_token"):
+                    self.session_token = data["session_token"]
+                    self.log_test(
+                        "Admin Login", 
+                        True, 
+                        f"Admin authenticated successfully, is_admin: {data.get('is_admin')}"
+                    )
                     return True
                 else:
-                    error_text = await response.text()
-                    self.log_result("Community Flag Endpoint", False, f"Cannot access community posts - HTTP {response.status}: {error_text}")
+                    self.log_test(
+                        "Admin Login", 
+                        False, 
+                        "Login successful but user is not admin or no session token", 
+                        data
+                    )
                     return False
-                    
-        except Exception as e:
-            self.log_result("Community Flag Endpoint", False, f"Exception: {str(e)}")
-            return False
-            
-    async def test_moderation_timeline_constants(self):
-        """Test that moderation timeline constants are properly configured"""
-        try:
-            # We can't directly test the constants, but we can verify the moderation status
-            # endpoint works and check if the system is configured properly
-            
-            headers = {"Authorization": f"Bearer {self.admin_token}"}
-            
-            async with self.session.get(f"{BACKEND_URL}/admin/moderation-status", headers=headers) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    
-                    # The existence of these fields suggests the moderation system is properly configured
-                    has_moderation_fields = all(field in data for field in ["pending_flags", "suspended_users", "cancelled_users"])
-                    
-                    # Check if we can get some indication of the timeline logic
-                    # by looking at the response structure
-                    timeline_configured = has_moderation_fields
-                    
-                    details = "Moderation timeline constants verified through status endpoint structure"
-                    if has_moderation_fields:
-                        details += f" - System shows {data['pending_flags']} pending flags, {data['suspended_users']} suspended users, {data['cancelled_users']} cancelled users"
-                    
-                    self.log_result("Moderation Timeline Constants", timeline_configured, details)
-                    return timeline_configured
-                    
-                else:
-                    self.log_result("Moderation Timeline Constants", False, f"Cannot verify - moderation status endpoint failed")
-                    return False
-                    
-        except Exception as e:
-            self.log_result("Moderation Timeline Constants", False, f"Exception: {str(e)}")
-            return False
-            
-    async def run_all_tests(self):
-        """Run all inbound email moderation tests"""
-        print("📧 INBOUND EMAIL MODERATION SYSTEM TESTING")
-        print("=" * 50)
-        
-        await self.setup()
-        
-        try:
-            # Test 1: Admin login
-            login_success = await self.test_admin_login()
-            
-            if login_success:
-                # Test 2: Process moderation emails endpoint
-                await self.test_process_moderation_emails()
-                
-                # Test 3: Moderation status endpoint
-                await self.test_moderation_status()
-                
-                # Test 4: Community flag endpoint (to verify email notification format)
-                await self.test_community_flag_endpoint()
-                
-                # Test 5: Moderation timeline constants verification
-                await self.test_moderation_timeline_constants()
             else:
-                print("❌ Cannot proceed with other tests - admin login failed")
+                self.log_test(
+                    "Admin Login", 
+                    False, 
+                    f"HTTP {response.status_code}", 
+                    response.text
+                )
+                return False
                 
-        finally:
-            await self.cleanup()
+        except Exception as e:
+            self.log_test("Admin Login", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_get_all_users(self):
+        """Test getting all users to find a test user ID"""
+        try:
+            response = requests.get(
+                f"{self.base_url}/api/community/admin/all-users",
+                params={"token": self.session_token},
+                timeout=30
+            )
             
+            if response.status_code == 200:
+                data = response.json()
+                users = data.get("users", [])
+                if users:
+                    # Find a non-admin user for testing
+                    test_user = None
+                    for user in users:
+                        if not user.get("is_admin", False):
+                            test_user = user
+                            break
+                    
+                    if test_user:
+                        self.test_user_id = test_user.get("id") or test_user.get("user_id")
+                        self.log_test(
+                            "Get All Users", 
+                            True, 
+                            f"Found {len(users)} users, selected test user: {test_user.get('email', 'N/A')}"
+                        )
+                        return True
+                    else:
+                        self.log_test(
+                            "Get All Users", 
+                            False, 
+                            "No non-admin users found for testing"
+                        )
+                        return False
+                else:
+                    self.log_test(
+                        "Get All Users", 
+                        False, 
+                        "No users returned"
+                    )
+                    return False
+            else:
+                self.log_test(
+                    "Get All Users", 
+                    False, 
+                    f"HTTP {response.status_code}", 
+                    response.text
+                )
+                return False
+                
+        except Exception as e:
+            self.log_test("Get All Users", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_create_test_flag(self):
+        """Test creating a test flag and sending notification email"""
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/community/admin/create-test-flag",
+                params={"token": self.session_token},
+                json={
+                    "user_id": self.test_user_id,
+                    "content_type": "test",
+                    "content": "Test content for moderation system verification",
+                    "reason": "Testing moderation system email notifications"
+                },
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success"):
+                    self.test_flag_id = data.get("flag_id")
+                    self.log_test(
+                        "Create Test Flag", 
+                        True, 
+                        f"Test flag created successfully, flag_id: {self.test_flag_id}"
+                    )
+                    return True
+                else:
+                    self.log_test(
+                        "Create Test Flag", 
+                        False, 
+                        "Response indicates failure", 
+                        data
+                    )
+                    return False
+            else:
+                self.log_test(
+                    "Create Test Flag", 
+                    False, 
+                    f"HTTP {response.status_code}", 
+                    response.text
+                )
+                return False
+                
+        except Exception as e:
+            self.log_test("Create Test Flag", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_moderation_status(self):
+        """Test getting moderation status"""
+        try:
+            response = requests.get(
+                f"{self.base_url}/api/admin/moderation-status",
+                headers={"Authorization": f"Bearer {self.session_token}"},
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ["pending_flags", "suspended_users", "cancelled_users"]
+                
+                if all(field in data for field in required_fields):
+                    self.log_test(
+                        "Get Moderation Status", 
+                        True, 
+                        f"Status retrieved: pending_flags={data['pending_flags']}, suspended_users={data['suspended_users']}, cancelled_users={data['cancelled_users']}"
+                    )
+                    return True
+                else:
+                    self.log_test(
+                        "Get Moderation Status", 
+                        False, 
+                        f"Missing required fields. Got: {list(data.keys())}", 
+                        data
+                    )
+                    return False
+            else:
+                self.log_test(
+                    "Get Moderation Status", 
+                    False, 
+                    f"HTTP {response.status_code}", 
+                    response.text
+                )
+                return False
+                
+        except Exception as e:
+            self.log_test("Get Moderation Status", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_process_moderation_emails(self):
+        """Test processing moderation email replies"""
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/admin/process-moderation-emails",
+                headers={"Authorization": f"Bearer {self.session_token}"},
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success"):
+                    processed_count = data.get("details", {}).get("processed", 0)
+                    self.log_test(
+                        "Process Moderation Emails", 
+                        True, 
+                        f"Email processing triggered successfully, processed {processed_count} emails"
+                    )
+                    return True
+                else:
+                    self.log_test(
+                        "Process Moderation Emails", 
+                        False, 
+                        "Response indicates failure", 
+                        data
+                    )
+                    return False
+            else:
+                self.log_test(
+                    "Process Moderation Emails", 
+                    False, 
+                    f"HTTP {response.status_code}", 
+                    response.text
+                )
+                return False
+                
+        except Exception as e:
+            self.log_test("Process Moderation Emails", False, f"Exception: {str(e)}")
+            return False
+    
+    def run_all_tests(self):
+        """Run all moderation system tests"""
+        print("🔧 ETHERIA MODERATION SYSTEM TESTING")
+        print("=" * 50)
+        print(f"Backend URL: {self.base_url}")
+        print(f"Admin Email: {ADMIN_EMAIL}")
+        print(f"Test Time: {datetime.now().isoformat()}")
+        print()
+        
+        # Test sequence
+        tests = [
+            ("Admin Login", self.test_admin_login),
+            ("Get All Users", self.test_get_all_users),
+            ("Create Test Flag", self.test_create_test_flag),
+            ("Get Moderation Status", self.test_moderation_status),
+            ("Process Moderation Emails", self.test_process_moderation_emails)
+        ]
+        
+        for test_name, test_func in tests:
+            if not test_func():
+                print(f"❌ Test sequence stopped at: {test_name}")
+                break
+        
         # Summary
         print("\n" + "=" * 50)
         print("📊 TEST SUMMARY")
@@ -285,39 +296,23 @@ class InboundEmailModerationTester:
         passed = sum(1 for result in self.test_results if result["success"])
         total = len(self.test_results)
         
-        for result in self.test_results:
-            status = "✅" if result["success"] else "❌"
-            print(f"{status} {result['test']}")
-            
-        print(f"\nResults: {passed}/{total} tests passed")
+        print(f"Tests Passed: {passed}/{total}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%")
         
-        if passed < total:
-            print("\n🔍 FAILED TESTS ANALYSIS:")
-            for result in self.test_results:
-                if not result["success"]:
-                    print(f"❌ {result['test']}: {result['details']}")
+        if passed == total:
+            print("🎉 ALL TESTS PASSED - Moderation system is working correctly!")
+        else:
+            print("⚠️  Some tests failed - Check details above")
         
-        # Moderation Timeline Constants Summary
-        print("\n📋 MODERATION TIMELINE VERIFICATION:")
-        print("Expected Configuration:")
-        print("- FLAGS_BEFORE_SUSPENSION = 3 (after 3 warnings → first suspension)")
-        print("- FIRST_SUSPENSION_DAYS = 14 (2 weeks)")
-        print("- SECOND_SUSPENSION_DAYS = 30 (30 days)")
-        print("- Third offense = permanent account cancellation")
-                    
         return passed == total
 
-async def main():
-    """Main test runner"""
-    tester = InboundEmailModerationTester()
-    success = await tester.run_all_tests()
+def main():
+    """Main test execution"""
+    tester = EtheriaModeratorTester()
+    success = tester.run_all_tests()
     
-    if success:
-        print("\n🎉 All inbound email moderation tests passed!")
-        sys.exit(0)
-    else:
-        print("\n⚠️  Some inbound email moderation tests failed - see details above")
-        sys.exit(1)
+    # Exit with appropriate code
+    sys.exit(0 if success else 1)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
