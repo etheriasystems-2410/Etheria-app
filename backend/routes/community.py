@@ -916,57 +916,64 @@ async def get_all_users(token: Optional[str] = None, limit: int = 100, skip: int
     if not admin or not admin.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Build query
-    query = {}
-    if search:
-        query = {
-            "$or": [
-                {"email": {"$regex": search, "$options": "i"}},
-                {"name": {"$regex": search, "$options": "i"}},
-                {"display_name": {"$regex": search, "$options": "i"}}
-            ]
+    try:
+        # Build query
+        query = {}
+        if search:
+            query = {
+                "$or": [
+                    {"email": {"$regex": search, "$options": "i"}},
+                    {"name": {"$regex": search, "$options": "i"}},
+                    {"display_name": {"$regex": search, "$options": "i"}}
+                ]
+            }
+        
+        # Get users - sorted by created_at descending (newest first)
+        users = await db.users.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+        
+        total_users = await db.users.count_documents(query)
+        
+        # Log for debugging
+        print(f"[Admin Panel] Found {len(users)} users, total: {total_users}")
+        
+        formatted = []
+        for u in users:
+            # Get subscription status
+            subscription = await db.subscriptions.find_one({"user_id": u.get("user_id")})
+            is_premium = (subscription and subscription.get("status") == "active") or u.get("lifetime_premium", False)
+            
+            # Handle created_at which might be datetime or string
+            created_at = u.get("created_at")
+            if created_at:
+                if hasattr(created_at, 'isoformat'):
+                    created_at = created_at.isoformat()
+                # else it's already a string
+            else:
+                created_at = None
+            
+            formatted.append({
+                "id": str(u["_id"]),
+                "user_id": u.get("user_id"),
+                "email": u.get("email", ""),
+                "name": u.get("display_name") or u.get("name", ""),
+                "is_admin": u.get("is_admin", False),
+                "admin_level": u.get("admin_level", 0),
+                "is_premium": is_premium,
+                "is_lifetime": u.get("lifetime_premium", False),
+                "account_status": u.get("account_status", "active"),
+                "flag_count": u.get("flag_count", 0),
+                "created_at": created_at
+            })
+        
+        return {
+            "users": formatted,
+            "total": total_users,
+            "limit": limit,
+            "skip": skip
         }
-    
-    # Get users
-    users = await db.users.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
-    
-    total_users = await db.users.count_documents(query)
-    
-    formatted = []
-    for u in users:
-        # Get subscription status
-        subscription = await db.subscriptions.find_one({"user_id": u.get("user_id")})
-        is_premium = (subscription and subscription.get("status") == "active") or u.get("lifetime_premium", False)
-        
-        # Handle created_at which might be datetime or string
-        created_at = u.get("created_at")
-        if created_at:
-            if hasattr(created_at, 'isoformat'):
-                created_at = created_at.isoformat()
-            # else it's already a string
-        else:
-            created_at = None
-        
-        formatted.append({
-            "id": str(u["_id"]),
-            "user_id": u.get("user_id"),
-            "email": u.get("email", ""),
-            "name": u.get("display_name") or u.get("name", ""),
-            "is_admin": u.get("is_admin", False),
-            "admin_level": u.get("admin_level", 0),
-            "is_premium": is_premium,
-            "is_lifetime": u.get("lifetime_premium", False),
-            "account_status": u.get("account_status", "active"),
-            "flag_count": u.get("flag_count", 0),
-            "created_at": created_at
-        })
-    
-    return {
-        "users": formatted,
-        "total": total_users,
-        "limit": limit,
-        "skip": skip
-    }
+    except Exception as e:
+        print(f"[Admin Panel] Error fetching users: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching users: {str(e)}")
 
 @router.post("/admin/user/{user_id}/promote-admin")
 async def promote_to_admin(user_id: str, token: Optional[str] = None):
