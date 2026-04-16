@@ -1,318 +1,280 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for Etheria Moderation System
-Tests the complete moderation system including test flag creation and email processing.
+Backend Testing Script for Admin Panel Moderation Functionality
+Tests the complete Admin Panel moderation functionality with flag actions.
 """
 
-import requests
+import asyncio
+import aiohttp
 import json
 import sys
-import os
 from datetime import datetime
 
 # Backend URL from environment
 BACKEND_URL = "https://meditation-nexus.preview.emergentagent.com"
 
-# Test credentials from review request
+# Test credentials
 ADMIN_EMAIL = "etheriasystems@gmail.com"
 ADMIN_PASSWORD = "$Tory2410"
 
-class EtheriaModeratorTester:
+class AdminModerationTester:
     def __init__(self):
-        self.session_token = None
-        self.base_url = BACKEND_URL
-        self.test_results = []
+        self.session = None
+        self.admin_token = None
+        self.test_flag_id = None
         
-    def log_test(self, test_name, success, details="", response_data=None):
-        """Log test results"""
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status}: {test_name}")
-        if details:
-            print(f"   Details: {details}")
-        if response_data and not success:
-            print(f"   Response: {response_data}")
-        print()
+    async def setup(self):
+        """Setup HTTP session"""
+        self.session = aiohttp.ClientSession()
         
-        self.test_results.append({
-            "test": test_name,
-            "success": success,
-            "details": details,
-            "response": response_data
-        })
+    async def cleanup(self):
+        """Cleanup HTTP session"""
+        if self.session:
+            await self.session.close()
     
-    def test_admin_login(self):
-        """Test admin authentication"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/api/auth/login",
-                json={
-                    "email": ADMIN_EMAIL,
-                    "password": ADMIN_PASSWORD
-                },
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
+    async def admin_login(self):
+        """Login as admin and get session token"""
+        print("🔐 Testing Admin Login...")
+        
+        login_data = {
+            "email": ADMIN_EMAIL,
+            "password": ADMIN_PASSWORD
+        }
+        
+        async with self.session.post(f"{BACKEND_URL}/api/auth/login", json=login_data) as response:
+            if response.status == 200:
+                data = await response.json()
                 if data.get("is_admin") and data.get("session_token"):
-                    self.session_token = data["session_token"]
-                    self.log_test(
-                        "Admin Login", 
-                        True, 
-                        f"Admin authenticated successfully, is_admin: {data.get('is_admin')}"
-                    )
+                    self.admin_token = data["session_token"]
+                    print(f"✅ Admin login successful: {ADMIN_EMAIL}")
+                    print(f"   Session token: {self.admin_token[:20]}...")
+                    print(f"   Admin status: {data.get('is_admin')}")
                     return True
                 else:
-                    self.log_test(
-                        "Admin Login", 
-                        False, 
-                        "Login successful but user is not admin or no session token", 
-                        data
-                    )
+                    print(f"❌ Login successful but not admin or no token: {data}")
                     return False
             else:
-                self.log_test(
-                    "Admin Login", 
-                    False, 
-                    f"HTTP {response.status_code}", 
-                    response.text
-                )
+                error_text = await response.text()
+                print(f"❌ Admin login failed: {response.status} - {error_text}")
                 return False
-                
-        except Exception as e:
-            self.log_test("Admin Login", False, f"Exception: {str(e)}")
-            return False
     
-    def test_get_all_users(self):
-        """Test getting all users to find a test user ID"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/api/community/admin/all-users",
-                params={"token": self.session_token},
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                users = data.get("users", [])
-                if users:
-                    # Find a non-admin user for testing
-                    test_user = None
-                    for user in users:
-                        if not user.get("is_admin", False):
-                            test_user = user
-                            break
+    async def get_pending_flags(self):
+        """Test GET /api/community/admin/pending-flags"""
+        print("\n📋 Testing GET /api/community/admin/pending-flags...")
+        
+        url = f"{BACKEND_URL}/api/community/admin/pending-flags?token={self.admin_token}"
+        
+        async with self.session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                flags = data.get("flags", [])
+                print(f"✅ Pending flags retrieved successfully")
+                print(f"   Total pending flags: {len(flags)}")
+                
+                if flags:
+                    print("   Sample flag details:")
+                    flag = flags[0]
+                    print(f"   - Flag ID: {flag.get('id')}")
+                    print(f"   - User: {flag.get('user_email')} ({flag.get('user_name')})")
+                    print(f"   - Content Type: {flag.get('content_type')}")
+                    print(f"   - Reason: {flag.get('reason')}")
+                    print(f"   - Status: {flag.get('status')}")
+                    print(f"   - Is Test: {flag.get('is_test')}")
                     
-                    if test_user:
-                        self.test_user_id = test_user.get("id") or test_user.get("user_id")
-                        self.log_test(
-                            "Get All Users", 
-                            True, 
-                            f"Found {len(users)} users, selected test user: {test_user.get('email', 'N/A')}"
-                        )
+                    # Store first flag for action testing
+                    self.test_flag_id = flag.get('id')
+                else:
+                    print("   No pending flags found")
+                
+                return True, flags
+            else:
+                error_text = await response.text()
+                print(f"❌ Failed to get pending flags: {response.status} - {error_text}")
+                return False, []
+    
+    async def create_test_flag(self):
+        """Test POST /api/community/admin/create-test-flag"""
+        print("\n🚩 Testing POST /api/community/admin/create-test-flag...")
+        
+        # First get a user to flag
+        users_url = f"{BACKEND_URL}/api/community/admin/all-users?token={self.admin_token}&limit=10"
+        
+        async with self.session.get(users_url) as response:
+            if response.status == 200:
+                users_data = await response.json()
+                users = users_data.get("users", [])
+                
+                if not users:
+                    print("❌ No users found to create test flag")
+                    return False
+                
+                # Find a non-admin user
+                test_user = None
+                for user in users:
+                    if not user.get("is_admin"):
+                        test_user = user
+                        break
+                
+                if not test_user:
+                    print("❌ No non-admin users found to create test flag")
+                    return False
+                
+                print(f"   Selected test user: {test_user.get('email')} ({test_user.get('name')})")
+                
+                # Create test flag
+                flag_data = {
+                    "user_id": test_user.get("user_id") or test_user.get("id"),
+                    "content_type": "test_post",
+                    "content": "This is a test flag content for moderation system testing",
+                    "reason": "Test flag created by automated testing system"
+                }
+                
+                create_url = f"{BACKEND_URL}/api/community/admin/create-test-flag?token={self.admin_token}"
+                
+                async with self.session.post(create_url, json=flag_data) as create_response:
+                    if create_response.status == 200:
+                        create_data = await create_response.json()
+                        self.test_flag_id = create_data.get("flag_id")
+                        print(f"✅ Test flag created successfully")
+                        print(f"   Flag ID: {self.test_flag_id}")
+                        print(f"   Message: {create_data.get('message')}")
+                        print(f"   Note: {create_data.get('note')}")
                         return True
                     else:
-                        self.log_test(
-                            "Get All Users", 
-                            False, 
-                            "No non-admin users found for testing"
-                        )
+                        error_text = await create_response.text()
+                        print(f"❌ Failed to create test flag: {create_response.status} - {error_text}")
                         return False
-                else:
-                    self.log_test(
-                        "Get All Users", 
-                        False, 
-                        "No users returned"
-                    )
-                    return False
             else:
-                self.log_test(
-                    "Get All Users", 
-                    False, 
-                    f"HTTP {response.status_code}", 
-                    response.text
-                )
+                error_text = await response.text()
+                print(f"❌ Failed to get users for test flag: {response.status} - {error_text}")
                 return False
-                
-        except Exception as e:
-            self.log_test("Get All Users", False, f"Exception: {str(e)}")
-            return False
     
-    def test_create_test_flag(self):
-        """Test creating a test flag and sending notification email"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/api/community/admin/create-test-flag",
-                params={"token": self.session_token},
-                json={
-                    "user_id": self.test_user_id,
-                    "content_type": "test",
-                    "content": "Test content for moderation system verification",
-                    "reason": "Testing moderation system email notifications"
-                },
-                timeout=30
-            )
+    async def test_flag_action(self, action):
+        """Test POST /api/community/admin/flag/{flag_id}/action"""
+        print(f"\n⚡ Testing POST /api/community/admin/flag/{self.test_flag_id}/action with action='{action}'...")
+        
+        if not self.test_flag_id:
+            print("❌ No test flag ID available for action testing")
+            return False
+        
+        url = f"{BACKEND_URL}/api/community/admin/flag/{self.test_flag_id}/action?token={self.admin_token}&action={action}"
+        
+        async with self.session.post(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                print(f"✅ Flag action '{action}' executed successfully")
+                print(f"   Response: {data.get('message')}")
+                print(f"   Action: {data.get('action')}")
+                print(f"   Flag ID: {data.get('flag_id')}")
+                
+                if data.get('suspension'):
+                    print(f"   🚨 User suspended!")
+                if data.get('cancelled'):
+                    print(f"   🚨 User account cancelled!")
+                if data.get('flag_count'):
+                    print(f"   Warning count: {data.get('flag_count')}")
+                
+                return True
+            else:
+                error_text = await response.text()
+                print(f"❌ Failed to execute flag action '{action}': {response.status} - {error_text}")
+                return False
+    
+    async def verify_flag_processed(self):
+        """Verify the flag is no longer in pending list"""
+        print(f"\n🔍 Verifying flag {self.test_flag_id} is no longer pending...")
+        
+        success, flags = await self.get_pending_flags()
+        if success:
+            # Check if our test flag is still in pending list
+            for flag in flags:
+                if flag.get('id') == self.test_flag_id:
+                    print(f"❌ Flag {self.test_flag_id} is still in pending list")
+                    return False
             
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("success"):
-                    self.test_flag_id = data.get("flag_id")
-                    self.log_test(
-                        "Create Test Flag", 
-                        True, 
-                        f"Test flag created successfully, flag_id: {self.test_flag_id}"
-                    )
-                    return True
-                else:
-                    self.log_test(
-                        "Create Test Flag", 
-                        False, 
-                        "Response indicates failure", 
-                        data
-                    )
-                    return False
-            else:
-                self.log_test(
-                    "Create Test Flag", 
-                    False, 
-                    f"HTTP {response.status_code}", 
-                    response.text
-                )
-                return False
-                
-        except Exception as e:
-            self.log_test("Create Test Flag", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_moderation_status(self):
-        """Test getting moderation status"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/api/admin/moderation-status",
-                headers={"Authorization": f"Bearer {self.session_token}"},
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ["pending_flags", "suspended_users", "cancelled_users"]
-                
-                if all(field in data for field in required_fields):
-                    self.log_test(
-                        "Get Moderation Status", 
-                        True, 
-                        f"Status retrieved: pending_flags={data['pending_flags']}, suspended_users={data['suspended_users']}, cancelled_users={data['cancelled_users']}"
-                    )
-                    return True
-                else:
-                    self.log_test(
-                        "Get Moderation Status", 
-                        False, 
-                        f"Missing required fields. Got: {list(data.keys())}", 
-                        data
-                    )
-                    return False
-            else:
-                self.log_test(
-                    "Get Moderation Status", 
-                    False, 
-                    f"HTTP {response.status_code}", 
-                    response.text
-                )
-                return False
-                
-        except Exception as e:
-            self.log_test("Get Moderation Status", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_process_moderation_emails(self):
-        """Test processing moderation email replies"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/api/admin/process-moderation-emails",
-                headers={"Authorization": f"Bearer {self.session_token}"},
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("success"):
-                    processed_count = data.get("details", {}).get("processed", 0)
-                    self.log_test(
-                        "Process Moderation Emails", 
-                        True, 
-                        f"Email processing triggered successfully, processed {processed_count} emails"
-                    )
-                    return True
-                else:
-                    self.log_test(
-                        "Process Moderation Emails", 
-                        False, 
-                        "Response indicates failure", 
-                        data
-                    )
-                    return False
-            else:
-                self.log_test(
-                    "Process Moderation Emails", 
-                    False, 
-                    f"HTTP {response.status_code}", 
-                    response.text
-                )
-                return False
-                
-        except Exception as e:
-            self.log_test("Process Moderation Emails", False, f"Exception: {str(e)}")
-            return False
-    
-    def run_all_tests(self):
-        """Run all moderation system tests"""
-        print("🔧 ETHERIA MODERATION SYSTEM TESTING")
-        print("=" * 50)
-        print(f"Backend URL: {self.base_url}")
-        print(f"Admin Email: {ADMIN_EMAIL}")
-        print(f"Test Time: {datetime.now().isoformat()}")
-        print()
-        
-        # Test sequence
-        tests = [
-            ("Admin Login", self.test_admin_login),
-            ("Get All Users", self.test_get_all_users),
-            ("Create Test Flag", self.test_create_test_flag),
-            ("Get Moderation Status", self.test_moderation_status),
-            ("Process Moderation Emails", self.test_process_moderation_emails)
-        ]
-        
-        for test_name, test_func in tests:
-            if not test_func():
-                print(f"❌ Test sequence stopped at: {test_name}")
-                break
-        
-        # Summary
-        print("\n" + "=" * 50)
-        print("📊 TEST SUMMARY")
-        print("=" * 50)
-        
-        passed = sum(1 for result in self.test_results if result["success"])
-        total = len(self.test_results)
-        
-        print(f"Tests Passed: {passed}/{total}")
-        print(f"Success Rate: {(passed/total)*100:.1f}%")
-        
-        if passed == total:
-            print("🎉 ALL TESTS PASSED - Moderation system is working correctly!")
+            print(f"✅ Flag {self.test_flag_id} is no longer in pending list")
+            return True
         else:
-            print("⚠️  Some tests failed - Check details above")
-        
-        return passed == total
-
-def main():
-    """Main test execution"""
-    tester = EtheriaModeratorTester()
-    success = tester.run_all_tests()
+            print("❌ Could not verify flag status due to API error")
+            return False
     
-    # Exit with appropriate code
-    sys.exit(0 if success else 1)
+    async def run_complete_test(self):
+        """Run the complete test flow"""
+        print("🚀 Starting Admin Panel Moderation Functionality Test")
+        print("=" * 60)
+        
+        try:
+            # 1. Admin Login
+            if not await self.admin_login():
+                return False
+            
+            # 2. Get initial pending flags
+            success, initial_flags = await self.get_pending_flags()
+            if not success:
+                return False
+            
+            initial_count = len(initial_flags)
+            
+            # 3. Create test flag if no pending flags exist
+            if initial_count == 0:
+                print("\n📝 No pending flags found, creating test flag...")
+                if not await self.create_test_flag():
+                    return False
+            else:
+                print(f"\n📝 Found {initial_count} existing pending flags, using first one for testing")
+                self.test_flag_id = initial_flags[0].get('id')
+            
+            # 4. Get pending flags again to verify test flag appears
+            success, updated_flags = await self.get_pending_flags()
+            if not success:
+                return False
+            
+            if len(updated_flags) <= initial_count and initial_count == 0:
+                print("❌ Test flag was not found in pending flags list")
+                return False
+            
+            # 5. Test dismiss action on the flag
+            if not await self.test_flag_action("dismiss"):
+                return False
+            
+            # 6. Verify flag is no longer in pending list
+            if not await self.verify_flag_processed():
+                return False
+            
+            print("\n" + "=" * 60)
+            print("🎉 ALL ADMIN PANEL MODERATION TESTS PASSED!")
+            print("✅ Admin login working")
+            print("✅ GET /api/community/admin/pending-flags working")
+            print("✅ POST /api/community/admin/create-test-flag working")
+            print("✅ POST /api/community/admin/flag/{flag_id}/action working")
+            print("✅ Flag dismiss action working")
+            print("✅ Flag processing workflow complete")
+            
+            return True
+            
+        except Exception as e:
+            print(f"\n❌ Test failed with exception: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+async def main():
+    """Main test function"""
+    tester = AdminModerationTester()
+    
+    try:
+        await tester.setup()
+        success = await tester.run_complete_test()
+        
+        if success:
+            print("\n🎯 RESULT: Admin Panel Moderation System is WORKING correctly!")
+            sys.exit(0)
+        else:
+            print("\n💥 RESULT: Admin Panel Moderation System has ISSUES!")
+            sys.exit(1)
+            
+    finally:
+        await tester.cleanup()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

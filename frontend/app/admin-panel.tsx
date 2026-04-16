@@ -88,6 +88,23 @@ interface ModerationStatus {
   }[];
 }
 
+interface PendingFlag {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  user_flag_count: number;
+  user_account_status: string;
+  content_type: string;
+  content_id: string;
+  content: string;
+  reason: string;
+  status: string;
+  is_test: boolean;
+  created_at: string | null;
+  flags_before_suspension: number;
+}
+
 export default function AdminPanel() {
   const { user, authToken } = useAuth();
   const router = useRouter();
@@ -124,7 +141,11 @@ export default function AdminPanel() {
   
   // Moderation state
   const [moderationStatus, setModerationStatus] = useState<ModerationStatus | null>(null);
+  const [pendingFlags, setPendingFlags] = useState<PendingFlag[]>([]);
   const [processingEmails, setProcessingEmails] = useState(false);
+  const [selectedFlag, setSelectedFlag] = useState<PendingFlag | null>(null);
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [processingAction, setProcessingAction] = useState(false);
   
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -254,6 +275,19 @@ export default function AdminPanel() {
     } catch (err) {
       console.error('Error:', err);
     }
+    
+    // Also fetch pending flags
+    try {
+      const flagsResponse = await fetch(
+        `${BACKEND_URL}/api/community/admin/pending-flags?token=${authToken}`
+      );
+      const flagsData = await flagsResponse.json();
+      if (flagsResponse.ok) {
+        setPendingFlags(flagsData.flags || []);
+      }
+    } catch (err) {
+      console.error('Error fetching flags:', err);
+    }
   };
 
   const processEmailReplies = async () => {
@@ -331,6 +365,30 @@ export default function AdminPanel() {
       setError('Failed to create test flag');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleFlagAction = async (flagId: string, action: 'dismiss' | 'warn' | 'cancel') => {
+    setProcessingAction(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/community/admin/flag/${flagId}/action?token=${authToken}&action=${action}`,
+        { method: 'POST' }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setSuccess(data.message || `Action "${action}" completed successfully`);
+        setShowFlagModal(false);
+        setSelectedFlag(null);
+        await fetchModerationStatus();
+      } else {
+        setError(data.detail || `Failed to ${action} flag`);
+      }
+    } catch (err) {
+      setError(`Failed to ${action} flag`);
+    } finally {
+      setProcessingAction(false);
     }
   };
 
@@ -775,6 +833,92 @@ export default function AdminPanel() {
                   </View>
                 </View>
               </View>
+            </View>
+
+            {/* Pending Flags - Flagged Content Review */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>
+                <Ionicons name="flag" size={18} color="#f59e0b" /> Flagged Content ({pendingFlags.length})
+              </Text>
+              
+              {pendingFlags.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="checkmark-circle-outline" size={40} color="#10b981" />
+                  <Text style={styles.emptyText}>No pending flags to review</Text>
+                </View>
+              ) : (
+                pendingFlags.map((flag) => (
+                  <TouchableOpacity
+                    key={flag.id}
+                    style={styles.flagCard}
+                    onPress={() => {
+                      setSelectedFlag(flag);
+                      setShowFlagModal(true);
+                    }}
+                  >
+                    <View style={styles.flagHeader}>
+                      <View style={styles.flagUserInfo}>
+                        <Text style={styles.flagUserName}>{flag.user_name}</Text>
+                        <Text style={styles.flagUserEmail}>{flag.user_email}</Text>
+                      </View>
+                      <View style={styles.flagMeta}>
+                        <View style={[styles.flagTypeBadge, flag.is_test && { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                          <Text style={[styles.flagTypeText, flag.is_test && { color: '#f59e0b' }]}>
+                            {flag.is_test ? 'TEST' : flag.content_type}
+                          </Text>
+                        </View>
+                        <Text style={styles.flagDate}>{flag.created_at ? formatDate(flag.created_at) : 'N/A'}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.flagContentPreview}>
+                      <Text style={styles.flagReason}>{flag.reason}</Text>
+                      <Text style={styles.flagContentText} numberOfLines={2}>
+                        "{flag.content}"
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.flagFooter}>
+                      <View style={styles.flagWarningCount}>
+                        <Ionicons name="warning" size={14} color="#f59e0b" />
+                        <Text style={styles.flagWarningText}>
+                          {flag.user_flag_count}/{flag.flags_before_suspension} warnings
+                        </Text>
+                      </View>
+                      <View style={styles.flagActions}>
+                        <TouchableOpacity 
+                          style={[styles.flagActionBtn, styles.dismissBtn]}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleFlagAction(flag.id, 'dismiss');
+                          }}
+                        >
+                          <Ionicons name="checkmark" size={16} color="#10b981" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.flagActionBtn, styles.warnBtn]}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleFlagAction(flag.id, 'warn');
+                          }}
+                        >
+                          <Ionicons name="warning" size={16} color="#f59e0b" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.flagActionBtn, styles.cancelAccountBtn]}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setSelectedFlag(flag);
+                            setShowFlagModal(true);
+                          }}
+                        >
+                          <Ionicons name="ban" size={16} color="#ef4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
 
             {/* Email Processing */}
@@ -1248,6 +1392,137 @@ export default function AdminPanel() {
           </View>
         </View>
       </Modal>
+
+      {/* Flag Detail Modal */}
+      <Modal visible={showFlagModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Flag Details</Text>
+              <TouchableOpacity onPress={() => { setShowFlagModal(false); setSelectedFlag(null); }}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            {selectedFlag && (
+              <ScrollView style={styles.modalBody}>
+                {/* User Info */}
+                <View style={styles.flagDetailSection}>
+                  <Text style={styles.flagDetailLabel}>Flagged User</Text>
+                  <View style={styles.flagDetailUserCard}>
+                    <Text style={styles.flagDetailUserName}>{selectedFlag.user_name}</Text>
+                    <Text style={styles.flagDetailUserEmail}>{selectedFlag.user_email}</Text>
+                    <View style={styles.flagDetailUserStats}>
+                      <View style={styles.flagDetailStat}>
+                        <Ionicons name="warning" size={14} color="#f59e0b" />
+                        <Text style={styles.flagDetailStatText}>
+                          {selectedFlag.user_flag_count}/{selectedFlag.flags_before_suspension} warnings
+                        </Text>
+                      </View>
+                      <View style={[styles.flagDetailStat, { backgroundColor: getStatusColor(selectedFlag.user_account_status) + '20' }]}>
+                        <Text style={[styles.flagDetailStatText, { color: getStatusColor(selectedFlag.user_account_status) }]}>
+                          {selectedFlag.user_account_status}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Flag Reason */}
+                <View style={styles.flagDetailSection}>
+                  <Text style={styles.flagDetailLabel}>Flag Reason</Text>
+                  <View style={styles.flagReasonCard}>
+                    <Ionicons name="flag" size={16} color="#ef4444" />
+                    <Text style={styles.flagReasonText}>{selectedFlag.reason}</Text>
+                  </View>
+                </View>
+
+                {/* Flagged Content */}
+                <View style={styles.flagDetailSection}>
+                  <Text style={styles.flagDetailLabel}>Flagged Content ({selectedFlag.content_type})</Text>
+                  <View style={styles.flagContentCard}>
+                    <Text style={styles.flagContentFullText}>"{selectedFlag.content}"</Text>
+                  </View>
+                </View>
+
+                {/* Meta Info */}
+                <View style={styles.flagDetailSection}>
+                  <View style={styles.flagMetaRow}>
+                    <Text style={styles.flagMetaLabel}>Created:</Text>
+                    <Text style={styles.flagMetaValue}>{selectedFlag.created_at ? formatDate(selectedFlag.created_at) : 'N/A'}</Text>
+                  </View>
+                  {selectedFlag.is_test && (
+                    <View style={styles.testFlagWarning}>
+                      <Ionicons name="flask" size={16} color="#f59e0b" />
+                      <Text style={styles.testFlagWarningText}>This is a test flag</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.flagActionButtons}>
+                  <Text style={styles.flagActionTitle}>Take Action</Text>
+                  
+                  <TouchableOpacity
+                    style={[styles.flagFullActionBtn, styles.dismissFullBtn]}
+                    onPress={() => handleFlagAction(selectedFlag.id, 'dismiss')}
+                    disabled={processingAction}
+                  >
+                    {processingAction ? (
+                      <ActivityIndicator size="small" color="#10b981" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                        <View style={styles.flagActionBtnContent}>
+                          <Text style={styles.dismissFullBtnText}>Dismiss Flag</Text>
+                          <Text style={styles.flagActionBtnHint}>Content is acceptable, no action needed</Text>
+                        </View>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.flagFullActionBtn, styles.warnFullBtn]}
+                    onPress={() => handleFlagAction(selectedFlag.id, 'warn')}
+                    disabled={processingAction}
+                  >
+                    {processingAction ? (
+                      <ActivityIndicator size="small" color="#f59e0b" />
+                    ) : (
+                      <>
+                        <Ionicons name="warning" size={20} color="#f59e0b" />
+                        <View style={styles.flagActionBtnContent}>
+                          <Text style={styles.warnFullBtnText}>Issue Warning</Text>
+                          <Text style={styles.flagActionBtnHint}>
+                            Send warning email ({selectedFlag.user_flag_count + 1}/{selectedFlag.flags_before_suspension})
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.flagFullActionBtn, styles.cancelFullBtn]}
+                    onPress={() => handleFlagAction(selectedFlag.id, 'cancel')}
+                    disabled={processingAction}
+                  >
+                    {processingAction ? (
+                      <ActivityIndicator size="small" color="#ef4444" />
+                    ) : (
+                      <>
+                        <Ionicons name="ban" size={20} color="#ef4444" />
+                        <View style={styles.flagActionBtnContent}>
+                          <Text style={styles.cancelFullBtnText}>Cancel Account</Text>
+                          <Text style={styles.flagActionBtnHint}>Permanently ban this user</Text>
+                        </View>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1388,4 +1663,54 @@ const styles = StyleSheet.create({
   actionContent: { flex: 1 },
   actionResolution: { fontSize: 14, color: '#fff', fontWeight: '500', textTransform: 'capitalize' },
   actionMeta: { fontSize: 11, color: '#9f7aea', marginTop: 2 },
+  // Flagged Content styles
+  flagCard: { backgroundColor: '#2d1b4e', borderRadius: 10, padding: 14, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#f59e0b' },
+  flagHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  flagUserInfo: { flex: 1 },
+  flagUserName: { fontSize: 15, fontWeight: '600', color: '#fff' },
+  flagUserEmail: { fontSize: 12, color: '#9f7aea', marginTop: 2 },
+  flagMeta: { alignItems: 'flex-end' },
+  flagTypeBadge: { backgroundColor: 'rgba(124, 58, 237, 0.2)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  flagTypeText: { fontSize: 10, fontWeight: '600', color: '#7c3aed', textTransform: 'uppercase' },
+  flagDate: { fontSize: 10, color: '#6b7280', marginTop: 4 },
+  flagContentPreview: { marginBottom: 12 },
+  flagReason: { fontSize: 12, color: '#ef4444', fontWeight: '500', marginBottom: 4 },
+  flagContentText: { fontSize: 13, color: '#c4b5fd', fontStyle: 'italic' },
+  flagFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  flagWarningCount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  flagWarningText: { fontSize: 12, color: '#f59e0b' },
+  flagActions: { flexDirection: 'row', gap: 8 },
+  flagActionBtn: { width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  dismissBtn: { backgroundColor: 'rgba(16, 185, 129, 0.2)' },
+  warnBtn: { backgroundColor: 'rgba(245, 158, 11, 0.2)' },
+  cancelAccountBtn: { backgroundColor: 'rgba(239, 68, 68, 0.2)' },
+  // Flag Detail Modal styles
+  flagDetailSection: { marginBottom: 20 },
+  flagDetailLabel: { fontSize: 12, fontWeight: '600', color: '#9f7aea', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  flagDetailUserCard: { backgroundColor: '#2d1b4e', borderRadius: 10, padding: 14 },
+  flagDetailUserName: { fontSize: 17, fontWeight: '600', color: '#fff' },
+  flagDetailUserEmail: { fontSize: 13, color: '#9f7aea', marginTop: 2 },
+  flagDetailUserStats: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  flagDetailStat: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.15)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, gap: 6 },
+  flagDetailStatText: { fontSize: 12, color: '#f59e0b', fontWeight: '500' },
+  flagReasonCard: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 10, padding: 14, gap: 10 },
+  flagReasonText: { flex: 1, fontSize: 14, color: '#ef4444', fontWeight: '500' },
+  flagContentCard: { backgroundColor: '#2d1b4e', borderRadius: 10, padding: 14 },
+  flagContentFullText: { fontSize: 14, color: '#e9d5ff', lineHeight: 20, fontStyle: 'italic' },
+  flagMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  flagMetaLabel: { fontSize: 13, color: '#9f7aea' },
+  flagMetaValue: { fontSize: 13, color: '#fff' },
+  testFlagWarning: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: 10, borderRadius: 8, gap: 8, marginTop: 10 },
+  testFlagWarningText: { fontSize: 13, color: '#f59e0b' },
+  flagActionButtons: { marginTop: 10 },
+  flagActionTitle: { fontSize: 14, fontWeight: '600', color: '#fff', marginBottom: 14 },
+  flagFullActionBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 10, gap: 14 },
+  dismissFullBtn: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
+  warnFullBtn: { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)' },
+  cancelFullBtn: { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' },
+  flagActionBtnContent: { flex: 1 },
+  dismissFullBtnText: { fontSize: 15, fontWeight: '600', color: '#10b981' },
+  warnFullBtnText: { fontSize: 15, fontWeight: '600', color: '#f59e0b' },
+  cancelFullBtnText: { fontSize: 15, fontWeight: '600', color: '#ef4444' },
+  flagActionBtnHint: { fontSize: 12, color: '#9f7aea', marginTop: 2 },
 });

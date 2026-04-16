@@ -1138,3 +1138,235 @@ async def create_test_flag(request: TestFlagRequest, token: Optional[str] = None
         "flag_id": flag_id,
         "note": "Check admin email for moderation notification. Reply with 'good', 'bad', 'okay', or 'cancel' to test."
     }
+
+
+@router.get("/admin/pending-flags")
+async def get_pending_flags(token: Optional[str] = None, limit: int = 50):
+    """Get all pending flags with user details for admin review"""
+    from services.moderation_service import FLAGS_BEFORE_SUSPENSION
+    
+    admin = await get_user_from_token(token)
+    if not admin or not admin.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get pending flags
+    flags = await db.user_flags.find(
+        {"status": "pending"}
+    ).sort("created_at", -1).limit(limit).to_list(length=limit)
+    
+    formatted = []
+    for f in flags:
+        # Get user details
+        user = None
+        try:
+            user = await db.users.find_one({"_id": ObjectId(f.get("user_id"))})
+        except:
+            user = await db.users.find_one({"user_id": f.get("user_id")})
+        
+        user_email = user.get("email", "Unknown") if user else "Unknown"
+        user_name = (user.get("display_name") or user.get("name") or user_email.split("@")[0]) if user else "Unknown"
+        flag_count = user.get("flag_count", 0) if user else 0
+        account_status = user.get("account_status", "active") if user else "unknown"
+        
+        formatted.append({
+            "id": str(f["_id"]),
+            "user_id": f.get("user_id"),
+            "user_email": user_email,
+            "user_name": user_name,
+            "user_flag_count": flag_count,
+            "user_account_status": account_status,
+            "content_type": f.get("content_type"),
+            "content_id": f.get("content_id"),
+            "content": f.get("content"),
+            "reason": f.get("reason"),
+            "status": f.get("status", "pending"),
+            "is_test": f.get("is_test", False),
+            "created_at": f.get("created_at").isoformat() if f.get("created_at") else None,
+            "flags_before_suspension": FLAGS_BEFORE_SUSPENSION
+        })
+    
+    return {"flags": formatted, "total": len(formatted)}
+
+
+@router.post("/admin/flag/{flag_id}/action")
+async def take_flag_action(flag_id: str, action: str, token: Optional[str] = None):
+    """
+    Take action on a pending flag.
+    Actions:
+    - dismiss: Content is acceptable, dismiss the flag
+    - warn: Issue a warning to the user (counts toward suspension)
+    - cancel: Immediately cancel the user's account
+    """
+    from services.moderation_service import (
+        send_user_warning, send_suspension_notice, send_cancellation_notice,
+        FLAGS_BEFORE_SUSPENSION, FIRST_SUSPENSION_DAYS, SECOND_SUSPENSION_DAYS
+    )
+    from datetime import timedelta
+    
+    admin = await get_user_from_token(token)
+    if not admin or not admin.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if action not in ["dismiss", "warn", "cancel"]:
+        raise HTTPException(status_code=400, detail="Invalid action. Use 'dismiss', 'warn', or 'cancel'")
+    
+    # Get the flag
+    try:
+        flag = await db.user_flags.find_one({"_id": ObjectId(flag_id)})
+    except:
+        raise HTTPException(status_code=400, detail="Invalid flag ID")
+    
+    if not flag:
+        raise HTTPException(status_code=404, detail="Flag not found")
+    
+    if flag.get("status") == "processed":
+        raise HTTPException(status_code=400, detail="Flag has already been processed")
+    
+    # Get the user
+    user_id = flag.get("user_id")
+    user = None
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+    except:
+        user = await db.users.find_one({"user_id": user_id})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_email = user.get("email", "")
+    user_name = user.get("display_name") or user.get("name") or user_email.split("@")[0]
+    result = {"success": True, "action": action, "flag_id": flag_id}
+    
+    if action == "dismiss":
+        # Dismiss the flag - content is acceptable
+        await db.user_flags.update_one(
+            {"_id": ObjectId(flag_id)},
+            {
+                "$set": {
+                    "status": "processed",
+                    "resolution": "dismissed",
+                    "processed_at": datetime.utcnow(),
+                    "processed_by": str(admin["_id"]),
+                    "processed_via": "admin_panel"
+                }
+            }
+        )
+        result["message"] = f"Flag dismissed for user {user_email}"
+        
+    elif action == "warn":
+        # Issue a warning to the user
+        current_flags = user.get("flag_count", 0) + 1
+        suspension_count = user.get("suspension_count", 0)
+        
+        # Update flag status
+        await db.user_flags.update_one(
+            {"_id": ObjectId(flag_id)},
+            {
+                "$set": {
+                    "status": "processed",
+                    "resolution": "warning_issued",
+                    "processed_at": datetime.utcnow(),
+                    "processed_by": str(admin["_id"]),
+                    "processed_via": "admin_panel"
+                }
+            }
+        )
+        
+        # Check if this triggers suspension
+        if current_flags >= FLAGS_BEFORE_SUSPENSION:
+            suspension_count += 1
+            
+            if suspension_count == 1:
+                # First suspension - 14 days
+                suspension_end = datetime.utcnow() + timedelta(days=FIRST_SUSPENSION_DAYS)
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {
+                        "$set": {
+                            "flag_count": 0,
+                            "suspension_count": suspension_count,
+                            "account_status": "suspended",
+                            "suspension_start": datetime.utcnow(),
+                            "suspension_end": suspension_end
+                        }
+                    }
+                )
+                await send_suspension_notice(user_email, user_name, FIRST_SUSPENSION_DAYS, 1, suspension_end)
+                result["message"] = f"User {user_email} suspended for {FIRST_SUSPENSION_DAYS} days (first suspension)"
+                result["suspension"] = True
+                
+            elif suspension_count == 2:
+                # Second suspension - 30 days
+                suspension_end = datetime.utcnow() + timedelta(days=SECOND_SUSPENSION_DAYS)
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {
+                        "$set": {
+                            "flag_count": 0,
+                            "suspension_count": suspension_count,
+                            "account_status": "suspended",
+                            "suspension_start": datetime.utcnow(),
+                            "suspension_end": suspension_end
+                        }
+                    }
+                )
+                await send_suspension_notice(user_email, user_name, SECOND_SUSPENSION_DAYS, 2, suspension_end)
+                result["message"] = f"User {user_email} suspended for {SECOND_SUSPENSION_DAYS} days (second suspension)"
+                result["suspension"] = True
+                
+            else:
+                # Third+ offense - permanent ban
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {
+                        "$set": {
+                            "account_status": "cancelled",
+                            "cancelled_at": datetime.utcnow(),
+                            "cancellation_reason": "repeated_violations"
+                        }
+                    }
+                )
+                await send_cancellation_notice(user_email, user_name)
+                result["message"] = f"User {user_email} account cancelled (third+ offense)"
+                result["cancelled"] = True
+        else:
+            # Just a warning
+            await db.users.update_one(
+                {"_id": user["_id"]},
+                {"$set": {"flag_count": current_flags}}
+            )
+            await send_user_warning(user_email, user_name, current_flags, flag.get("reason", "Community guidelines violation"))
+            result["message"] = f"Warning issued to {user_email} ({current_flags}/{FLAGS_BEFORE_SUSPENSION} before suspension)"
+            result["flag_count"] = current_flags
+        
+    elif action == "cancel":
+        # Immediately cancel the user's account
+        await db.user_flags.update_one(
+            {"_id": ObjectId(flag_id)},
+            {
+                "$set": {
+                    "status": "processed",
+                    "resolution": "account_cancelled",
+                    "processed_at": datetime.utcnow(),
+                    "processed_by": str(admin["_id"]),
+                    "processed_via": "admin_panel"
+                }
+            }
+        )
+        
+        await db.users.update_one(
+            {"_id": user["_id"]},
+            {
+                "$set": {
+                    "account_status": "cancelled",
+                    "cancelled_at": datetime.utcnow(),
+                    "cancellation_reason": "admin_decision"
+                }
+            }
+        )
+        
+        await send_cancellation_notice(user_email, user_name, reason="violation of community guidelines")
+        result["message"] = f"User {user_email} account cancelled"
+        result["cancelled"] = True
+    
+    return result
