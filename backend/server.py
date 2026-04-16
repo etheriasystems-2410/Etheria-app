@@ -3768,11 +3768,89 @@ async def setup_owner_admin(request: AdminSetupRequest):
         }
     )
     
+# Admin endpoint to manually trigger email processing
+@api_router.post("/admin/process-moderation-emails")
+async def trigger_email_processing(request: Request):
+    """
+    Manually trigger processing of admin moderation email replies.
+    Requires admin authentication via Authorization header.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = auth_header.replace("Bearer ", "")
+    
+    # Verify admin
+    session = await db.user_sessions.find_one({"session_token": token})
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    
+    user = await db.users.find_one({"user_id": session.get("user_id")})
+    if not user or not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Import here to avoid circular imports
+    from services.moderation_service import process_inbound_moderation_emails
+    
+    # Process emails
+    result = await process_inbound_moderation_emails(db)
+    
     return {
-        "success": True, 
-        "message": "Admin privileges granted successfully",
-        "is_admin": True,
-        "admin_level": "full"
+        "success": True,
+        "message": f"Processed {result['processed']} email replies",
+        "details": result
+    }
+
+
+@api_router.get("/admin/moderation-status")
+async def get_moderation_status(request: Request):
+    """
+    Get current moderation status including pending flags and recent actions.
+    Requires admin authentication via Authorization header.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = auth_header.replace("Bearer ", "")
+    
+    # Verify admin
+    session = await db.user_sessions.find_one({"session_token": token})
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    
+    user = await db.users.find_one({"user_id": session.get("user_id")})
+    if not user or not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get pending flags count
+    pending_flags = await db.user_flags.count_documents({"status": "pending"})
+    
+    # Get recent processed flags (last 10)
+    recent_processed = await db.user_flags.find(
+        {"status": "processed"}
+    ).sort("processed_at", -1).limit(10).to_list(length=10)
+    
+    # Get suspended users
+    suspended_users = await db.users.count_documents({"account_status": "suspended"})
+    
+    # Get cancelled users
+    cancelled_users = await db.users.count_documents({"account_status": "cancelled"})
+    
+    return {
+        "pending_flags": pending_flags,
+        "suspended_users": suspended_users,
+        "cancelled_users": cancelled_users,
+        "recent_actions": [
+            {
+                "flag_id": str(f["_id"]),
+                "resolution": f.get("resolution"),
+                "processed_at": f.get("processed_at").isoformat() if f.get("processed_at") else None,
+                "processed_via": f.get("processed_via", "admin_panel")
+            }
+            for f in recent_processed
+        ]
     }
 
 # Include the router in the main app
@@ -3805,6 +3883,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Import moderation service for email polling
+from services.moderation_service import (
+    start_email_polling_task, 
+    stop_email_polling_task,
+    process_inbound_moderation_emails
+)
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks on application startup"""
+    # Start email polling task (checks every 5 minutes)
+    await start_email_polling_task(db, interval_seconds=300)
+    logger.info("Application startup complete - email polling task started")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    # Stop email polling task
+    stop_email_polling_task()
     client.close()

@@ -1,12 +1,18 @@
 """
 User Moderation Service - Handles flagging, warnings, suspensions, and bans
+Also includes inbound email parsing for admin reply commands
 """
 import smtplib
+import imaplib
+import email
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.header import decode_header
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Tuple, Dict, Any
 import os
+import re
+import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,6 +20,21 @@ load_dotenv()
 ADMIN_EMAIL = "etheriasystems@gmail.com"
 GMAIL_EMAIL = os.getenv("GMAIL_EMAIL", "etheriasystems@gmail.com")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
+
+# IMAP Configuration for Gmail
+IMAP_SERVER = "imap.gmail.com"
+IMAP_PORT = 993
+
+# Valid moderation commands from email replies
+VALID_COMMANDS = {
+    "good": "approve",      # Content is acceptable, dismiss flag
+    "okay": "approve",      # Alias for good
+    "bad": "warn",          # Issue warning to user
+    "cancel": "cancel"      # Cancel the user's account immediately
+}
+
+# Import ObjectId for MongoDB operations
+from bson import ObjectId
 
 # Suspension durations
 FIRST_SUSPENSION_DAYS = 14  # 2 weeks
@@ -59,8 +80,9 @@ async def send_flagged_content_notification(
     reason: str,
     flag_id: str
 ):
-    """Send notification to admin about flagged content"""
-    subject = "Flagged for Review"
+    """Send notification to admin about flagged content with reply-based action support"""
+    # Include flag_id in subject for easy parsing of replies
+    subject = f"Flagged for Review [FLAG:{flag_id}]"
     
     html_content = f"""
     <html>
@@ -86,14 +108,30 @@ async def send_flagged_content_notification(
                 <p style="color: #c4b5fd; font-style: italic;">"{content[:500]}{'...' if len(content) > 500 else ''}"</p>
             </div>
             
+            <div style="background-color: #1a0033; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #ffd700;">
+                <p style="color: #ffd700; font-weight: bold; font-size: 16px;">📧 Quick Reply Actions</p>
+                <p style="color: #e9d5ff; margin: 10px 0;">Reply to this email with ONE of these commands:</p>
+                <ul style="color: #c4b5fd; list-style: none; padding-left: 0;">
+                    <li style="margin: 8px 0;"><strong style="color: #10b981;">good</strong> or <strong style="color: #10b981;">okay</strong> - Dismiss flag, content is acceptable</li>
+                    <li style="margin: 8px 0;"><strong style="color: #f59e0b;">bad</strong> - Issue warning to user (counts toward suspension)</li>
+                    <li style="margin: 8px 0;"><strong style="color: #ef4444;">cancel</strong> - Immediately cancel user's account</li>
+                </ul>
+                <p style="color: #9f7aea; font-size: 12px; margin-top: 15px;">Just type the command in your reply - no other text needed.</p>
+            </div>
+            
             <div style="background-color: #2d1b4e; padding: 15px; border-radius: 8px; border: 1px solid #7c3aed;">
-                <p style="color: #ffd700; font-weight: bold;">Take action in the Etheria Admin Panel</p>
-                <p style="color: #c4b5fd; font-size: 14px;">Go to Settings → Admin Panel to approve, warn, or ban this user.</p>
+                <p style="color: #c4b5fd; font-size: 14px;">Or go to Settings → Admin Panel to manage this and other flags.</p>
             </div>
         </div>
     </body>
     </html>
     """
+    
+    # Also store the flag_id in database for reference
+    await db.user_flags.update_one(
+        {"_id": ObjectId(flag_id)},
+        {"$set": {"email_sent": True, "email_sent_at": datetime.utcnow()}}
+    )
     
     await send_email(ADMIN_EMAIL, subject, html_content)
 
@@ -405,3 +443,428 @@ async def check_user_can_post(db, user_id: str):
                 return True, "Account reactivated"
     
     return True, "OK"
+
+
+# ============================================================================
+# INBOUND EMAIL PROCESSING FOR ADMIN REPLY COMMANDS
+# ============================================================================
+
+def extract_flag_id_from_subject(subject: str) -> Optional[str]:
+    """Extract flag ID from email subject like 'Re: Flagged for Review [FLAG:abc123]'"""
+    # Match pattern [FLAG:xxxxxxx]
+    match = re.search(r'\[FLAG:([a-f0-9]{24})\]', subject, re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return None
+
+
+def extract_command_from_body(body: str) -> Optional[str]:
+    """
+    Extract moderation command from email body.
+    Looks for: good, okay, bad, cancel (case-insensitive)
+    Returns the first valid command found.
+    """
+    if not body:
+        return None
+    
+    # Clean the body - get first line or first few words
+    # Replies often have the command at the very beginning
+    body_lower = body.lower().strip()
+    
+    # Remove common reply artifacts
+    # Remove lines starting with > (quoted text)
+    lines = body_lower.split('\n')
+    clean_lines = []
+    for line in lines:
+        line = line.strip()
+        # Skip quoted lines and signature lines
+        if line.startswith('>') or line.startswith('--') or line.startswith('___'):
+            continue
+        # Skip empty lines
+        if not line:
+            continue
+        clean_lines.append(line)
+    
+    if not clean_lines:
+        return None
+    
+    # Check first few lines for a command
+    text_to_check = ' '.join(clean_lines[:3])
+    
+    # Look for exact command words
+    for cmd in VALID_COMMANDS.keys():
+        # Match the command as a whole word
+        pattern = rf'\b{cmd}\b'
+        if re.search(pattern, text_to_check):
+            return cmd
+    
+    return None
+
+
+def decode_email_body(msg) -> str:
+    """Extract and decode the text body from an email message"""
+    body = ""
+    
+    if msg.is_multipart():
+        for part in msg.walk():
+            content_type = part.get_content_type()
+            content_disposition = str(part.get("Content-Disposition", ""))
+            
+            # Skip attachments
+            if "attachment" in content_disposition:
+                continue
+            
+            # Prefer plain text
+            if content_type == "text/plain":
+                try:
+                    payload = part.get_payload(decode=True)
+                    charset = part.get_content_charset() or 'utf-8'
+                    body = payload.decode(charset, errors='replace')
+                    break  # Use plain text if available
+                except Exception as e:
+                    print(f"Error decoding email part: {e}")
+                    continue
+            # Fall back to HTML if no plain text
+            elif content_type == "text/html" and not body:
+                try:
+                    payload = part.get_payload(decode=True)
+                    charset = part.get_content_charset() or 'utf-8'
+                    html_body = payload.decode(charset, errors='replace')
+                    # Simple HTML stripping
+                    body = re.sub(r'<[^>]+>', ' ', html_body)
+                    body = re.sub(r'\s+', ' ', body).strip()
+                except Exception as e:
+                    print(f"Error decoding HTML part: {e}")
+                    continue
+    else:
+        try:
+            payload = msg.get_payload(decode=True)
+            charset = msg.get_content_charset() or 'utf-8'
+            body = payload.decode(charset, errors='replace')
+        except Exception as e:
+            print(f"Error decoding email body: {e}")
+    
+    return body
+
+
+def check_admin_inbox_for_replies() -> list:
+    """
+    Connect to Gmail IMAP and check for replies to flagged content emails.
+    Returns a list of (flag_id, command, email_uid) tuples for processing.
+    
+    Note: This is a synchronous function that should be called from an async context.
+    """
+    if not GMAIL_APP_PASSWORD:
+        print("[Moderation] IMAP: No Gmail password configured, skipping inbox check")
+        return []
+    
+    results = []
+    
+    try:
+        # Connect to Gmail IMAP
+        mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+        mail.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
+        
+        # Select inbox
+        mail.select('INBOX')
+        
+        # Search for unread emails with "FLAG:" in subject (our reply format)
+        # Note: IMAP search might vary, we search for UNSEEN emails
+        status, messages = mail.search(None, 'UNSEEN')
+        
+        if status != 'OK':
+            print("[Moderation] IMAP: Failed to search inbox")
+            mail.logout()
+            return []
+        
+        email_ids = messages[0].split()
+        print(f"[Moderation] IMAP: Found {len(email_ids)} unread emails")
+        
+        for email_id in email_ids:
+            try:
+                # Fetch the email
+                status, msg_data = mail.fetch(email_id, '(RFC822)')
+                if status != 'OK':
+                    continue
+                
+                raw_email = msg_data[0][1]
+                msg = email.message_from_bytes(raw_email)
+                
+                # Decode subject
+                subject_header = msg.get('Subject', '')
+                decoded_subject = ''
+                for part, encoding in decode_header(subject_header):
+                    if isinstance(part, bytes):
+                        decoded_subject += part.decode(encoding or 'utf-8', errors='replace')
+                    else:
+                        decoded_subject += part
+                
+                # Check if this is a reply to a flagged content email
+                flag_id = extract_flag_id_from_subject(decoded_subject)
+                if not flag_id:
+                    continue
+                
+                print(f"[Moderation] IMAP: Found reply for flag {flag_id}")
+                
+                # Extract and parse the body
+                body = decode_email_body(msg)
+                command = extract_command_from_body(body)
+                
+                if command:
+                    print(f"[Moderation] IMAP: Extracted command '{command}' for flag {flag_id}")
+                    results.append((flag_id, command, email_id.decode()))
+                    
+                    # Mark as read (seen)
+                    mail.store(email_id, '+FLAGS', '\\Seen')
+                else:
+                    print(f"[Moderation] IMAP: No valid command found in reply for flag {flag_id}")
+                    # Still mark as seen to avoid reprocessing
+                    mail.store(email_id, '+FLAGS', '\\Seen')
+                    
+            except Exception as e:
+                print(f"[Moderation] IMAP: Error processing email {email_id}: {e}")
+                continue
+        
+        mail.logout()
+        
+    except Exception as e:
+        print(f"[Moderation] IMAP: Error connecting to inbox: {e}")
+    
+    return results
+
+
+async def execute_moderation_command(db, flag_id: str, command: str) -> Dict[str, Any]:
+    """
+    Execute a moderation action based on email reply command.
+    
+    Commands:
+    - good/okay: Dismiss the flag, content is acceptable
+    - bad: Issue a warning to the user (counts toward suspension)
+    - cancel: Immediately cancel the user's account
+    """
+    action = VALID_COMMANDS.get(command)
+    if not action:
+        return {"success": False, "error": f"Unknown command: {command}"}
+    
+    # Get the flag record
+    try:
+        flag = await db.user_flags.find_one({"_id": ObjectId(flag_id)})
+    except:
+        return {"success": False, "error": f"Invalid flag ID: {flag_id}"}
+    
+    if not flag:
+        return {"success": False, "error": f"Flag not found: {flag_id}"}
+    
+    # Check if already processed
+    if flag.get("status") == "processed":
+        return {"success": True, "message": "Flag already processed", "action": "none"}
+    
+    user_id = flag.get("user_id")
+    if not user_id:
+        return {"success": False, "error": "No user_id in flag record"}
+    
+    # Get user
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+    except:
+        user = await db.users.find_one({"user_id": user_id})
+    
+    if not user:
+        return {"success": False, "error": f"User not found: {user_id}"}
+    
+    user_email = user.get("email", "")
+    user_name = user.get("display_name") or user.get("name") or user_email.split("@")[0]
+    result = {"success": True, "action": action, "flag_id": flag_id}
+    
+    if action == "approve":
+        # Dismiss the flag - content is acceptable
+        await db.user_flags.update_one(
+            {"_id": ObjectId(flag_id)},
+            {
+                "$set": {
+                    "status": "processed",
+                    "resolution": "approved",
+                    "processed_at": datetime.utcnow(),
+                    "processed_via": "email_reply"
+                }
+            }
+        )
+        result["message"] = f"Flag dismissed for user {user_email}"
+        print(f"[Moderation] Approved/dismissed flag {flag_id} for user {user_email}")
+        
+    elif action == "warn":
+        # Issue a warning to the user
+        current_flags = user.get("flag_count", 0) + 1
+        suspension_count = user.get("suspension_count", 0)
+        
+        # Update flag status
+        await db.user_flags.update_one(
+            {"_id": ObjectId(flag_id)},
+            {
+                "$set": {
+                    "status": "processed",
+                    "resolution": "warning_issued",
+                    "processed_at": datetime.utcnow(),
+                    "processed_via": "email_reply"
+                }
+            }
+        )
+        
+        # Check if this triggers suspension
+        if current_flags >= FLAGS_BEFORE_SUSPENSION:
+            suspension_count += 1
+            
+            if suspension_count == 1:
+                # First suspension
+                suspension_end = datetime.utcnow() + timedelta(days=FIRST_SUSPENSION_DAYS)
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {
+                        "$set": {
+                            "flag_count": 0,
+                            "suspension_count": suspension_count,
+                            "account_status": "suspended",
+                            "suspension_start": datetime.utcnow(),
+                            "suspension_end": suspension_end
+                        }
+                    }
+                )
+                await send_suspension_notice(user_email, user_name, FIRST_SUSPENSION_DAYS, 1, suspension_end)
+                result["message"] = f"User {user_email} suspended for {FIRST_SUSPENSION_DAYS} days (first suspension)"
+                
+            elif suspension_count == 2:
+                # Second suspension
+                suspension_end = datetime.utcnow() + timedelta(days=SECOND_SUSPENSION_DAYS)
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {
+                        "$set": {
+                            "flag_count": 0,
+                            "suspension_count": suspension_count,
+                            "account_status": "suspended",
+                            "suspension_start": datetime.utcnow(),
+                            "suspension_end": suspension_end
+                        }
+                    }
+                )
+                await send_suspension_notice(user_email, user_name, SECOND_SUSPENSION_DAYS, 2, suspension_end)
+                result["message"] = f"User {user_email} suspended for {SECOND_SUSPENSION_DAYS} days (second suspension)"
+                
+            else:
+                # Third+ offense - permanent ban
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {
+                        "$set": {
+                            "account_status": "cancelled",
+                            "cancelled_at": datetime.utcnow(),
+                            "cancellation_reason": "repeated_violations"
+                        }
+                    }
+                )
+                await send_cancellation_notice(user_email, user_name)
+                result["message"] = f"User {user_email} account cancelled (third+ offense)"
+        else:
+            # Just a warning
+            await db.users.update_one(
+                {"_id": user["_id"]},
+                {"$set": {"flag_count": current_flags}}
+            )
+            await send_user_warning(user_email, user_name, current_flags, flag.get("reason", "Community guidelines violation"))
+            result["message"] = f"Warning issued to {user_email} ({current_flags}/{FLAGS_BEFORE_SUSPENSION})"
+        
+        print(f"[Moderation] Warning/action taken for flag {flag_id}: {result.get('message')}")
+        
+    elif action == "cancel":
+        # Immediately cancel the user's account
+        await db.user_flags.update_one(
+            {"_id": ObjectId(flag_id)},
+            {
+                "$set": {
+                    "status": "processed",
+                    "resolution": "account_cancelled",
+                    "processed_at": datetime.utcnow(),
+                    "processed_via": "email_reply"
+                }
+            }
+        )
+        
+        await db.users.update_one(
+            {"_id": user["_id"]},
+            {
+                "$set": {
+                    "account_status": "cancelled",
+                    "cancelled_at": datetime.utcnow(),
+                    "cancellation_reason": "admin_decision"
+                }
+            }
+        )
+        
+        await send_cancellation_notice(user_email, user_name, reason="violation of community guidelines")
+        result["message"] = f"User {user_email} account cancelled by admin command"
+        print(f"[Moderation] Account cancelled for flag {flag_id}: {user_email}")
+    
+    return result
+
+
+async def process_inbound_moderation_emails(db) -> Dict[str, Any]:
+    """
+    Main function to check inbox and process any admin reply commands.
+    This should be called periodically (e.g., every 5 minutes) by a background task.
+    
+    Returns summary of actions taken.
+    """
+    print("[Moderation] Starting inbound email check...")
+    
+    # Run the synchronous IMAP check in a thread pool
+    loop = asyncio.get_event_loop()
+    replies = await loop.run_in_executor(None, check_admin_inbox_for_replies)
+    
+    if not replies:
+        print("[Moderation] No moderation replies found")
+        return {"processed": 0, "actions": []}
+    
+    actions = []
+    for flag_id, command, email_uid in replies:
+        result = await execute_moderation_command(db, flag_id, command)
+        actions.append({
+            "flag_id": flag_id,
+            "command": command,
+            "result": result
+        })
+    
+    print(f"[Moderation] Processed {len(actions)} email replies")
+    return {"processed": len(actions), "actions": actions}
+
+
+# Background task reference (will be set by server.py)
+_email_check_task = None
+
+
+async def start_email_polling_task(db, interval_seconds: int = 300):
+    """
+    Start a background task that periodically checks for admin email replies.
+    Default interval: 5 minutes (300 seconds)
+    """
+    global _email_check_task
+    
+    async def poll_loop():
+        while True:
+            try:
+                await process_inbound_moderation_emails(db)
+            except Exception as e:
+                print(f"[Moderation] Error in email polling task: {e}")
+            await asyncio.sleep(interval_seconds)
+    
+    _email_check_task = asyncio.create_task(poll_loop())
+    print(f"[Moderation] Started email polling task (interval: {interval_seconds}s)")
+    return _email_check_task
+
+
+def stop_email_polling_task():
+    """Stop the background email polling task"""
+    global _email_check_task
+    if _email_check_task:
+        _email_check_task.cancel()
+        _email_check_task = None
+        print("[Moderation] Stopped email polling task")
