@@ -33,9 +33,12 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL')
+if not mongo_url:
+    raise ValueError("MONGO_URL environment variable is required")
+db_name = os.environ.get('DB_NAME', 'etheria_db')
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[db_name]
 
 # Gemini API key
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
