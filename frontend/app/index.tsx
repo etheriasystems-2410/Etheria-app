@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   heroSection: {
-    height: 280,
+    height: 180,
     position: 'relative',
     overflow: 'hidden',
   },

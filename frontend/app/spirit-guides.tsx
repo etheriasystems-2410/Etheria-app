@@ -945,7 +945,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   heroSection: {
-    height: 200,
+    height: 160,
     position: 'relative',
     overflow: 'hidden',
   },

@@ -764,7 +764,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f0321',
   },
   heroSection: {
-    height: 140,
+    height: 120,
     position: 'relative',
     overflow: 'hidden',
   },

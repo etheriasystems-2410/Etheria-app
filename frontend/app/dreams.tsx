@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
   },
   heroSection: {
-    height: 180,
+    height: 150,
     position: 'relative',
     marginBottom: 16,
     marginHorizontal: -20,

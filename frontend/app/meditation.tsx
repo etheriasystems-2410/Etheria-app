@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   heroSection: {
-    height: 220,
+    height: 160,
     position: 'relative',
     overflow: 'hidden',
   },

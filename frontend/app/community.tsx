@@ -1030,7 +1030,7 @@ const styles = StyleSheet.create({
   },
   heroImageContainer: {
     width: '100%',
-    height: 200,
+    height: 160,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
