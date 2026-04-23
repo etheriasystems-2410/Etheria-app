@@ -601,7 +601,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   heroSection: {
-    height: 400,
+    width: '100%',
+    aspectRatio: 9/16,
+    maxHeight: 550,
     position: 'relative',
     overflow: 'hidden',
     backgroundColor: '#0f0321',
