@@ -603,7 +603,6 @@ const styles = StyleSheet.create({
   heroSection: {
     width: '100%',
     aspectRatio: 9/16,
-    maxHeight: 550,
     position: 'relative',
     overflow: 'hidden',
     backgroundColor: '#0f0321',
