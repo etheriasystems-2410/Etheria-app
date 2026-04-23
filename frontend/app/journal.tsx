@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -34,6 +35,7 @@ import {
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const JOURNAL_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/zw3j6sl3_36734.jpg';
+const JOURNAL_HERO_VIDEO = require('../assets/videos/journal-hero.mp4');
 
 // Use imported types with local aliases for compatibility
 type JournalEntry = JournalEntryType;
@@ -473,11 +475,19 @@ export default function Journal() {
       {/* Header Banner */}
       <HeaderBanner title="Journal" height={100} />
       
-      {/* Hero Image Section */}
+      {/* Hero Section with Video Background */}
       <View style={styles.heroSection}>
+        <Video
+          source={JOURNAL_HERO_VIDEO}
+          style={styles.heroVideo}
+          resizeMode={ResizeMode.COVER}
+          shouldPlay
+          isLooping
+          isMuted
+        />
         <Image
           source={{ uri: JOURNAL_HERO_IMAGE }}
-          style={styles.heroImage}
+          style={styles.heroImageFallback}
           contentFit="cover"
         />
         <View style={styles.heroOverlay}>
@@ -756,6 +766,26 @@ const styles = StyleSheet.create({
   heroSection: {
     height: 140,
     position: 'relative',
+    overflow: 'hidden',
+  },
+  heroVideo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  heroImageFallback: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: -1,
   },
   heroImage: {
     width: '100%',

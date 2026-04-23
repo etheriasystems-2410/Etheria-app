@@ -8,11 +8,15 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
+import { Video, ResizeMode } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { Paywall } from '../components/Paywall';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const ASTRAL_HERO_VIDEO = require('../assets/videos/astral-travel-hero.mp4');
+const ASTRAL_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/36730.jpg';
 
 interface AstralLevel {
   id: string;
@@ -205,6 +209,28 @@ export default function AstralTravel() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Hero Section with Video Background */}
+        <View style={styles.heroSection}>
+          <Video
+            source={ASTRAL_HERO_VIDEO}
+            style={styles.heroVideo}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay
+            isLooping
+            isMuted
+          />
+          <Image
+            source={{ uri: ASTRAL_HERO_IMAGE }}
+            style={styles.heroImageFallback}
+            contentFit="cover"
+          />
+          <View style={styles.heroOverlay}>
+            <Ionicons name="planet" size={50} color="#a855f7" />
+            <Text style={styles.heroTitle}>Astral Travel</Text>
+            <Text style={styles.heroSubtitle}>Journey beyond the physical</Text>
+          </View>
+        </View>
+
         <View style={styles.warningCard}>
           <Ionicons name="warning" size={32} color="#f59e0b" />
           <Text style={styles.warningTitle}>Important Guidelines</Text>
@@ -320,6 +346,56 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 12,
+  },
+  heroSection: {
+    height: 200,
+    position: 'relative',
+    marginHorizontal: -12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  heroVideo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  heroImageFallback: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: -1,
+  },
+  heroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: '#c4b5fd',
+    marginTop: 6,
+    textAlign: 'center',
   },
   warningCard: {
     backgroundColor: '#1a0033',

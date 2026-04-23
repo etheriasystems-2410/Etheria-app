@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { Video, ResizeMode } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -25,6 +26,7 @@ import { Paywall } from '../components/Paywall';
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');
 const ORACLE_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/qnwv0w54_36736.jpg';
+const ORACLE_HERO_VIDEO = require('../assets/videos/oracle-hero.mp4');
 
 interface CardReading {
   card: {
@@ -332,11 +334,19 @@ export default function Oracle() {
         <HeaderBanner title="Oracle" height={100} />
         
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Hero Image Section */}
+          {/* Hero Section with Video Background */}
           <View style={styles.heroSection}>
+            <Video
+              source={ORACLE_HERO_VIDEO}
+              style={styles.heroVideo}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay
+              isLooping
+              isMuted
+            />
             <Image
               source={{ uri: ORACLE_HERO_IMAGE }}
-              style={styles.heroImage}
+              style={styles.heroImageFallback}
               contentFit="cover"
             />
             <View style={styles.heroOverlay}>
@@ -790,6 +800,26 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginHorizontal: -12,
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  heroVideo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  heroImageFallback: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: -1,
   },
   heroImage: {
     width: '100%',

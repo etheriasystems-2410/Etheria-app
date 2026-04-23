@@ -15,6 +15,7 @@ import {
   Animated,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
+import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,6 +27,7 @@ import { AudioPlayerManager, setupAudioMode } from '../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const SPIRIT_GUIDES_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/yv072mjq_36707.png';
+const SPIRIT_GUIDES_HERO_VIDEO = require('../assets/videos/spirit-guide-hero.mp4');
 
 interface Guide {
   name: string;
@@ -592,11 +594,19 @@ export default function SpiritGuides() {
         <HeaderBanner title="Spirit Guides" height={100} />
         
         <ScrollView contentContainerStyle={styles.selectionContainer}>
-          {/* Hero Image Section */}
+          {/* Hero Section with Video Background */}
           <View style={styles.heroSection}>
+            <Video
+              source={SPIRIT_GUIDES_HERO_VIDEO}
+              style={styles.heroVideo}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay
+              isLooping
+              isMuted
+            />
             <ExpoImage
               source={{ uri: SPIRIT_GUIDES_HERO_IMAGE }}
-              style={styles.heroImage}
+              style={styles.heroImageFallback}
               contentFit="cover"
             />
             <View style={styles.heroOverlay}>
@@ -937,6 +947,26 @@ const styles = StyleSheet.create({
   heroSection: {
     height: 200,
     position: 'relative',
+    overflow: 'hidden',
+  },
+  heroVideo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  heroImageFallback: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: -1,
   },
   heroImage: {
     width: '100%',
