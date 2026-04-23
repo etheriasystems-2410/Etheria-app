@@ -274,6 +274,73 @@ async def send_reactivation_notice(user_email: str, user_name: str):
     
     await send_email(user_email, subject, html_content)
 
+
+async def send_reply_notification(
+    to_email: str,
+    to_name: str,
+    replier_name: str,
+    post_title: str,
+    reply_content: str,
+    post_id: str
+):
+    """Send notification to post author when someone replies to their post"""
+    subject = f"New Reply to Your Post: {post_title[:50]}{'...' if len(post_title) > 50 else ''}"
+    
+    # Truncate reply preview
+    reply_preview = reply_content[:200] + ('...' if len(reply_content) > 200 else '')
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a0033; color: #e9d5ff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2d1b4e; padding: 30px; border-radius: 12px;">
+            <h2 style="color: #b794f6; margin-bottom: 20px;">💬 New Reply to Your Post</h2>
+            
+            <p style="color: #e9d5ff;">Hello {to_name},</p>
+            
+            <p style="color: #c4b5fd;"><strong>{replier_name}</strong> replied to your post:</p>
+            
+            <div style="background-color: #1a0033; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 3px solid #7c3aed;">
+                <p style="color: #9f7aea; font-size: 12px; margin-bottom: 8px; text-transform: uppercase;">Your Post</p>
+                <p style="color: #fff; font-weight: 600; margin: 0;">{post_title}</p>
+            </div>
+            
+            <div style="background-color: #1a0033; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 3px solid #10b981;">
+                <p style="color: #9f7aea; font-size: 12px; margin-bottom: 8px; text-transform: uppercase;">Reply from {replier_name}</p>
+                <p style="color: #e9d5ff; font-style: italic; margin: 0;">"{reply_preview}"</p>
+            </div>
+            
+            <p style="color: #c4b5fd; font-size: 14px;">
+                Open the Etheria app to view and respond to this reply.
+            </p>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #3d2b5e;">
+                <p style="color: #9f7aea; font-size: 12px; margin: 0;">
+                    You're receiving this because someone replied to your post in the Etheria Community.
+                </p>
+            </div>
+            
+            <p style="color: #9f7aea; margin-top: 20px;">Blessings,<br>The Etheria Team ✨</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    text_content = f"""
+Hello {to_name},
+
+{replier_name} replied to your post "{post_title}":
+
+"{reply_preview}"
+
+Open the Etheria app to view and respond.
+
+Blessings,
+The Etheria Team
+    """
+    
+    await send_email(to_email, subject, html_content, text_content)
+
+
 async def process_flag(db, user_id: str, content_type: str, content: str, content_id: str, reason: str):
     """Process a flagged content item - increment user flags, apply suspensions if needed"""
     from bson import ObjectId

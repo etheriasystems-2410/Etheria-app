@@ -11,7 +11,7 @@ import re
 import uuid
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from emergentintegrations.llm.chat import LlmChat
+from emergentintegrations.llm.chat import LlmChat, UserMessage
 from services.moderation_service import process_flag, check_user_can_post
 
 router = APIRouter(prefix="/api/community", tags=["community"])
@@ -175,14 +175,12 @@ If flagged but approved, it means human review is recommended but content can be
             api_key=llm_api_key,
             session_id=f"moderation-{uuid.uuid4()}",
             system_message="You are a content moderator for a spiritual wellness community."
-        )
+        ).with_model("gemini", "gemini-2.0-flash")
         
-        response = await chat.chat(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": moderation_prompt}]
-        )
+        user_message = UserMessage(text=moderation_prompt)
+        response = await chat.send_message(user_message)
         
-        response_text = response.get("message", "").upper()
+        response_text = response.upper()
         
         approved = "APPROVED: YES" in response_text
         flagged = "FLAGGED: YES" in response_text
@@ -410,6 +408,7 @@ async def get_comments(post_id: str, token: Optional[str] = None, limit: int = 1
 @router.post("/posts/{post_id}/comments")
 async def create_comment(post_id: str, comment: CommentCreate, token: Optional[str] = None):
     """Add a comment to a post"""
+    from services.moderation_service import send_reply_notification
     
     if not await check_premium(token):
         raise HTTPException(status_code=403, detail="Premium subscription required for community access")
@@ -449,11 +448,13 @@ async def create_comment(post_id: str, comment: CommentCreate, token: Optional[s
         )
         raise HTTPException(status_code=400, detail=f"Comment not approved: {moderation.reason}")
     
+    commenter_name = user.get("display_name") or user.get("name") or user.get("email", "").split("@")[0]
+    
     comment_doc = {
         "post_id": post_id,
         "content": comment.content.strip(),
         "author_id": str(user["_id"]),
-        "author_name": user.get("display_name") or user.get("name") or user.get("email", "").split("@")[0],
+        "author_name": commenter_name,
         "created_at": datetime.utcnow(),
         "approved": True,
         "flagged": moderation.flagged,
@@ -471,6 +472,33 @@ async def create_comment(post_id: str, comment: CommentCreate, token: Optional[s
             str(result.inserted_id),
             moderation.reason or "Flagged for review"
         )
+    
+    # Send email notification to post author (if not commenting on own post)
+    post_author_id = post.get("author_id")
+    if post_author_id and post_author_id != str(user["_id"]):
+        try:
+            # Get post author details
+            post_author = await db.users.find_one({"_id": ObjectId(post_author_id)})
+            if post_author and post_author.get("email"):
+                author_email = post_author.get("email")
+                author_name = post_author.get("display_name") or post_author.get("name") or author_email.split("@")[0]
+                post_title = post.get("title", "Your Post")
+                
+                # Send notification asynchronously (don't wait for it)
+                import asyncio
+                asyncio.create_task(
+                    send_reply_notification(
+                        to_email=author_email,
+                        to_name=author_name,
+                        replier_name=commenter_name,
+                        post_title=post_title,
+                        reply_content=comment.content.strip(),
+                        post_id=post_id
+                    )
+                )
+        except Exception as e:
+            # Don't fail the comment creation if email fails
+            print(f"Failed to send reply notification: {e}")
     
     return {
         "success": True,
