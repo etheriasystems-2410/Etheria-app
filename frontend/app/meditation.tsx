@@ -130,18 +130,17 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   heroSection: {
-    height: 160,
+    height: 260,
     position: 'relative',
     overflow: 'hidden',
   },
   heroVideo: {
     position: 'absolute',
-    top: 0,
+    top: '-20%',
     left: 0,
     right: 0,
-    bottom: 0,
     width: '100%',
-    height: '100%',
+    height: '140%',
   },
   heroImageFallback: {
     position: 'absolute',

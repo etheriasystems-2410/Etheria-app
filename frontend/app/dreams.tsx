@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
   },
   heroSection: {
-    height: 150,
+    height: 240,
     position: 'relative',
     marginBottom: 16,
     marginHorizontal: -20,
@@ -484,12 +484,11 @@ const styles = StyleSheet.create({
   },
   heroVideo: {
     position: 'absolute',
-    top: 0,
+    top: '-20%',
     left: 0,
     right: 0,
-    bottom: 0,
     width: '100%',
-    height: '100%',
+    height: '140%',
   },
   heroImageFallback: {
     position: 'absolute',

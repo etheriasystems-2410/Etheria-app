@@ -602,18 +602,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   heroSection: {
-    height: 180,
+    height: 300,
     position: 'relative',
     overflow: 'hidden',
   },
   heroVideo: {
     position: 'absolute',
-    top: 0,
+    top: '-20%',
     left: 0,
     right: 0,
-    bottom: 0,
     width: '100%',
-    height: '100%',
+    height: '140%',
   },
   heroImageFallback: {
     position: 'absolute',

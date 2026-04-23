@@ -1030,7 +1030,7 @@ const styles = StyleSheet.create({
   },
   heroImageContainer: {
     width: '100%',
-    height: 160,
+    height: 240,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
@@ -1038,12 +1038,11 @@ const styles = StyleSheet.create({
   },
   heroVideo: {
     position: 'absolute',
-    top: 0,
+    top: '-20%',
     left: 0,
     right: 0,
-    bottom: 0,
     width: '100%',
-    height: '100%',
+    height: '140%',
   },
   heroImageFallback: {
     position: 'absolute',
