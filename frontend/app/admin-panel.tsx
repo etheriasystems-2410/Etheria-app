@@ -131,7 +131,9 @@ export default function AdminPanel() {
   const [contestStatus, setContestStatus] = useState<any>(null);
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showWinnerEmailModal, setShowWinnerEmailModal] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<ContestEntry | null>(null);
+  const [winnerCodeType, setWinnerCodeType] = useState<'monthly' | 'lifetime'>('lifetime');
   
   // Form state
   const [newCodeType, setNewCodeType] = useState<'monthly' | 'lifetime'>('monthly');
@@ -503,6 +505,62 @@ export default function AdminPanel() {
       }
     } catch (err) {
       setError('Failed to send email');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const generateAndSendWinnerEmail = async () => {
+    if (!selectedEntry) return;
+    
+    setActionLoading(true);
+    setError(null);
+    try {
+      // Step 1: Generate a new code
+      const generateResponse = await fetch(
+        `${BACKEND_URL}/api/admin/contest/generate-code?token=${authToken}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code_type: winnerCodeType,
+            custom_code: ''
+          })
+        }
+      );
+      const generateData = await generateResponse.json();
+      
+      if (!generateResponse.ok) {
+        setError(generateData.detail || 'Failed to generate code');
+        return;
+      }
+      
+      const newCode = generateData.code;
+      
+      // Step 2: Send the winner email with the generated code
+      const emailResponse = await fetch(
+        `${BACKEND_URL}/api/admin/contest/send-winner-email?token=${authToken}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: selectedEntry.user_id,
+            code: newCode
+          })
+        }
+      );
+      const emailData = await emailResponse.json();
+      
+      if (emailResponse.ok) {
+        setSuccess(`Winner email with ${winnerCodeType} code "${newCode}" sent to ${selectedEntry.email}`);
+        setShowWinnerEmailModal(false);
+        setSelectedEntry(null);
+        fetchPromoCodes(); // Refresh the codes list
+      } else {
+        setError(emailData.detail || 'Failed to send winner email');
+      }
+    } catch (err) {
+      setError('Failed to generate code and send email');
     } finally {
       setActionLoading(false);
     }
@@ -1147,16 +1205,17 @@ export default function AdminPanel() {
                       <Text style={[styles.eligibleBadge, entry.eligible ? styles.eligible : styles.ineligible]}>
                         {entry.eligible ? '✓ Eligible' : '✗ Not Eligible'}
                       </Text>
-                      {entry.eligible && generatedCode && (
+                      {entry.eligible && (
                         <TouchableOpacity
-                          style={styles.selectWinnerBtn}
+                          style={styles.sendWinnerEmailBtn}
                           onPress={() => {
                             setSelectedEntry(entry);
                             setEmailRecipient({ email: entry.email, name: entry.name || '', user_id: entry.user_id });
-                            setShowEmailModal(true);
+                            setShowWinnerEmailModal(true);
                           }}
                         >
-                          <Ionicons name="trophy" size={14} color="#ffd700" />
+                          <Ionicons name="mail" size={14} color="#fff" />
+                          <Text style={styles.sendWinnerEmailBtnText}>Send Code</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -1286,6 +1345,73 @@ export default function AdminPanel() {
                   )}
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Winner Email Modal */}
+      <Modal visible={showWinnerEmailModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Send Winner Email</Text>
+              <TouchableOpacity onPress={() => {
+                setShowWinnerEmailModal(false);
+                setSelectedEntry(null);
+              }}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              {selectedEntry && (
+                <>
+                  <View style={styles.winnerInfoBox}>
+                    <Ionicons name="trophy" size={40} color="#ffd700" />
+                    <Text style={styles.winnerName}>{selectedEntry.name || selectedEntry.email}</Text>
+                    <Text style={styles.winnerEmail}>{selectedEntry.email}</Text>
+                  </View>
+                  
+                  <Text style={styles.emailLabel}>Select Code Type:</Text>
+                  <View style={styles.codeTypeSelector}>
+                    <TouchableOpacity
+                      style={[styles.codeTypeBtn, winnerCodeType === 'monthly' && styles.codeTypeBtnActive]}
+                      onPress={() => setWinnerCodeType('monthly')}
+                    >
+                      <Text style={[styles.codeTypeBtnText, winnerCodeType === 'monthly' && styles.codeTypeBtnTextActive]}>
+                        Monthly
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.codeTypeBtn, winnerCodeType === 'lifetime' && styles.codeTypeBtnActive]}
+                      onPress={() => setWinnerCodeType('lifetime')}
+                    >
+                      <Text style={[styles.codeTypeBtnText, winnerCodeType === 'lifetime' && styles.codeTypeBtnTextActive]}>
+                        Lifetime
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <Text style={styles.winnerNote}>
+                    A new {winnerCodeType} code will be generated and emailed to the winner with congratulations.
+                  </Text>
+                  
+                  <TouchableOpacity
+                    style={styles.sendWinnerBtn}
+                    onPress={generateAndSendWinnerEmail}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="send" size={18} color="#fff" />
+                        <Text style={styles.sendWinnerBtnText}>Generate Code & Send Email</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
         </View>
@@ -1713,4 +1839,48 @@ const styles = StyleSheet.create({
   warnFullBtnText: { fontSize: 15, fontWeight: '600', color: '#f59e0b' },
   cancelFullBtnText: { fontSize: 15, fontWeight: '600', color: '#ef4444' },
   flagActionBtnHint: { fontSize: 12, color: '#9f7aea', marginTop: 2 },
+  // Winner email button and modal styles
+  sendWinnerEmailBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#10b981', 
+    paddingHorizontal: 10, 
+    paddingVertical: 6, 
+    borderRadius: 6, 
+    gap: 4,
+    marginTop: 6 
+  },
+  sendWinnerEmailBtnText: { 
+    fontSize: 11, 
+    fontWeight: '600', 
+    color: '#fff' 
+  },
+  winnerInfoBox: { 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255, 215, 0, 0.1)', 
+    padding: 20, 
+    borderRadius: 12, 
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)'
+  },
+  winnerName: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: '#fff', 
+    marginTop: 12 
+  },
+  winnerEmail: { 
+    fontSize: 14, 
+    color: '#9f7aea', 
+    marginTop: 4 
+  },
+  winnerNote: { 
+    fontSize: 13, 
+    color: '#c4b5fd', 
+    textAlign: 'center', 
+    marginTop: 16, 
+    marginBottom: 20,
+    lineHeight: 18
+  },
 });
