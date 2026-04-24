@@ -796,12 +796,12 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   heroSection: {
-    height: 200,
+    height: 180,
     position: 'relative',
     marginHorizontal: -12,
     marginBottom: 16,
     overflow: 'hidden',
-    backgroundColor: '#0f0321',
+    backgroundColor: '#1a0533',
   },
   heroVideo: {
     position: 'absolute',

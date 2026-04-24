@@ -767,7 +767,7 @@ const styles = StyleSheet.create({
     height: 140,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#0f0321',
+    backgroundColor: '#1a0533',
   },
   heroVideo: {
     position: 'absolute',

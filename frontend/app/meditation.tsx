@@ -130,10 +130,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   heroSection: {
-    height: 220,
+    height: 180,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#0f0321',
+    backgroundColor: '#1a0533',
   },
   heroVideo: {
     position: 'absolute',

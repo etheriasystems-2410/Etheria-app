@@ -1030,12 +1030,12 @@ const styles = StyleSheet.create({
   },
   heroImageContainer: {
     width: '100%',
-    height: 200,
+    height: 180,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
     position: 'relative',
-    backgroundColor: '#0f0321',
+    backgroundColor: '#1a0533',
   },
   heroVideo: {
     position: 'absolute',

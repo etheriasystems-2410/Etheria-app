@@ -601,10 +601,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   heroSection: {
-    height: 280,
+    height: 180,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#0f0321',
+    backgroundColor: '#1a0533',
   },
   heroVideo: {
     position: 'absolute',
