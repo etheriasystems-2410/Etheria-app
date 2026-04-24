@@ -245,7 +245,7 @@ export default function DreamsScreen() {
             <Video
               source={DREAMS_HERO_VIDEO}
               style={styles.heroVideo}
-              resizeMode={ResizeMode.COVER}
+              resizeMode={ResizeMode.CONTAIN}
               shouldPlay
               isLooping
               isMuted
@@ -475,20 +475,22 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
   },
   heroSection: {
-    height: 240,
+    height: 180,
     position: 'relative',
     marginBottom: 16,
     marginHorizontal: -20,
     marginTop: -20,
     overflow: 'hidden',
+    backgroundColor: '#0f0321',
   },
   heroVideo: {
     position: 'absolute',
-    top: '-20%',
+    top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     width: '100%',
-    height: '140%',
+    height: '100%',
   },
   heroImageFallback: {
     position: 'absolute',

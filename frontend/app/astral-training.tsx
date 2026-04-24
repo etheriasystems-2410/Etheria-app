@@ -214,7 +214,7 @@ export default function AstralTravel() {
           <Video
             source={ASTRAL_HERO_VIDEO}
             style={styles.heroVideo}
-            resizeMode={ResizeMode.COVER}
+            resizeMode={ResizeMode.CONTAIN}
             shouldPlay
             isLooping
             isMuted
@@ -348,19 +348,21 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   heroSection: {
-    height: 260,
+    height: 200,
     position: 'relative',
     marginHorizontal: -12,
     marginBottom: 16,
     overflow: 'hidden',
+    backgroundColor: '#0f0321',
   },
   heroVideo: {
     position: 'absolute',
-    top: '-20%',
+    top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     width: '100%',
-    height: '140%',
+    height: '100%',
   },
   heroImageFallback: {
     position: 'absolute',

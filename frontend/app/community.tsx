@@ -454,7 +454,7 @@ export default function Community() {
           <Video
             source={COMMUNITY_HERO_VIDEO}
             style={styles.heroVideo}
-            resizeMode={ResizeMode.COVER}
+            resizeMode={ResizeMode.CONTAIN}
             shouldPlay
             isLooping
             isMuted
@@ -1030,19 +1030,21 @@ const styles = StyleSheet.create({
   },
   heroImageContainer: {
     width: '100%',
-    height: 240,
+    height: 200,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
     position: 'relative',
+    backgroundColor: '#0f0321',
   },
   heroVideo: {
     position: 'absolute',
-    top: '-20%',
+    top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     width: '100%',
-    height: '140%',
+    height: '100%',
   },
   heroImageFallback: {
     position: 'absolute',

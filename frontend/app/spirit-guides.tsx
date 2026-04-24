@@ -599,7 +599,7 @@ export default function SpiritGuides() {
             <Video
               source={SPIRIT_GUIDES_HERO_VIDEO}
               style={styles.heroVideo}
-              resizeMode={ResizeMode.COVER}
+              resizeMode={ResizeMode.CONTAIN}
               shouldPlay
               isLooping
               isMuted
@@ -945,17 +945,19 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   heroSection: {
-    height: 260,
+    height: 200,
     position: 'relative',
     overflow: 'hidden',
+    backgroundColor: '#0f0321',
   },
   heroVideo: {
     position: 'absolute',
-    top: '-20%',
+    top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     width: '100%',
-    height: '140%',
+    height: '100%',
   },
   heroImageFallback: {
     position: 'absolute',

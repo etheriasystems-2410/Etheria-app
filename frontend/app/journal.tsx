@@ -480,7 +480,7 @@ export default function Journal() {
         <Video
           source={JOURNAL_HERO_VIDEO}
           style={styles.heroVideo}
-          resizeMode={ResizeMode.COVER}
+          resizeMode={ResizeMode.CONTAIN}
           shouldPlay
           isLooping
           isMuted
@@ -764,17 +764,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f0321',
   },
   heroSection: {
-    height: 200,
+    height: 140,
     position: 'relative',
     overflow: 'hidden',
+    backgroundColor: '#0f0321',
   },
   heroVideo: {
     position: 'absolute',
-    top: '-20%',
+    top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     width: '100%',
-    height: '140%',
+    height: '100%',
   },
   heroImageFallback: {
     position: 'absolute',
