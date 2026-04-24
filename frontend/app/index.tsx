@@ -1,9 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Video, ResizeMode } from 'expo-av';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -11,7 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/d3xhv7qx_47721.png';
 const HEADER_BANNER_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/oz3admmj_47815.jpg';
-const HERO_VIDEO = require('../assets/videos/hero-background.mp4');
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function Home() {
@@ -320,22 +318,11 @@ export default function Home() {
         </View>
       )}
 
-      {/* Hero Section with Video Background */}
+      {/* Hero Section with Image Background */}
       <View style={styles.heroSection}>
-        {/* Video Background */}
-        <Video
-          source={HERO_VIDEO}
-          style={styles.heroVideo}
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay
-          isLooping
-          isMuted
-          onError={() => console.log('Video failed to load')}
-        />
-        {/* Fallback Image (hidden behind video) */}
         <Image
           source={{ uri: ETHERIA_IMAGE }}
-          style={styles.heroImageFallback}
+          style={styles.heroImage}
           contentFit="cover"
         />
         <View style={styles.heroOverlay}>
@@ -601,28 +588,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   heroSection: {
-    height: 120,
+    height: 280,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#1a0533',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  heroVideo: {
-    width: '100%',
-    height: '100%',
-  },
-  heroImageFallback: {
+  heroImage: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: -1, // Behind video
-  },
-  heroImage: {
     width: '100%',
     height: '100%',
   },

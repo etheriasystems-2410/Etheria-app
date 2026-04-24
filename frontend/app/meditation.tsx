@@ -3,11 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Video, ResizeMode } from 'expo-av';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
-
-const MEDITATION_HERO_VIDEO = require('../assets/videos/meditation-hero.mp4');
 
 interface MeditationType {
   id: string;
@@ -73,22 +70,11 @@ export default function Meditation() {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.scrollContent}>
-      {/* Hero Section with Video Background */}
+      {/* Hero Section with Image Background */}
       <View style={styles.heroSection}>
-        {/* Video Background */}
-        <Video
-          source={MEDITATION_HERO_VIDEO}
-          style={styles.heroVideo}
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay
-          isLooping
-          isMuted
-          onError={() => console.log('Meditation video failed to load')}
-        />
-        {/* Fallback Image */}
         <Image
           source={require('../assets/backgrounds/meditation-bg.jpg')}
-          style={styles.heroImageFallback}
+          style={styles.heroImage}
           contentFit="cover"
         />
         <View style={styles.heroOverlay}>
@@ -130,28 +116,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   heroSection: {
-    height: 120,
+    height: 220,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#1a0533',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  heroVideo: {
-    width: '100%',
-    height: '100%',
-  },
-  heroImageFallback: {
+  heroImage: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: -1,
-  },
-  heroImage: {
     width: '100%',
     height: '100%',
   },

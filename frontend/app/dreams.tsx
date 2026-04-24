@@ -13,7 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Video, ResizeMode } from 'expo-av';
+
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,7 +23,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const DREAMS_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/la383jz1_36726.jpg';
-const DREAMS_HERO_VIDEO = require('../assets/videos/dream-decoder-hero.mp4');
 
 // Common dream symbols for quick selection
 const DREAM_SYMBOLS = [
@@ -240,19 +239,11 @@ export default function DreamsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Section with Video Background */}
+          {/* Hero Section with Image Background */}
           <View style={styles.heroSection}>
-            <Video
-              source={DREAMS_HERO_VIDEO}
-              style={styles.heroVideo}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay
-              isLooping
-              isMuted
-            />
             <Image
               source={{ uri: DREAMS_HERO_IMAGE }}
-              style={styles.heroImageFallback}
+              style={styles.heroImage}
               contentFit="cover"
             />
             <View style={styles.heroOverlay}>
@@ -475,31 +466,19 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
   },
   heroSection: {
-    height: 120,
+    height: 180,
     position: 'relative',
     marginBottom: 16,
     marginHorizontal: -20,
     marginTop: -20,
     overflow: 'hidden',
-    backgroundColor: '#1a0533',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  heroVideo: {
-    width: '100%',
-    height: '100%',
-  },
-  heroImageFallback: {
+  heroImage: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: -1,
-  },
-  heroImage: {
     width: '100%',
     height: '100%',
   },

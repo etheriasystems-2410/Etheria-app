@@ -9,13 +9,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Video, ResizeMode } from 'expo-av';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { Paywall } from '../components/Paywall';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
-const ASTRAL_HERO_VIDEO = require('../assets/videos/astral-travel-hero.mp4');
 const ASTRAL_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/36730.jpg';
 
 interface AstralLevel {
@@ -209,19 +208,11 @@ export default function AstralTravel() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Hero Section with Video Background */}
+        {/* Hero Section with Image Background */}
         <View style={styles.heroSection}>
-          <Video
-            source={ASTRAL_HERO_VIDEO}
-            style={styles.heroVideo}
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay
-            isLooping
-            isMuted
-          />
           <Image
             source={{ uri: ASTRAL_HERO_IMAGE }}
-            style={styles.heroImageFallback}
+            style={styles.heroImage}
             contentFit="cover"
           />
           <View style={styles.heroOverlay}>
@@ -348,20 +339,13 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   heroSection: {
-    height: 120,
+    height: 200,
     position: 'relative',
     marginHorizontal: -12,
     marginBottom: 16,
     overflow: 'hidden',
-    backgroundColor: '#1a0533',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  heroVideo: {
-    width: '100%',
-    height: '100%',
-  },
-  heroImageFallback: {
+  heroImage: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -369,7 +353,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
-    zIndex: -1,
   },
   heroOverlay: {
     position: 'absolute',

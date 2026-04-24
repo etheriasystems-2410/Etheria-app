@@ -21,10 +21,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Paywall } from '../components/Paywall';
 import HeaderBanner from '../components/HeaderBanner';
 import { Image } from 'expo-image';
-import { Video, ResizeMode } from 'expo-av';
+
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
-const COMMUNITY_HERO_VIDEO = require('../assets/videos/community-hero.mp4');
 
 interface Category {
   id: string;
@@ -449,19 +448,11 @@ export default function Community() {
   const renderCategories = () => (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.headerSection}>
-        {/* Hero Section with Video */}
+        {/* Hero Section with Image */}
         <View style={styles.heroImageContainer}>
-          <Video
-            source={COMMUNITY_HERO_VIDEO}
-            style={styles.heroVideo}
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay
-            isLooping
-            isMuted
-          />
           <Image
             source={require('../assets/images/community-hero.png')}
-            style={styles.heroImageFallback}
+            style={styles.heroImage}
             contentFit="cover"
           />
           <View style={styles.heroOverlay} />
@@ -1030,30 +1021,18 @@ const styles = StyleSheet.create({
   },
   heroImageContainer: {
     width: '100%',
-    height: 120,
+    height: 200,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
     position: 'relative',
-    backgroundColor: '#1a0533',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  heroVideo: {
-    width: '100%',
-    height: '100%',
-  },
-  heroImageFallback: {
+  heroImage: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: -1,
-  },
-  heroImage: {
     width: '100%',
     height: '100%',
   },
