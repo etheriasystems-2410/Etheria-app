@@ -52,6 +52,9 @@ class SendCodeEmail(BaseModel):
     code: str
     code_type: str  # "monthly" or "lifetime"
 
+class ModerationSettings(BaseModel):
+    ai_moderation_enabled: bool
+
 # Helper functions
 async def get_admin_from_token(token: str):
     """Verify admin access"""
@@ -544,4 +547,66 @@ async def clear_admin_ai_chat(ai_type: str, token: Optional[str] = None):
         admin_chat_histories[chat_key] = []
     
     return {"success": True, "message": f"Chat history cleared for {ai_type} AI"}
+
+
+# ================== AI MODERATION SETTINGS ==================
+
+@router.get("/moderation/settings")
+async def get_moderation_settings(token: Optional[str] = None):
+    """Get AI moderation settings"""
+    admin = await get_admin_from_token(token)
+    if not admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get settings from database, create default if not exists
+    settings = await db.app_settings.find_one({"setting_type": "moderation"})
+    
+    if not settings:
+        # Create default settings
+        default_settings = {
+            "setting_type": "moderation",
+            "ai_moderation_enabled": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        await db.app_settings.insert_one(default_settings)
+        settings = default_settings
+    
+    return {
+        "ai_moderation_enabled": settings.get("ai_moderation_enabled", True),
+        "updated_at": settings.get("updated_at").isoformat() if settings.get("updated_at") else None
+    }
+
+@router.post("/moderation/settings")
+async def update_moderation_settings(data: ModerationSettings, token: Optional[str] = None):
+    """Update AI moderation settings"""
+    admin = await get_admin_from_token(token)
+    if not admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Update settings in database
+    result = await db.app_settings.update_one(
+        {"setting_type": "moderation"},
+        {
+            "$set": {
+                "ai_moderation_enabled": data.ai_moderation_enabled,
+                "updated_at": datetime.utcnow(),
+                "updated_by": admin.get("email")
+            },
+            "$setOnInsert": {
+                "setting_type": "moderation",
+                "created_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+    
+    status = "enabled" if data.ai_moderation_enabled else "disabled"
+    print(f"[Moderation] AI Moderation {status} by {admin.get('email')}")
+    
+    return {
+        "success": True,
+        "ai_moderation_enabled": data.ai_moderation_enabled,
+        "message": f"AI moderation has been {status}"
+    }
 

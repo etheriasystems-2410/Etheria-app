@@ -149,6 +149,10 @@ export default function AdminPanel() {
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [processingAction, setProcessingAction] = useState(false);
   
+  // AI Moderation Settings
+  const [aiModerationEnabled, setAiModerationEnabled] = useState(true);
+  const [togglingModeration, setTogglingModeration] = useState(false);
+  
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -170,7 +174,7 @@ export default function AdminPanel() {
     } else if (activeTab === 'moderation') {
       await fetchModerationStatus();
     } else {
-      await Promise.all([fetchContestStatus(), fetchContestEntries(), fetchPromoCodes()]);
+      await Promise.all([fetchContestStatus(), fetchContestEntries(), fetchPromoCodes(), fetchModerationSettings()]);
     }
     setLoading(false);
   };
@@ -243,6 +247,48 @@ export default function AdminPanel() {
       }
     } catch (err) {
       console.error('Error:', err);
+    }
+  };
+
+  const fetchModerationSettings = async () => {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/admin/moderation/settings?token=${authToken}`
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setAiModerationEnabled(data.ai_moderation_enabled);
+      }
+    } catch (err) {
+      console.error('Error fetching moderation settings:', err);
+    }
+  };
+
+  const toggleAiModeration = async () => {
+    setTogglingModeration(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/admin/moderation/settings?token=${authToken}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ai_moderation_enabled: !aiModerationEnabled
+          })
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setAiModerationEnabled(data.ai_moderation_enabled);
+        setSuccess(data.message);
+      } else {
+        setError(data.detail || 'Failed to update moderation settings');
+      }
+    } catch (err) {
+      setError('Failed to toggle AI moderation');
+    } finally {
+      setTogglingModeration(false);
     }
   };
 
@@ -1117,6 +1163,58 @@ export default function AdminPanel() {
         ) : (
           /* Contest Tab */
           <View style={styles.section}>
+            {/* AI Moderation Settings */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>
+                <Ionicons name="shield-checkmark" size={18} color="#10b981" /> AI Content Moderation
+              </Text>
+              
+              <View style={styles.moderationToggleRow}>
+                <View style={styles.moderationToggleInfo}>
+                  <Text style={styles.moderationToggleLabel}>
+                    {aiModerationEnabled ? 'Active' : 'Disabled'}
+                  </Text>
+                  <Text style={styles.moderationToggleDescription}>
+                    {aiModerationEnabled 
+                      ? 'AI is automatically reviewing content for policy violations' 
+                      : 'AI moderation is turned off - content is not being reviewed'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.moderationToggleBtn,
+                    aiModerationEnabled ? styles.moderationToggleBtnActive : styles.moderationToggleBtnInactive
+                  ]}
+                  onPress={toggleAiModeration}
+                  disabled={togglingModeration}
+                >
+                  {togglingModeration ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <View style={styles.toggleSwitch}>
+                      <View style={[
+                        styles.toggleKnob,
+                        aiModerationEnabled ? styles.toggleKnobActive : styles.toggleKnobInactive
+                      ]} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.moderationStatusBadge}>
+                <View style={[
+                  styles.statusDot,
+                  { backgroundColor: aiModerationEnabled ? '#10b981' : '#ef4444' }
+                ]} />
+                <Text style={[
+                  styles.statusText,
+                  { color: aiModerationEnabled ? '#10b981' : '#ef4444' }
+                ]}>
+                  {aiModerationEnabled ? 'Monitoring Active' : 'Monitoring Paused'}
+                </Text>
+              </View>
+            </View>
+
             {/* Code Generation */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>
@@ -1882,5 +1980,76 @@ const styles = StyleSheet.create({
     marginTop: 16, 
     marginBottom: 20,
     lineHeight: 18
+  },
+  // AI Moderation Toggle Styles
+  moderationToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  moderationToggleInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  moderationToggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  moderationToggleDescription: {
+    fontSize: 12,
+    color: '#9f7aea',
+    lineHeight: 16,
+  },
+  moderationToggleBtn: {
+    width: 60,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  moderationToggleBtnActive: {
+    backgroundColor: '#10b981',
+  },
+  moderationToggleBtnInactive: {
+    backgroundColor: '#4b5563',
+  },
+  toggleSwitch: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+  },
+  toggleKnob: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+  },
+  toggleKnobActive: {
+    alignSelf: 'flex-end',
+  },
+  toggleKnobInactive: {
+    alignSelf: 'flex-start',
+  },
+  moderationStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
