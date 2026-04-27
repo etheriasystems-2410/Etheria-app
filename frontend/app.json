@@ -4,19 +4,19 @@
     "slug": "etheria",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/etheria-app-icon.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "etheria",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/images/etheria-splash-new.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#0a0014"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.etheriasystems.etheria",
       "buildNumber": "1",
-      "icon": "./assets/images/etheria-app-icon.png",
+      "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Record voice memos for your spiritual journal",
         "NSCameraUsageDescription": "Capture moments for your spiritual journey",
@@ -28,11 +28,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/etheria-app-icon.png",
-        "backgroundImage": "./assets/images/etheria-app-icon.png",
-        "backgroundColor": "#000000"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0a0014"
       },
-      "icon": "./assets/images/etheria-app-icon.png",
+      "icon": "./assets/images/icon.png",
       "package": "com.etheriasystems.etheria",
       "versionCode": 1,
       "permissions": [
@@ -48,16 +48,16 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/etheria-app-icon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/etheria-splash-new.png",
+          "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+          "backgroundColor": "#0a0014"
         }
       ],
       "expo-font",
@@ -66,7 +66,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/etheria-app-icon.png",
+          "icon": "./assets/images/icon.png",
           "color": "#7c3aed",
           "sounds": []
         }
