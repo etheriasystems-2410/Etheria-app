@@ -27,7 +27,7 @@ from email.mime.multipart import MIMEMultipart
 import asyncio
 
 # Import training content from data module
-from data.training_content import TRAINING_MODULES, LESSON_CONTENT
+from data.training_content import TRAINING_MODULES, LESSON_CONTENT  # noqa: F401  # used by routes.training
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -498,35 +498,6 @@ async def get_current_user(request: Request) -> dict:
 @api_router.get("/")
 async def root():
     return {"message": "Psychic Awareness API"}
-
-@api_router.get("/training/modules")
-async def get_training_modules():
-    """Get all training modules"""
-    return TRAINING_MODULES
-
-@api_router.get("/training/modules/{module_id}/lessons")
-async def get_module_lessons(module_id: str):
-    """Get lessons for a specific training module"""
-    if module_id not in LESSON_CONTENT:
-        raise HTTPException(status_code=404, detail="Module not found")
-    return {
-        "module_id": module_id,
-        "lessons": LESSON_CONTENT[module_id]
-    }
-
-@api_router.get("/training/modules/{module_id}/lessons/{lesson_id}")
-async def get_single_lesson(module_id: str, lesson_id: int):
-    """Get a specific lesson from a module"""
-    if module_id not in LESSON_CONTENT:
-        raise HTTPException(status_code=404, detail="Module not found")
-    
-    lessons = LESSON_CONTENT[module_id]
-    lesson = next((l for l in lessons if l["id"] == lesson_id), None)
-    
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Lesson not found")
-    
-    return lesson
 
 class MultiCardDrawRequest(BaseModel):
     spread_type: str = "single"
@@ -3778,6 +3749,10 @@ app.include_router(api_router)
 from routes.moderation import router as moderation_router, set_db as set_moderation_db
 set_moderation_db(db)
 app.include_router(moderation_router)
+
+# Import and register training routes (extracted from server.py - no DB deps)
+from routes.training import router as training_router
+app.include_router(training_router, prefix="/api")
 
 # Import and register community routes
 from routes.community import router as community_router, set_db as set_community_db, set_llm_key as set_community_llm_key
