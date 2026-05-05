@@ -148,6 +148,11 @@ export default function AdminPanel() {
   const [selectedFlag, setSelectedFlag] = useState<PendingFlag | null>(null);
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [processingAction, setProcessingAction] = useState(false);
+
+  // Moderation timeline state
+  const [timeline, setTimeline] = useState<any | null>(null);
+  const [processingTimeline, setProcessingTimeline] = useState(false);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
   
   // AI Moderation Settings
   const [aiModerationEnabled, setAiModerationEnabled] = useState(true);
@@ -336,6 +341,9 @@ export default function AdminPanel() {
     } catch (err) {
       console.error('Error fetching flags:', err);
     }
+
+    // Also fetch moderation timeline
+    await fetchTimeline();
   };
 
   const processEmailReplies = async () => {
@@ -366,6 +374,78 @@ export default function AdminPanel() {
       setError('Failed to process emails');
     } finally {
       setProcessingEmails(false);
+    }
+  };
+
+  const fetchTimeline = async () => {
+    setLoadingTimeline(true);
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/admin/moderation/timeline`,
+        { headers: { 'Authorization': `Bearer ${authToken}` } }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setTimeline(data);
+      } else {
+        setError(data.detail || 'Failed to load timeline');
+      }
+    } catch (err) {
+      setError('Failed to load timeline');
+    } finally {
+      setLoadingTimeline(false);
+    }
+  };
+
+  const processTimeline = async () => {
+    setProcessingTimeline(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/admin/moderation/process-timeline`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        const n = data.reactivated_count || 0;
+        setSuccess(n > 0 ? `Auto-reactivated ${n} user(s)` : 'No expired suspensions to process');
+        await fetchTimeline();
+        await fetchModerationStatus();
+      } else {
+        setError(data.detail || 'Failed to process timeline');
+      }
+    } catch (err) {
+      setError('Failed to process timeline');
+    } finally {
+      setProcessingTimeline(false);
+    }
+  };
+
+  const simulateExpire = async (userId: string, email: string) => {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/admin/moderation/simulate-timeline`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ user_id: userId }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setSuccess(`Fast-forwarded suspension for ${email}. Click "Process Timeline" to trigger reactivation.`);
+        await fetchTimeline();
+      } else {
+        setError(data.detail || 'Failed to fast-forward');
+      }
+    } catch (err) {
+      setError('Failed to fast-forward');
     }
   };
 
@@ -1082,6 +1162,121 @@ export default function AdminPanel() {
                   </>
                 )}
               </TouchableOpacity>
+            </View>
+
+            {/* Automated Moderation Timeline */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>
+                <Ionicons name="hourglass" size={18} color="#7c3aed" /> Automated Timeline
+              </Text>
+
+              <Text style={styles.helpText}>
+                Auto-reactivates suspended users when their suspension ends. Runs hourly in the background.
+              </Text>
+
+              {timeline && (
+                <View style={styles.statsGrid}>
+                  <View style={styles.statCard}>
+                    <Text style={styles.statNumber}>{timeline.counts?.active_suspensions || 0}</Text>
+                    <Text style={styles.statLabel}>Active Suspensions</Text>
+                    <View style={[styles.statIcon, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
+                      <Ionicons name="pause-circle" size={20} color="#ef4444" />
+                    </View>
+                  </View>
+                  <View style={styles.statCard}>
+                    <Text style={styles.statNumber}>{timeline.counts?.expired_suspensions || 0}</Text>
+                    <Text style={styles.statLabel}>Pending Reactivation</Text>
+                    <View style={[styles.statIcon, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                      <Ionicons name="time" size={20} color="#10b981" />
+                    </View>
+                  </View>
+                  <View style={styles.statCard}>
+                    <Text style={styles.statNumber}>{timeline.counts?.users_with_warnings || 0}</Text>
+                    <Text style={styles.statLabel}>Users w/ Warnings</Text>
+                    <View style={[styles.statIcon, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                      <Ionicons name="warning" size={20} color="#f59e0b" />
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.processBtn, processingTimeline && styles.processBtnDisabled]}
+                onPress={processTimeline}
+                disabled={processingTimeline}
+              >
+                {processingTimeline ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="refresh-circle" size={18} color="#fff" />
+                    <Text style={styles.processBtnText}>Process Timeline Now</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {timeline?.active_suspensions?.length > 0 && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={[styles.helpText, { fontWeight: '600', color: '#e9d5ff' }]}>
+                    Active Suspensions
+                  </Text>
+                  {timeline.active_suspensions.map((u: any) => (
+                    <View key={u.user_id} style={styles.timelineRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.timelineEmail}>{u.email}</Text>
+                        <Text style={styles.timelineMeta}>
+                          Suspension #{u.suspension_count} • {u.days_remaining}d remaining • ends {u.suspension_end ? new Date(u.suspension_end).toLocaleDateString() : 'N/A'}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.ffBtn}
+                        onPress={() => simulateExpire(u.user_id, u.email)}
+                      >
+                        <Ionicons name="play-forward" size={14} color="#1a0033" />
+                        <Text style={styles.ffBtnText}>Fast-Fwd</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {timeline?.expired_suspensions?.length > 0 && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={[styles.helpText, { fontWeight: '600', color: '#10b981' }]}>
+                    Pending Auto-Reactivation
+                  </Text>
+                  {timeline.expired_suspensions.map((u: any) => (
+                    <View key={u.user_id} style={styles.timelineRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.timelineEmail}>{u.email}</Text>
+                        <Text style={styles.timelineMeta}>
+                          Expired {u.suspension_end ? new Date(u.suspension_end).toLocaleString() : 'N/A'}
+                        </Text>
+                      </View>
+                      <Ionicons name="hourglass-outline" size={18} color="#10b981" />
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {timeline?.cancelled_accounts?.length > 0 && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={[styles.helpText, { fontWeight: '600', color: '#ef4444' }]}>
+                    Cancelled Accounts ({timeline.cancelled_accounts.length})
+                  </Text>
+                  {timeline.cancelled_accounts.slice(0, 5).map((u: any) => (
+                    <View key={u.user_id} style={styles.timelineRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.timelineEmail}>{u.email}</Text>
+                        <Text style={styles.timelineMeta}>
+                          {u.cancellation_reason || 'repeated_violations'} • {u.cancelled_at ? new Date(u.cancelled_at).toLocaleDateString() : 'N/A'}
+                        </Text>
+                      </View>
+                      <Ionicons name="ban" size={18} color="#ef4444" />
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
 
             {/* Moderation Rules */}
@@ -2051,5 +2246,38 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 13,
     fontWeight: '500',
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 6,
+    gap: 8,
+  },
+  timelineEmail: {
+    fontSize: 13,
+    color: '#e9d5ff',
+    fontWeight: '600',
+  },
+  timelineMeta: {
+    fontSize: 11,
+    color: '#9f7aea',
+    marginTop: 2,
+  },
+  ffBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fbbf24',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  ffBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1a0033',
   },
 });

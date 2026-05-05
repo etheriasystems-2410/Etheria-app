@@ -3856,6 +3856,111 @@ async def get_moderation_status(request: Request):
         ]
     }
 
+@api_router.post("/admin/moderation/process-timeline")
+async def trigger_timeline_processing(request: Request):
+    """
+    Manually process suspension expirations - auto-reactivates users whose
+    suspension_end has passed. Normally runs automatically every hour.
+    Admin only.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization required")
+
+    token = auth_header.replace("Bearer ", "")
+    session = await db.user_sessions.find_one({"session_token": token})
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    user = await db.users.find_one({"user_id": session.get("user_id")})
+    if not user or not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    from services.moderation_service import process_suspension_expirations
+    result = await process_suspension_expirations(db)
+    return {"success": True, **result}
+
+
+@api_router.get("/admin/moderation/timeline")
+async def get_timeline(request: Request):
+    """
+    Get the current state of the moderation timeline - active suspensions,
+    pending auto-reactivations, cancelled accounts, and warning distribution.
+    Admin only.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization required")
+
+    token = auth_header.replace("Bearer ", "")
+    session = await db.user_sessions.find_one({"session_token": token})
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    user = await db.users.find_one({"user_id": session.get("user_id")})
+    if not user or not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    from services.moderation_service import get_moderation_timeline
+    return await get_moderation_timeline(db)
+
+
+@api_router.post("/admin/moderation/simulate-timeline")
+async def simulate_timeline_transition(request: Request):
+    """
+    TEST-ONLY: Fast-forward a user's suspension_end to the past so the next
+    timeline processing call will auto-reactivate them. Lets admins verify
+    the full automated timeline without waiting days.
+
+    Body: {"user_id": "<mongo_id_or_user_id>"}
+    Admin only.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization required")
+
+    token = auth_header.replace("Bearer ", "")
+    session = await db.user_sessions.find_one({"session_token": token})
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    admin = await db.users.find_one({"user_id": session.get("user_id")})
+    if not admin or not admin.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    body = await request.json()
+    user_id = body.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id required")
+
+    from bson import ObjectId as _ObjectId
+    target = None
+    try:
+        target = await db.users.find_one({"_id": _ObjectId(user_id)})
+    except Exception:
+        pass
+    if not target:
+        target = await db.users.find_one({"user_id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if target.get("account_status") != "suspended":
+        raise HTTPException(status_code=400, detail=f"User is not suspended (status={target.get('account_status')})")
+
+    past = datetime.utcnow() - timedelta(minutes=1)
+    await db.users.update_one(
+        {"_id": target["_id"]},
+        {"$set": {"suspension_end": past}}
+    )
+
+    return {
+        "success": True,
+        "message": f"Suspension for {target.get('email')} fast-forwarded to the past. Run /api/admin/moderation/process-timeline to trigger auto-reactivation.",
+        "user_id": str(target["_id"]),
+        "new_suspension_end": past.isoformat(),
+    }
+
+
 # Include the router in the main app
 app.include_router(api_router)
 

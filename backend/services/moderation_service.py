@@ -513,6 +513,162 @@ async def check_user_can_post(db, user_id: str):
 
 
 # ============================================================================
+# AUTOMATED TIMELINE PROCESSING
+# ============================================================================
+
+async def process_suspension_expirations(db) -> Dict[str, Any]:
+    """
+    Scan all suspended users and auto-reactivate those whose suspension_end has passed.
+    Should be called periodically (e.g., every hour) by a background task.
+
+    Returns summary of reactivations.
+    """
+    now = datetime.utcnow()
+    reactivated = []
+    errors = []
+
+    # Find suspended users whose suspension_end has passed
+    try:
+        cursor = db.users.find({
+            "account_status": "suspended",
+            "suspension_end": {"$lte": now}
+        })
+
+        expired_users = await cursor.to_list(length=None)
+        print(f"[Moderation Timeline] Found {len(expired_users)} suspensions to auto-reactivate")
+
+        for user in expired_users:
+            try:
+                user_email = user.get("email", "")
+                user_name = user.get("display_name") or user.get("name") or user_email.split("@")[0]
+
+                # Reactivate account - preserve suspension_count (so next cycle escalates correctly)
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {
+                        "$set": {
+                            "account_status": "active",
+                            "flag_count": 0,  # Reset warnings for the new cycle
+                            "reactivated_at": now,
+                        },
+                        "$unset": {
+                            "suspension_start": "",
+                            "suspension_end": "",
+                        }
+                    }
+                )
+
+                # Send reactivation email (non-blocking - don't fail entire batch if email fails)
+                try:
+                    await send_reactivation_notice(user_email, user_name)
+                except Exception as mail_err:
+                    print(f"[Moderation Timeline] Email send failed for {user_email}: {mail_err}")
+
+                reactivated.append({
+                    "user_id": str(user.get("_id")),
+                    "email": user_email,
+                    "suspension_count": user.get("suspension_count", 0),
+                })
+                print(f"[Moderation Timeline] Reactivated {user_email}")
+            except Exception as ue:
+                err = f"Error reactivating user {user.get('email', user.get('_id'))}: {ue}"
+                print(f"[Moderation Timeline] {err}")
+                errors.append(err)
+    except Exception as e:
+        print(f"[Moderation Timeline] Error scanning suspended users: {e}")
+        errors.append(str(e))
+
+    return {
+        "scanned_at": now.isoformat(),
+        "reactivated_count": len(reactivated),
+        "reactivated": reactivated,
+        "errors": errors,
+    }
+
+
+async def get_moderation_timeline(db) -> Dict[str, Any]:
+    """
+    Return a snapshot of the moderation timeline:
+    - Active suspensions (with days remaining)
+    - Expired suspensions pending auto-reactivation
+    - Cancelled accounts
+    - Warning count distribution
+    """
+    now = datetime.utcnow()
+
+    # Active suspensions (end date in the future)
+    active_cursor = db.users.find({
+        "account_status": "suspended",
+        "suspension_end": {"$gt": now}
+    }).sort("suspension_end", 1)
+    active_list = await active_cursor.to_list(length=None)
+
+    # Expired suspensions (end date already passed but still marked suspended)
+    expired_cursor = db.users.find({
+        "account_status": "suspended",
+        "suspension_end": {"$lte": now}
+    })
+    expired_list = await expired_cursor.to_list(length=None)
+
+    # Cancelled
+    cancelled_cursor = db.users.find({
+        "account_status": "cancelled"
+    }).sort("cancelled_at", -1).limit(50)
+    cancelled_list = await cancelled_cursor.to_list(length=50)
+
+    # Warning distribution (users who currently have > 0 flags and active)
+    warning_cursor = db.users.find({
+        "account_status": {"$ne": "cancelled"},
+        "flag_count": {"$gt": 0}
+    })
+    warning_list = await warning_cursor.to_list(length=None)
+
+    def user_dict(u):
+        return {
+            "user_id": str(u.get("_id")),
+            "email": u.get("email"),
+            "name": u.get("display_name") or u.get("name"),
+            "flag_count": u.get("flag_count", 0),
+            "suspension_count": u.get("suspension_count", 0),
+            "account_status": u.get("account_status", "active"),
+            "suspension_start": u.get("suspension_start").isoformat() if u.get("suspension_start") else None,
+            "suspension_end": u.get("suspension_end").isoformat() if u.get("suspension_end") else None,
+            "cancelled_at": u.get("cancelled_at").isoformat() if u.get("cancelled_at") else None,
+            "cancellation_reason": u.get("cancellation_reason"),
+        }
+
+    def with_days_remaining(u):
+        d = user_dict(u)
+        end = u.get("suspension_end")
+        if end:
+            delta = end - now
+            d["days_remaining"] = max(0, delta.days)
+            d["hours_remaining"] = max(0, int(delta.total_seconds() // 3600))
+        return d
+
+    return {
+        "now": now.isoformat(),
+        "constants": {
+            "flags_before_suspension": FLAGS_BEFORE_SUSPENSION,
+            "first_suspension_days": FIRST_SUSPENSION_DAYS,
+            "second_suspension_days": SECOND_SUSPENSION_DAYS,
+        },
+        "active_suspensions": [with_days_remaining(u) for u in active_list],
+        "expired_suspensions": [user_dict(u) for u in expired_list],
+        "cancelled_accounts": [user_dict(u) for u in cancelled_list],
+        "users_with_warnings": [user_dict(u) for u in warning_list],
+        "counts": {
+            "active_suspensions": len(active_list),
+            "expired_suspensions": len(expired_list),
+            "cancelled_accounts": len(cancelled_list),
+            "users_with_warnings": len(warning_list),
+        },
+    }
+
+
+
+
+# ============================================================================
 # INBOUND EMAIL PROCESSING FOR ADMIN REPLY COMMANDS
 # ============================================================================
 
@@ -908,23 +1064,41 @@ async def process_inbound_moderation_emails(db) -> Dict[str, Any]:
 _email_check_task = None
 
 
-async def start_email_polling_task(db, interval_seconds: int = 300):
+async def start_email_polling_task(db, interval_seconds: int = 300, timeline_interval_seconds: int = 3600):
     """
-    Start a background task that periodically checks for admin email replies.
-    Default interval: 5 minutes (300 seconds)
+    Start a background task that periodically:
+    1. Checks for admin email replies (default every 5 minutes)
+    2. Processes suspension expirations / auto-reactivations (default every 1 hour)
+
+    The timeline processing runs every N iterations of the email poll so we avoid
+    a second task and keep things simple.
     """
     global _email_check_task
-    
+
+    iterations_per_timeline = max(1, timeline_interval_seconds // interval_seconds)
+
     async def poll_loop():
+        iteration = 0
         while True:
             try:
                 await process_inbound_moderation_emails(db)
             except Exception as e:
                 print(f"[Moderation] Error in email polling task: {e}")
+
+            # Process timeline expirations on schedule
+            if iteration % iterations_per_timeline == 0:
+                try:
+                    result = await process_suspension_expirations(db)
+                    if result.get("reactivated_count", 0) > 0:
+                        print(f"[Moderation Timeline] Auto-reactivated {result['reactivated_count']} users")
+                except Exception as e:
+                    print(f"[Moderation Timeline] Error processing expirations: {e}")
+
+            iteration += 1
             await asyncio.sleep(interval_seconds)
-    
+
     _email_check_task = asyncio.create_task(poll_loop())
-    print(f"[Moderation] Started email polling task (interval: {interval_seconds}s)")
+    print(f"[Moderation] Started polling task (email: {interval_seconds}s, timeline: {timeline_interval_seconds}s)")
     return _email_check_task
 
 
