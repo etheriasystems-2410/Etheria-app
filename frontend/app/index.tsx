@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GlassCard, GlowButton, StarField, SectionTitle } from '../components/ui';
+import { GlassCard, GlowButton, Mist, SectionTitle } from '../components/ui';
 import { palette, spacing, radii, typography, shadows, gradients } from '../theme/tokens';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/88c8k78q_8227.jpg';
@@ -280,7 +280,7 @@ export default function Home() {
         colors={['#1a0033', '#0d0015', '#000000']}
         style={StyleSheet.absoluteFill}
       />
-      <StarField count={45} goldRatio={0.18} />
+      <Mist count={8} intensity="medium" />
 
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing['5xl'] }}>
         {/* Hero Banner */}

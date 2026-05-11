@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { palette, spacing, typography, radii } from '../../theme/tokens';
 import StarField from './StarField';
+import Mist from './Mist';
 
 interface MysticalHeaderProps {
   title: string;
@@ -44,7 +45,7 @@ export const MysticalHeader: React.FC<MysticalHeaderProps> = ({
         colors={['rgba(168,85,247,0.18)', 'rgba(26,0,51,0.0)']}
         style={StyleSheet.absoluteFill}
       />
-      <StarField count={18} goldRatio={0.25} />
+      <Mist count={4} intensity="soft" />
 
       <View style={styles.row}>
         {showBack ? (
