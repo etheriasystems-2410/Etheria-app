@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -610,20 +611,27 @@ export default function Training() {
 
   return (
     <View style={styles.container}>
-      {/* Header Banner */}
-      <HeaderBanner title="Training" height={100} />
-      
+        <CosmicBackdrop />
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Hero Image Section */}
+        {/* Hero Image Section - mystical header */}
         <View style={styles.heroSection}>
           <Image
             source={require('../assets/backgrounds/training-bg.jpg')}
             style={styles.heroImage}
             contentFit="cover"
           />
+          <LinearGradient
+            colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.55)', 'rgba(13,0,21,0.95)']}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.heroOverlay}>
-            <Ionicons name="school" size={50} color="#e9d5ff" />
+            <Text style={styles.heroEyebrow}>✦ Psychic Mastery ✦</Text>
             <Text style={styles.heroTitle}>{t('psychicTraining')}</Text>
+            <View style={styles.heroGlyphRow}>
+              <View style={styles.heroGlyphLine} />
+              <Ionicons name="sparkles" size={11} color="#fbbf24" style={{ marginHorizontal: 8 }} />
+              <View style={styles.heroGlyphLine} />
+            </View>
             <Text style={styles.heroSubtitle}>{t('developAbilities')}</Text>
           </View>
         </View>
@@ -687,8 +695,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   heroSection: {
-    height: 200,
+    height: 180,
     position: 'relative',
+    overflow: 'hidden',
   },
   heroImage: {
     width: '100%',
@@ -696,27 +705,39 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 3, 33, 0.6)',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
+  },
+  heroEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    color: '#fbbf24',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    marginBottom: 4,
   },
   heroTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#e9d5ff',
-    marginTop: 10,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
     textAlign: 'center',
+    textShadowColor: 'rgba(168,85,247,0.7)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
+  heroGlyphRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 4 },
+  heroGlyphLine: { width: 32, height: 1, backgroundColor: 'rgba(251,191,36,0.6)' },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#c4b5fd',
-    marginTop: 6,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   header: {
     flexDirection: 'row',

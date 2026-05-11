@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -473,20 +474,26 @@ export default function Journal() {
   return (
     <View style={styles.container}>
         <CosmicBackdrop />
-      {/* Header Banner */}
-      <HeaderBanner title="Journal" height={100} />
-      
-      {/* Hero Section with Image Background */}
+      {/* Hero Section with Image Background - mystical header */}
       <View style={styles.heroSection}>
         <Image
           source={{ uri: JOURNAL_HERO_IMAGE }}
           style={styles.heroImage}
           contentFit="cover"
         />
+        <LinearGradient
+          colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.55)', 'rgba(13,0,21,0.95)']}
+          style={StyleSheet.absoluteFill}
+        />
         <View style={styles.heroOverlay}>
           <View style={styles.heroContent}>
-            <Ionicons name="book" size={40} color="#e9d5ff" />
+            <Text style={styles.heroEyebrow}>✦ Sacred Pages ✦</Text>
             <Text style={styles.heroTitle}>My Journal</Text>
+            <View style={styles.heroGlyphRow}>
+              <View style={styles.heroGlyphLine} />
+              <Ionicons name="sparkles" size={11} color="#fbbf24" style={{ marginHorizontal: 8 }} />
+              <View style={styles.heroGlyphLine} />
+            </View>
           </View>
           <TouchableOpacity
             style={styles.addButton}
@@ -757,7 +764,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0d0015',
   },
   heroSection: {
-    height: 140,
+    height: 160,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -772,26 +779,39 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'transparent',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
   },
   heroContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    alignItems: 'flex-start',
+    flex: 1,
+  },
+  heroEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    color: '#fbbf24',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    marginBottom: 4,
   },
   heroTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#e9d5ff',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    textShadowColor: 'rgba(168,85,247,0.7)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
+  heroGlyphRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  heroGlyphLine: { width: 32, height: 1, backgroundColor: 'rgba(251,191,36,0.6)' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

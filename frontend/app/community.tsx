@@ -14,6 +14,7 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRouter } from 'expo-router';
@@ -449,19 +450,29 @@ export default function Community() {
   const renderCategories = () => (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.headerSection}>
-        {/* Hero Section with Image */}
+        {/* Hero Section with Image - mystical header */}
         <View style={styles.heroImageContainer}>
           <Image
             source={require('../assets/images/community-hero.png')}
             style={styles.heroImage}
             contentFit="cover"
           />
-          <View style={styles.heroOverlay} />
+          <LinearGradient
+            colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.55)', 'rgba(13,0,21,0.95)']}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.heroOverlay}>
+            <Text style={styles.heroEyebrow}>✦ Spiritual Circle ✦</Text>
+            <Text style={styles.heroTitle}>Community</Text>
+            <View style={styles.heroGlyphRow}>
+              <View style={styles.heroGlyphLine} />
+              <Ionicons name="sparkles" size={11} color="#fbbf24" style={{ marginHorizontal: 8 }} />
+              <View style={styles.heroGlyphLine} />
+            </View>
+            <Text style={styles.heroSubtitle}>Connect with fellow seekers</Text>
+          </View>
         </View>
-        
-        <Text style={styles.headerTitle}>Community</Text>
-        <Text style={styles.headerSubtitle}>Connect with fellow seekers</Text>
-        
+
         {!isPremium && (
           <View style={styles.premiumBanner}>
             <Ionicons name="diamond" size={20} color="#ffd700" />
@@ -842,9 +853,7 @@ export default function Community() {
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header Banner */}
-      <HeaderBanner title="Community" height={100} />
-      
+        <CosmicBackdrop />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -878,7 +887,6 @@ export default function Community() {
       {/* Guidelines Agreement Modal */}
       <Modal visible={showGuidelines} animationType="slide" transparent={false}>
         <SafeAreaView style={styles.guidelinesContainer}>
-          <HeaderBanner title="Guidelines" height={100} />
           <ScrollView style={styles.guidelinesScroll} showsVerticalScrollIndicator={false}>
             <View style={styles.guidelinesContent}>
               <View style={styles.guidelinesHeader}>
@@ -1022,10 +1030,10 @@ const styles = StyleSheet.create({
   },
   heroImageContainer: {
     width: '100%',
-    height: 200,
+    height: 180,
     borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 20,
+    marginBottom: 16,
     position: 'relative',
   },
   heroImage: {
@@ -1039,12 +1047,39 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
-    backgroundColor: 'transparent',
-    backgroundImage: 'linear-gradient(transparent, rgba(10, 0, 20, 0.9))',
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    alignItems: 'center',
+  },
+  heroEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    color: '#fbbf24',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    marginBottom: 4,
+  },
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(168,85,247,0.7)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+  },
+  heroGlyphRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 4 },
+  heroGlyphLine: { width: 32, height: 1, backgroundColor: 'rgba(251,191,36,0.6)' },
+  heroSubtitle: {
+    fontSize: 12,
+    color: '#c4b5fd',
+    textAlign: 'center',
+    letterSpacing: 0.3,
   },
   headerTitle: {
     fontSize: 28,
