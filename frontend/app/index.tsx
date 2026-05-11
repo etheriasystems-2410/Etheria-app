@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlassCard, GlowButton, StarField, SectionTitle } from '../components/ui';
 import { palette, spacing, radii, typography, shadows, gradients } from '../theme/tokens';
 
-const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/d3xhv7qx_47721.png';
+const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/88c8k78q_8227.jpg';
 const HEADER_BANNER_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/oz3admmj_47815.jpg';
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -356,7 +356,7 @@ export default function Home() {
         </View>
 
         {/* Intro card */}
-        <View style={{ paddingHorizontal: spacing.lg, marginTop: -28 }}>
+        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
           <GlassCard variant="strong" style={{ borderRadius: radii['2xl'] }}>
             <Text style={styles.introText}>{getWelcomeText()}</Text>
           </GlassCard>
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
   },
   heroImageFull: { width: '100%', height: '100%' },
   heroImageContent: {
-    position: 'absolute', left: 0, right: 0, bottom: 28,
+    position: 'absolute', left: 0, right: 0, bottom: 16,
     paddingHorizontal: spacing.lg,
   },
   heroTitle: {
