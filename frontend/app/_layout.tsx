@@ -98,7 +98,7 @@ function ProtectedLayout() {
         name="index"
         options={{
           drawerLabel: t('home'),
-          title: t('welcomeMessage'),
+          title: 'Menu',
           drawerIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
