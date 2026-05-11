@@ -15,12 +15,15 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import HeaderBanner from '../components/HeaderBanner';
 import { Paywall } from '../components/Paywall';
+import { Mist } from '../components/ui';
+import { palette, radii, spacing } from '../theme/tokens';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');
@@ -328,20 +331,25 @@ export default function Oracle() {
   if (!selectedSpread) {
     return (
       <View style={styles.container}>
-        {/* Header Banner */}
-        <HeaderBanner title="Oracle" height={100} />
-        
+        <LinearGradient colors={['#1a0033', '#0d0015', '#000000']} style={StyleSheet.absoluteFill} />
+        <Mist count={6} intensity="soft" />
+
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Hero Section with Image Background */}
           <View style={styles.heroSection}>
-            <Image
-              source={{ uri: ORACLE_HERO_IMAGE }}
-              style={styles.heroImage}
-              contentFit="cover"
+            <Image source={{ uri: ORACLE_HERO_IMAGE }} style={styles.heroImage} contentFit="cover" />
+            <LinearGradient
+              colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.55)', 'rgba(13,0,21,0.95)']}
+              style={StyleSheet.absoluteFill}
             />
             <View style={styles.heroOverlay}>
-              <Ionicons name="sparkles" size={50} color="#b794f6" />
+              <Text style={styles.heroEyebrow}>✦ Sacred Cards ✦</Text>
               <Text style={styles.heroTitle}>Oracle Divination</Text>
+              <View style={styles.heroGlyphRow}>
+                <View style={styles.heroGlyphLine} />
+                <Ionicons name="sparkles" size={11} color={palette.gold} style={{ marginHorizontal: 8 }} />
+                <View style={styles.heroGlyphLine} />
+              </View>
               <Text style={styles.heroSubtitle}>Choose your card spread</Text>
             </View>
           </View>
@@ -779,14 +787,14 @@ export default function Oracle() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0321',
+    backgroundColor: '#0d0015',
   },
   scrollContent: {
     paddingHorizontal: 12,
     paddingBottom: 20,
   },
   heroSection: {
-    height: 200,
+    height: 170,
     position: 'relative',
     marginHorizontal: -12,
     marginBottom: 16,
@@ -803,27 +811,39 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
+  },
+  heroEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    color: palette.gold,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    marginBottom: 4,
   },
   heroTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#e9d5ff',
-    marginTop: 10,
+    fontSize: 22,
+    fontWeight: '800',
+    color: palette.starWhite,
     textAlign: 'center',
+    textShadowColor: 'rgba(168,85,247,0.7)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
+  heroGlyphRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 4 },
+  heroGlyphLine: { width: 32, height: 1, backgroundColor: 'rgba(251,191,36,0.6)' },
   heroSubtitle: {
-    fontSize: 16,
-    color: '#c4b5fd',
-    marginTop: 6,
+    fontSize: 12,
+    color: palette.mist,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   backButton: {
     flexDirection: 'row',
@@ -857,11 +877,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   spreadCard: {
-    backgroundColor: '#1a0033',
-    borderRadius: 16,
+    backgroundColor: 'rgba(26, 10, 46, 0.6)',
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2d1b4e',
+    borderColor: 'rgba(183, 148, 246, 0.25)',
+    shadowColor: '#7c3aed',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
   lockedSpreadCard: {
     opacity: 0.9,
