@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(26, 10, 46, 0.55)',
   },
   inner: {
-    padding: spacing.lg,
+    padding: spacing.md,
   },
 });
 

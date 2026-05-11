@@ -70,9 +70,9 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
   style,
   labelStyle,
 }) => {
-  const padV = size === 'sm' ? 10 : size === 'lg' ? 16 : 13;
-  const padH = size === 'sm' ? 14 : size === 'lg' ? 28 : 22;
-  const fontSize = size === 'sm' ? 13 : size === 'lg' ? 17 : 15;
+  const padV = size === 'sm' ? 8 : size === 'lg' ? 14 : 10;
+  const padH = size === 'sm' ? 12 : size === 'lg' ? 24 : 18;
+  const fontSize = size === 'sm' ? 12 : size === 'lg' ? 15 : 13;
   const shadow = variant === 'gold' ? shadows.glowGold : variant === 'primary' ? shadows.glow : shadows.glowSoft;
 
   const handlePress = () => {
