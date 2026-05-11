@@ -21,6 +21,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Paywall } from '../components/Paywall';
 import HeaderBanner from '../components/HeaderBanner';
 import { Image } from 'expo-image';
+import { CosmicBackdrop } from '../components/ui';
 
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;

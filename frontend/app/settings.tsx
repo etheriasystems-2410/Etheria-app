@@ -23,6 +23,7 @@ import HeaderBanner from '../components/HeaderBanner';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
+import { CosmicBackdrop } from '../components/ui';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -1070,7 +1071,7 @@ export default function Settings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0321',
+    backgroundColor: '#0d0015',
   },
   processingOverlay: {
     position: 'absolute',

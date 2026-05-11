@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import HeaderBanner from '../components/HeaderBanner';
+import { CosmicBackdrop } from '../components/ui';
 
 export default function CommunityGuidelines() {
   const router = useRouter();

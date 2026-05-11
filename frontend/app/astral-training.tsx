@@ -13,6 +13,7 @@ import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { Paywall } from '../components/Paywall';
+import { CosmicBackdrop } from '../components/ui';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const ASTRAL_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/36730.jpg';
@@ -167,6 +168,7 @@ export default function AstralTravel() {
   if (sessionActive && selectedLevel) {
     return (
       <View style={styles.container}>
+        <CosmicBackdrop />
         <View style={styles.sessionContainer}>
           <View style={styles.cosmicBackground}>
             <View style={styles.orb1} />
@@ -309,7 +311,7 @@ export default function AstralTravel() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0321',
+    backgroundColor: '#0d0015',
   },
   backgroundImage: {
     opacity: 0.25,
@@ -360,7 +362,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,

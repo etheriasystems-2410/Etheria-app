@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { CosmicBackdrop } from '../components/ui';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const DREAMS_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/la383jz1_36726.jpg';
@@ -488,7 +489,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,

@@ -20,6 +20,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import HeaderBanner from '../components/HeaderBanner';
+import { CosmicBackdrop } from '../components/ui';
 
 // Import modular journal components
 import { 
@@ -471,6 +472,7 @@ export default function Journal() {
 
   return (
     <View style={styles.container}>
+        <CosmicBackdrop />
       {/* Header Banner */}
       <HeaderBanner title="Journal" height={100} />
       
@@ -752,7 +754,7 @@ export default function Journal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0321',
+    backgroundColor: '#0d0015',
   },
   heroSection: {
     height: 140,
@@ -774,7 +776,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 3, 33, 0.5)',
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

@@ -10,6 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Paywall } from '../components/Paywall';
 import HeaderBanner from '../components/HeaderBanner';
 import { AudioPlayerManager } from '../utils/audioPlayer';
+import { CosmicBackdrop } from '../components/ui';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -446,6 +447,7 @@ export default function Training() {
       onRequestClose={() => setShowLessons(false)}
     >
       <View style={styles.container}>
+        <CosmicBackdrop />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setShowLessons(false)} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
@@ -679,7 +681,7 @@ export default function Training() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0321',
+    backgroundColor: '#0d0015',
   },
   scrollContent: {
     flexGrow: 1,
@@ -739,7 +741,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0f0321',
+    backgroundColor: '#0d0015',
   },
   loadingText: {
     color: '#c4b5fd',
@@ -948,7 +950,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: '#0f0321',
+    backgroundColor: '#0d0015',
     borderTopWidth: 1,
     borderTopColor: '#2d1b4e',
   },
@@ -1003,7 +1005,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   meditationScriptBox: {
-    backgroundColor: '#0f0321',
+    backgroundColor: '#0d0015',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,

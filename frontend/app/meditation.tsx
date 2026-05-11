@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { CosmicBackdrop } from '../components/ui';
 
 interface MeditationType {
   id: string;
@@ -110,7 +111,7 @@ export default function Meditation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0321',
+    backgroundColor: '#0d0015',
   },
   scrollContent: {
     flexGrow: 1,
