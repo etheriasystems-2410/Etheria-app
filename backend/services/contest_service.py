@@ -201,21 +201,12 @@ Just output the code, nothing else."""
         return eligible
     
     async def send_winner_email(self, winner: Dict, code: str, expires_at: datetime) -> bool:
-        """Send email notification to contest winner"""
-        
-        if not self.gmail_email or not self.gmail_password:
-            logger.error("Gmail credentials not configured")
-            return False
-        
+        """Send email notification to contest winner via Resend."""
+        from .email_service import send_email
         try:
             email = winner.get("email")
             name = winner.get("name", "Spiritual Seeker")
-            
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = '🎉 Congratulations! You Won the Etheria Bi-Weekly Contest!'
-            msg['From'] = self.gmail_email
-            msg['To'] = email
-            
+
             text = f"""
 Congratulations, {name}! 🌟
 
@@ -255,17 +246,17 @@ The Etheria Team
 
 P.S. This code is unique to you and cannot be shared. Continue your spiritual journey to be eligible for future contests!
             """
-            
+
             html = f"""
 <html>
 <body style="font-family: Arial, sans-serif; background: linear-gradient(135deg, #1a0a2e 0%, #0f0321 100%); color: #e9d5ff; padding: 40px;">
     <div style="max-width: 600px; margin: 0 auto; background: rgba(45, 27, 78, 0.9); border-radius: 20px; padding: 40px; border: 1px solid #7c3aed;">
         <h1 style="color: #fbbf24; text-align: center;">🎉 Congratulations, {name}! 🎉</h1>
-        
+
         <p style="font-size: 18px; text-align: center; color: #c4b5fd;">
             You have been selected as the winner of Etheria's bi-weekly spiritual journey contest!
         </p>
-        
+
         <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-radius: 15px; padding: 30px; margin: 30px 0; text-align: center;">
             <p style="color: #fff; font-size: 16px; margin-bottom: 10px;">🎁 ONE MONTH FREE PREMIUM 🎁</p>
             <p style="color: #fbbf24; font-size: 28px; font-weight: bold; letter-spacing: 3px; font-family: monospace;">
@@ -275,7 +266,7 @@ P.S. This code is unique to you and cannot be shared. Continue your spiritual jo
                 Expires: {expires_at.strftime("%B %d, %Y")}
             </p>
         </div>
-        
+
         <h3 style="color: #a855f7;">How to Redeem:</h3>
         <ol style="color: #c4b5fd;">
             <li>Open the Etheria app</li>
@@ -284,11 +275,11 @@ P.S. This code is unique to you and cannot be shared. Continue your spiritual jo
             <li>Enter your code</li>
             <li>Enjoy premium features!</li>
         </ol>
-        
+
         <p style="text-align: center; color: #9f7aea; font-style: italic; margin-top: 30px;">
             May the stars guide your spiritual journey! ✨
         </p>
-        
+
         <p style="text-align: center; color: #7c3aed; font-size: 12px;">
             The Etheria Team
         </p>
@@ -296,20 +287,16 @@ P.S. This code is unique to you and cannot be shared. Continue your spiritual jo
 </body>
 </html>
             """
-            
-            part1 = MIMEText(text, 'plain')
-            part2 = MIMEText(html, 'html')
-            msg.attach(part1)
-            msg.attach(part2)
-            
-            server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-            server.login(self.gmail_email, self.gmail_password)
-            server.sendmail(self.gmail_email, email, msg.as_string())
-            server.quit()
-            
-            logger.info(f"Winner email sent to {email}")
-            return True
-            
+
+            ok = await send_email(
+                to=email,
+                subject="🎉 Congratulations! You Won the Etheria Bi-Weekly Contest!",
+                html=html,
+                text=text,
+            )
+            if ok:
+                logger.info(f"Winner email sent to {email}")
+            return ok
         except Exception as e:
             logger.error(f"Failed to send winner email: {e}")
             return False

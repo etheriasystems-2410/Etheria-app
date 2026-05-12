@@ -82,28 +82,9 @@ def generate_mystical_code(code_type: str) -> str:
     return code
 
 async def send_email(to_email: str, subject: str, html_content: str):
-    """Send email using Gmail SMTP"""
-    if not GMAIL_APP_PASSWORD:
-        print(f"Email not sent (no password): {subject}")
-        return False
-    
-    try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = GMAIL_EMAIL
-        msg['To'] = to_email
-        
-        part = MIMEText(html_content, 'html')
-        msg.attach(part)
-        
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_EMAIL, to_email, msg.as_string())
-        
-        return True
-    except Exception as e:
-        print(f"Email error: {e}")
-        return False
+    """Send email via Resend (replaces Gmail SMTP)."""
+    from services.email_service import send_email as resend_send
+    return await resend_send(to=to_email, subject=subject, html=html_content)
 
 # Contest Management Routes
 @router.get("/contest/status")

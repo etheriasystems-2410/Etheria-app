@@ -42,33 +42,15 @@ SECOND_SUSPENSION_DAYS = 30  # 30 days
 FLAGS_BEFORE_SUSPENSION = 3
 
 async def send_email(to_email: str, subject: str, html_content: str, text_content: str = None):
-    """Send email using Gmail SMTP"""
-    if not GMAIL_APP_PASSWORD:
-        print(f"Email not sent (no password configured): {subject} to {to_email}")
-        return False
-    
-    try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = GMAIL_EMAIL
-        msg['To'] = to_email
-        
-        if text_content:
-            part1 = MIMEText(text_content, 'plain')
-            msg.attach(part1)
-        
-        part2 = MIMEText(html_content, 'html')
-        msg.attach(part2)
-        
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_EMAIL, to_email, msg.as_string())
-        
-        print(f"Email sent: {subject} to {to_email}")
-        return True
-    except Exception as e:
-        print(f"Error sending email: {e}")
-        return False
+    """Send email via Resend (replaces Gmail SMTP for outbound)."""
+    from .email_service import send_email as resend_send
+    return await resend_send(
+        to=to_email,
+        subject=subject,
+        html=html_content,
+        text=text_content,
+        reply_to=GMAIL_EMAIL,  # admins reply to gmail so the IMAP poller picks it up
+    )
 
 async def send_flagged_content_notification(
     db,

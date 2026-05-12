@@ -2605,18 +2605,10 @@ async def track_usage(request: Request):
     return {"tracked": True, "duration_seconds": duration_seconds}
 
 async def send_winner_email(email: str, code: str, expires_at: str):
-    """Send winner notification email via Gmail SMTP"""
-    if not GMAIL_EMAIL or not GMAIL_APP_PASSWORD:
-        logging.error("Gmail credentials not configured")
-        return False
-    
+    """Send winner notification email via Resend."""
     try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = '🎉 Congratulations! You Won the Etheria Monthly Drawing!'
-        msg['From'] = GMAIL_EMAIL
-        msg['To'] = email
-        
-        # Plain text version
+        from services.email_service import send_email as resend_send
+
         text = f"""
 Congratulations! 🌟
 
@@ -2632,7 +2624,7 @@ This code expires on: {expires_at}
 How to redeem:
 1. Open the Etheria app
 2. Go to Settings or tap "Subscribe Now"
-3. Click "Have a code?" 
+3. Click "Have a code?"
 4. Enter your code: {code}
 5. Enjoy your free month of premium features!
 
@@ -2641,21 +2633,20 @@ Thank you for being part of the Etheria community.
 Blessings on your spiritual journey,
 The Etheria Team
         """
-        
-        # HTML version
+
         html = f"""
         <html>
         <body style="font-family: Arial, sans-serif; background: linear-gradient(135deg, #1a0033, #0f0321); color: #e9d5ff; padding: 40px;">
             <div style="max-width: 600px; margin: 0 auto; background: rgba(45, 27, 78, 0.9); border-radius: 16px; padding: 32px; border: 1px solid #7c3aed;">
                 <h1 style="color: #ffd700; text-align: center;">🎉 Congratulations! 🎉</h1>
                 <p style="font-size: 18px; text-align: center;">You have been selected as the winner of Etheria's monthly prize drawing!</p>
-                
+
                 <div style="background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
                     <p style="margin: 0; color: #fff; font-size: 16px;">Your Exclusive Code:</p>
                     <p style="font-size: 32px; font-weight: bold; color: #ffd700; margin: 12px 0; letter-spacing: 3px;">{code}</p>
                     <p style="margin: 0; color: #e9d5ff; font-size: 14px;">Expires: {expires_at}</p>
                 </div>
-                
+
                 <h3 style="color: #b794f6;">How to Redeem:</h3>
                 <ol style="color: #c4b5fd;">
                     <li>Open the Etheria app</li>
@@ -2664,7 +2655,7 @@ The Etheria Team
                     <li>Enter your code</li>
                     <li>Enjoy 1 month of FREE premium features!</li>
                 </ol>
-                
+
                 <p style="text-align: center; color: #9f7aea; margin-top: 32px;">
                     ✨ Thank you for being part of the Etheria community ✨
                 </p>
@@ -2672,19 +2663,13 @@ The Etheria Team
         </body>
         </html>
         """
-        
-        part1 = MIMEText(text, 'plain')
-        part2 = MIMEText(html, 'html')
-        msg.attach(part1)
-        msg.attach(part2)
-        
-        # Send via Gmail SMTP
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_EMAIL, email, msg.as_string())
-        server.quit()
-        
-        return True
+
+        return await resend_send(
+            to=email,
+            subject="🎉 Congratulations! You Won the Etheria Monthly Drawing!",
+            html=html,
+            text=text,
+        )
     except Exception as e:
         logging.error(f"Failed to send winner email: {e}")
         return False
@@ -2891,13 +2876,10 @@ class FeedbackRequest(BaseModel):
     user_name: Optional[str] = "Anonymous"
 
 async def send_feedback_email(feedback: FeedbackRequest):
-    """Send feedback email to etheriasystems@gmail.com via Gmail SMTP"""
-    if not GMAIL_EMAIL or not GMAIL_APP_PASSWORD:
-        logging.error("Gmail credentials not configured for feedback")
-        return False
-    
+    """Send feedback email to admin inbox via Resend."""
     try:
-        # Map feedback type to emoji
+        from services.email_service import send_email as resend_send
+
         type_emoji = {
             "bug": "🐛",
             "suggestion": "💡",
@@ -2905,14 +2887,7 @@ async def send_feedback_email(feedback: FeedbackRequest):
             "other": "💬"
         }
         emoji = type_emoji.get(feedback.type, "📧")
-        
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f'{emoji} Etheria Feedback: [{feedback.type.upper()}] {feedback.subject}'
-        msg['From'] = GMAIL_EMAIL
-        msg['To'] = 'etheriasystems@gmail.com'
-        msg['Reply-To'] = feedback.user_email
-        
-        # Plain text version
+
         text = f"""
 New Feedback Received from Etheria App
 =====================================
@@ -2928,8 +2903,7 @@ Message:
 ---
 Submitted: {datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")}
         """
-        
-        # HTML version
+
         type_colors = {
             "bug": "#ef4444",
             "suggestion": "#f59e0b",
@@ -2937,7 +2911,7 @@ Submitted: {datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")}
             "other": "#8b5cf6"
         }
         color = type_colors.get(feedback.type, "#8b5cf6")
-        
+
         html = f"""
         <html>
         <body style="font-family: Arial, sans-serif; background: #f3f4f6; padding: 20px;">
@@ -2945,12 +2919,12 @@ Submitted: {datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")}
                 <div style="background: linear-gradient(135deg, #1a0033, #2d1b4e); padding: 24px; text-align: center;">
                     <h1 style="color: #e9d5ff; margin: 0;">✨ Etheria Feedback ✨</h1>
                 </div>
-                
+
                 <div style="padding: 24px;">
                     <div style="background: {color}20; border-left: 4px solid {color}; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">
                         <span style="color: {color}; font-weight: bold; text-transform: uppercase;">{emoji} {feedback.type}</span>
                     </div>
-                    
+
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
                             <td style="padding: 8px 0; color: #6b7280; width: 100px;">From:</td>
@@ -2965,20 +2939,20 @@ Submitted: {datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")}
                             <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">{feedback.subject}</td>
                         </tr>
                     </table>
-                    
+
                     <div style="margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 8px;">
                         <h3 style="color: #374151; margin: 0 0 12px 0;">Message:</h3>
                         <p style="color: #4b5563; line-height: 1.6; margin: 0; white-space: pre-wrap;">{feedback.message}</p>
                     </div>
-                    
+
                     <div style="margin-top: 20px; text-align: center;">
-                        <a href="mailto:{feedback.user_email}?subject=Re: {feedback.subject}" 
+                        <a href="mailto:{feedback.user_email}?subject=Re: {feedback.subject}"
                            style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">
                             Reply to User
                         </a>
                     </div>
                 </div>
-                
+
                 <div style="background: #f3f4f6; padding: 16px; text-align: center; color: #6b7280; font-size: 12px;">
                     Submitted {datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")}
                 </div>
@@ -2986,19 +2960,14 @@ Submitted: {datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")}
         </body>
         </html>
         """
-        
-        part1 = MIMEText(text, 'plain')
-        part2 = MIMEText(html, 'html')
-        msg.attach(part1)
-        msg.attach(part2)
-        
-        # Send via Gmail SMTP
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_EMAIL, 'etheriasystems@gmail.com', msg.as_string())
-        server.quit()
-        
-        return True
+
+        return await resend_send(
+            to='etheriasystems@gmail.com',
+            subject=f'{emoji} Etheria Feedback: [{feedback.type.upper()}] {feedback.subject}',
+            html=html,
+            text=text,
+            reply_to=feedback.user_email,
+        )
     except Exception as e:
         logging.error(f"Failed to send feedback email: {e}")
         return False
