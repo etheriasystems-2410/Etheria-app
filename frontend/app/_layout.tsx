@@ -45,6 +45,37 @@ const menuStyles = StyleSheet.create({
   },
 });
 
+// Drawer label for Messages with an unread badge
+import { Text } from 'react-native';
+import useDMUnread from '../hooks/useDMUnread';
+
+function MessagesDrawerLabel({ color }: { color: string }) {
+  const { unread } = useDMUnread(true);
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+      <Text style={{ color, fontSize: 14, fontWeight: '500', flex: 1 }}>Messages</Text>
+      {unread > 0 && (
+        <View
+          style={{
+            backgroundColor: '#fbbf24',
+            minWidth: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 6,
+            marginRight: 8,
+          }}
+        >
+          <Text style={{ color: '#1a0033', fontSize: 11, fontWeight: '800' }}>
+            {unread > 99 ? '99+' : unread}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function ProtectedLayout() {
   const { isAuthenticated, loading } = useAuth();
   const { theme } = useTheme();
@@ -171,6 +202,16 @@ function ProtectedLayout() {
           title: t('journalTitle'),
           drawerIcon: ({ color, size }) => (
             <Ionicons name="book" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="messages"
+        options={{
+          drawerLabel: ({ color }) => <MessagesDrawerLabel color={color} />,
+          title: 'Messages',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="mail" size={size} color={color} />
           ),
         }}
       />

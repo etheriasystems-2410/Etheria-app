@@ -3291,6 +3291,11 @@ from routes.journal import router as journal_router, set_db as set_journal_db
 set_journal_db(db)
 app.include_router(journal_router)
 
+# Import and register DM (messages) routes
+from routes.messages import router as messages_router, set_db as set_messages_db
+set_messages_db(db)
+app.include_router(messages_router)
+
 # Import and register community routes
 from routes.community import router as community_router, set_db as set_community_db, set_llm_key as set_community_llm_key
 set_community_db(db)
