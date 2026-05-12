@@ -391,6 +391,33 @@ export default function Community() {
     }
   };
 
+  const handleStartDM = async (recipientId: string, _recipientName: string) => {
+    try {
+      const r = await fetch(`${BACKEND_URL}/api/messages/threads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ recipient_id: recipientId }),
+      });
+      const data = await r.json();
+      if (r.ok && data.thread_id) {
+        router.push(`/messages/${data.thread_id}` as any);
+      } else if (r.status === 403) {
+        Alert.alert(
+          'Premium required',
+          'Direct messages require a Premium subscription to initiate. Upgrade in Settings to start a new conversation.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'View Premium', onPress: () => router.push('/settings' as any) },
+          ]
+        );
+      } else {
+        Alert.alert('Cannot start conversation', data.detail || 'Please try again.');
+      }
+    } catch (e) {
+      Alert.alert('Network error', 'Could not start the conversation.');
+    }
+  };
+
   const handleFlagContent = async (contentType: 'post' | 'comment' | 'chat', contentId: string) => {
     if (flagging) return;
     
@@ -649,13 +676,21 @@ export default function Community() {
                   <Text style={styles.statText}>{post.comment_count}</Text>
                 </View>
                 {post.author_id !== user?._id && (
-                  <TouchableOpacity
-                    style={styles.flagButton}
-                    onPress={() => handleFlagContent('post', post.id)}
-                    disabled={flagging}
-                  >
-                    <Ionicons name="flag-outline" size={16} color="#f59e0b" />
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      style={styles.flagButton}
+                      onPress={() => handleStartDM(post.author_id, post.author_name)}
+                    >
+                      <Ionicons name="mail" size={16} color="#fbbf24" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.flagButton}
+                      onPress={() => handleFlagContent('post', post.id)}
+                      disabled={flagging}
+                    >
+                      <Ionicons name="flag-outline" size={16} color="#f59e0b" />
+                    </TouchableOpacity>
+                  </>
                 )}
               </View>
             </TouchableOpacity>
@@ -712,13 +747,21 @@ export default function Community() {
               <Text style={[styles.commentAuthor, comment.is_admin && styles.adminAuthor]}>{comment.author_name}</Text>
               <Text style={styles.commentTime}>{formatTime(comment.created_at)}</Text>
               {comment.author_id !== user?._id && (
-                <TouchableOpacity
-                  style={styles.flagButtonSmall}
-                  onPress={() => handleFlagContent('comment', comment.id)}
-                  disabled={flagging}
-                >
-                  <Ionicons name="flag-outline" size={14} color="#f59e0b" />
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity
+                    style={styles.flagButtonSmall}
+                    onPress={() => handleStartDM(comment.author_id, comment.author_name)}
+                  >
+                    <Ionicons name="mail" size={14} color="#fbbf24" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.flagButtonSmall}
+                    onPress={() => handleFlagContent('comment', comment.id)}
+                    disabled={flagging}
+                  >
+                    <Ionicons name="flag-outline" size={14} color="#f59e0b" />
+                  </TouchableOpacity>
+                </>
               )}
             </View>
             <Text style={styles.commentContent}>{comment.content}</Text>

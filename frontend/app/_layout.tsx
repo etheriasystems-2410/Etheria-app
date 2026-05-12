@@ -48,6 +48,7 @@ const menuStyles = StyleSheet.create({
 // Drawer label for Messages with an unread badge
 import { Text } from 'react-native';
 import useDMUnread from '../hooks/useDMUnread';
+import usePushNotifications from '../hooks/usePushNotifications';
 
 function MessagesDrawerLabel({ color }: { color: string }) {
   const { unread } = useDMUnread(true);
@@ -82,6 +83,9 @@ function ProtectedLayout() {
   const { t } = useLanguage();
   const segments = useSegments();
   const router = useRouter();
+
+  // Register for push notifications once authenticated (no-op on web/simulator)
+  usePushNotifications(isAuthenticated);
 
   useEffect(() => {
     if (loading) return;
