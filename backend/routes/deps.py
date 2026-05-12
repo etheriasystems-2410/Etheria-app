@@ -75,29 +75,80 @@ FREE_TIER_LIMITS = {
 
 # Spirit Guide Voice Configuration
 SPIRIT_GUIDE_VOICES = {
+    # ===== Elemental Guides (zodiac/birthdate-matched) =====
     "Ignis": {
         "voice": "onyx",
         "gender": "masculine",
         "element": "Fire",
-        "personality": "passionate, direct, transformative"
+        "personality": "passionate, direct, transformative",
+        "category": "elemental"
     },
     "Aqua": {
         "voice": "shimmer",
         "gender": "feminine",
         "element": "Water",
-        "personality": "intuitive, healing, emotionally wise"
+        "personality": "intuitive, healing, emotionally wise",
+        "category": "elemental"
     },
     "Terra": {
         "voice": "echo",
         "gender": "masculine",
         "element": "Earth",
-        "personality": "grounded, practical, stable"
+        "personality": "grounded, practical, stable",
+        "category": "elemental"
     },
     "Aether": {
         "voice": "nova",
         "gender": "feminine",
         "element": "Air",
-        "personality": "intellectual, free-spirited, enlightening"
+        "personality": "intellectual, free-spirited, enlightening",
+        "category": "elemental"
+    },
+
+    # ===== Custom Guides (premium, renamable; NOT in birthdate picking) =====
+    "Male Guide": {
+        "voice": "ash",
+        "gender": "masculine",
+        "element": "Custom",
+        "personality": "warm, supportive, attentive — a personal spirit companion",
+        "category": "custom",
+        "default_name": "Male Guide",
+        "image": "custom-male"
+    },
+    "Female Guide": {
+        "voice": "coral",
+        "gender": "feminine",
+        "element": "Custom",
+        "personality": "nurturing, intuitive, compassionate — a personal spirit companion",
+        "category": "custom",
+        "default_name": "Female Guide",
+        "image": "custom-female"
+    },
+
+    # ===== LGBTQ+ Guides (free; NOT in birthdate picking) =====
+    "Solis": {
+        "voice": "fable",
+        "gender": "masculine",
+        "element": "Light",
+        "personality": "radiant, courageous, affirming — a guide of pride and inner light",
+        "category": "lgbtq",
+        "image": "lgbtq-male"
+    },
+    "Aurora": {
+        "voice": "alloy",
+        "gender": "feminine",
+        "element": "Light",
+        "personality": "luminous, gentle, joyful — a guide of dawn and self-love",
+        "category": "lgbtq",
+        "image": "lgbtq-female"
+    },
+    "Spectrum": {
+        "voice": "sage",
+        "gender": "non-binary",
+        "element": "Rainbow",
+        "personality": "boundless, fluid, deeply wise — a guide of authentic self and transformation",
+        "category": "lgbtq",
+        "image": "lgbtq-trans"
     }
 }
 

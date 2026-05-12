@@ -33,7 +33,7 @@ const SPIRIT_GUIDES_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_
 
 interface Guide {
   name: string;
-  element: 'Fire' | 'Water' | 'Earth' | 'Air';
+  element: string;
   description: string;
   color: string;
   icon: string;
@@ -41,6 +41,8 @@ interface Guide {
   personality: string;
   voice_id: string;
   image?: any;
+  category: 'elemental' | 'lgbtq' | 'custom';
+  custom_slot?: 'male' | 'female';
 }
 
 interface Message {
@@ -50,7 +52,7 @@ interface Message {
   audioBase64?: string;
 }
 
-const guides: Guide[] = [
+const elementalGuides: Guide[] = [
   {
     name: 'Ignis',
     element: 'Fire',
@@ -61,6 +63,7 @@ const guides: Guide[] = [
     personality: 'passionate, direct, transformative',
     voice_id: 'TxGEqnHWrfWFTfGW9XjX',
     image: require('../assets/images/guide-ignis.jpg'),
+    category: 'elemental',
   },
   {
     name: 'Aqua',
@@ -72,6 +75,7 @@ const guides: Guide[] = [
     personality: 'intuitive, healing, emotionally wise',
     voice_id: 'EXAVITQu4vr4xnSDxMaL',
     image: require('../assets/images/guide-aqua.jpg'),
+    category: 'elemental',
   },
   {
     name: 'Terra',
@@ -83,6 +87,7 @@ const guides: Guide[] = [
     personality: 'grounded, practical, stable',
     voice_id: 'VR6AewLTigWG4xSOukaG',
     image: require('../assets/images/guide-terra.webp'),
+    category: 'elemental',
   },
   {
     name: 'Aether',
@@ -94,8 +99,80 @@ const guides: Guide[] = [
     personality: 'intellectual, free-spirited, enlightening',
     voice_id: 'ThT5KcBeYPX3keUQqHPh',
     image: require('../assets/images/guide-aether.jpg'),
+    category: 'elemental',
   },
 ];
+
+const lgbtqGuides: Guide[] = [
+  {
+    name: 'Solis',
+    element: 'Light',
+    description: 'Radiant and affirming, guides through pride and joy',
+    color: '#f59e0b',
+    icon: 'sunny',
+    gender: 'masculine',
+    personality: 'radiant, courageous, affirming',
+    voice_id: 'fable',
+    image: require('../assets/guides/lgbtq-male.jpg'),
+    category: 'lgbtq',
+  },
+  {
+    name: 'Aurora',
+    element: 'Light',
+    description: 'Luminous and tender, guides through self-love',
+    color: '#ec4899',
+    icon: 'flower',
+    gender: 'feminine',
+    personality: 'luminous, gentle, joyful',
+    voice_id: 'alloy',
+    image: require('../assets/guides/lgbtq-female.jpg'),
+    category: 'lgbtq',
+  },
+  {
+    name: 'Spectrum',
+    element: 'Rainbow',
+    description: 'Boundless and authentic, guides through transformation',
+    color: '#8b5cf6',
+    icon: 'color-palette',
+    gender: 'non-binary',
+    personality: 'boundless, fluid, deeply wise',
+    voice_id: 'sage',
+    image: require('../assets/guides/lgbtq-trans.jpg'),
+    category: 'lgbtq',
+  },
+];
+
+const customGuidesBase: Guide[] = [
+  {
+    name: 'Male Guide',
+    element: 'Custom',
+    description: 'Your personal masculine spirit companion',
+    color: '#3b82f6',
+    icon: 'person',
+    gender: 'masculine',
+    personality: 'warm, supportive, attentive',
+    voice_id: 'ash',
+    image: require('../assets/guides/custom-male.jpg'),
+    category: 'custom',
+    custom_slot: 'male',
+  },
+  {
+    name: 'Female Guide',
+    element: 'Custom',
+    description: 'Your personal feminine spirit companion',
+    color: '#ec4899',
+    icon: 'person',
+    gender: 'feminine',
+    personality: 'nurturing, intuitive, compassionate',
+    voice_id: 'coral',
+    image: require('../assets/guides/custom-female.jpg'),
+    category: 'custom',
+    custom_slot: 'female',
+  },
+];
+
+// All guides combined — used for chat session lookups across the page
+const guides: Guide[] = [...elementalGuides, ...lgbtqGuides, ...customGuidesBase];
 
 export default function SpiritGuides() {
   const { isPremium, checkFeatureAccess } = useAuth();
@@ -120,6 +197,17 @@ export default function SpiritGuides() {
   // Animation for pulsating ring when guide is talking
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
+
+  // Custom Guide names + rename modal state
+  const [customNames, setCustomNames] = useState<{ male: string; female: string }>({
+    male: 'Male Guide',
+    female: 'Female Guide',
+  });
+  const [customUnlocked, setCustomUnlocked] = useState<boolean>(true);
+  const [inFreePromo, setInFreePromo] = useState<boolean>(true);
+  const [renameModal, setRenameModal] = useState<null | 'male' | 'female'>(null);
+  const [renameInput, setRenameInput] = useState<string>('');
+  const [renameSaving, setRenameSaving] = useState<boolean>(false);
   
   // Check if guide is currently "talking" (loading response, generating audio, or playing audio)
   const isTalking = loading || generatingAudio || playingAudioIndex !== null;
@@ -172,6 +260,7 @@ export default function SpiritGuides() {
       checkBirthdayStored();
       loadMutePreference();
       setupAudioMode();
+      loadCustomGuideInfo();
     }
   }, [hasAccess]);
 
@@ -205,6 +294,101 @@ export default function SpiritGuides() {
       setPlayingAudioIndex(null);
     }
   };
+
+  const loadCustomGuideInfo = async () => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const [namesRes, accessRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/spirit-guides/custom-names`, { headers }),
+        fetch(`${BACKEND_URL}/api/spirit-guides/access`, { headers }),
+      ]);
+      if (namesRes.ok) {
+        const data = await namesRes.json();
+        setCustomNames({
+          male: data.male_name || 'Male Guide',
+          female: data.female_name || 'Female Guide',
+        });
+      }
+      if (accessRes.ok) {
+        const data = await accessRes.json();
+        setCustomUnlocked(!!data.custom_unlocked);
+        setInFreePromo(!!data.in_free_promo);
+      }
+    } catch (e) {
+      console.warn('Failed to load custom guide info', e);
+    }
+  };
+
+  const openRenameModal = (slot: 'male' | 'female') => {
+    if (!customUnlocked) {
+      setShowPaywall(true);
+      return;
+    }
+    setRenameInput(slot === 'male' ? customNames.male : customNames.female);
+    setRenameModal(slot);
+  };
+
+  const saveCustomName = async () => {
+    if (!renameModal) return;
+    const trimmed = (renameInput || '').trim().slice(0, 32);
+    if (!trimmed) {
+      Alert.alert('Name required', 'Please enter a name for your guide.');
+      return;
+    }
+    setRenameSaving(true);
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const body: any = {};
+      if (renameModal === 'male') {
+        body.male_name = trimmed;
+        body.female_name = customNames.female;
+      } else {
+        body.male_name = customNames.male;
+        body.female_name = trimmed;
+      }
+      const res = await fetch(`${BACKEND_URL}/api/spirit-guides/custom-names`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (res.status === 401) {
+        Alert.alert('Sign in required', 'Please sign in to customize your guides.');
+        setRenameModal(null);
+        return;
+      }
+      if (res.status === 403) {
+        setRenameModal(null);
+        setShowPaywall(true);
+        return;
+      }
+      if (!res.ok) throw new Error('save failed');
+      const data = await res.json();
+      setCustomNames({
+        male: data.male_name || 'Male Guide',
+        female: data.female_name || 'Female Guide',
+      });
+      setRenameModal(null);
+    } catch (e) {
+      console.warn('Rename failed', e);
+      Alert.alert('Couldn’t save', 'Please try again in a moment.');
+    } finally {
+      setRenameSaving(false);
+    }
+  };
+
+  // Build the displayed Custom Guides list with the current renames applied
+  const customGuides: Guide[] = customGuidesBase.map((g) =>
+    g.custom_slot === 'male'
+      ? { ...g, name: customNames.male }
+      : { ...g, name: customNames.female }
+  );
+
+
 
   const checkBirthdayStored = async () => {
     try {
@@ -400,6 +584,8 @@ export default function SpiritGuides() {
           message: inputText,
           history: messages,
           language: languageCode,
+          voice_id: selectedGuide.voice_id,
+          gender: selectedGuide.gender,
         }),
       });
       const data = await response.json();
@@ -640,7 +826,9 @@ export default function SpiritGuides() {
           )}
 
           <View style={styles.guidesGrid}>
-            {guides.map((guide) => (
+            <Text style={styles.sectionHeading}>Elemental Guides</Text>
+            <Text style={styles.sectionSub}>Matched to your zodiac element</Text>
+            {elementalGuides.map((guide) => (
               <TouchableOpacity
                 key={guide.name}
                 style={[
@@ -652,11 +840,7 @@ export default function SpiritGuides() {
               >
                 {guide.image ? (
                   <View style={styles.guideImageContainer}>
-                    <Image 
-                      source={guide.image} 
-                      style={styles.guideImage}
-                      resizeMode="cover"
-                    />
+                    <Image source={guide.image} style={styles.guideImage} resizeMode="cover" />
                   </View>
                 ) : (
                   <View style={[styles.guideIcon, { backgroundColor: guide.color }]}>
@@ -671,8 +855,153 @@ export default function SpiritGuides() {
                 <Text style={styles.guideDescription}>{guide.description}</Text>
               </TouchableOpacity>
             ))}
+
+            <View style={styles.sectionDivider} />
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionHeading}>LGBTQ+ Guides</Text>
+              <View style={styles.rainbowDot} />
+            </View>
+            <Text style={styles.sectionSub}>Open to every seeker — free for all</Text>
+            {lgbtqGuides.map((guide) => (
+              <TouchableOpacity
+                key={guide.name}
+                style={styles.guideCard}
+                onPress={() => selectGuide(guide)}
+                activeOpacity={0.7}
+              >
+                {guide.image ? (
+                  <View style={[styles.guideImageContainer, { borderColor: guide.color }]}>
+                    <Image source={guide.image} style={styles.guideImage} resizeMode="cover" />
+                  </View>
+                ) : (
+                  <View style={[styles.guideIcon, { backgroundColor: guide.color }]}>
+                    <Ionicons name={guide.icon as any} size={40} color="#fff" />
+                  </View>
+                )}
+                <Text style={styles.guideName}>{guide.name}</Text>
+                <Text style={styles.guideElement}>{guide.element}</Text>
+                <Text style={styles.guideGender}>
+                  {guide.gender === 'non-binary' ? '⚧' : guide.gender === 'feminine' ? '♀' : '♂'} {guide.gender}
+                </Text>
+                <Text style={styles.guideDescription}>{guide.description}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <View style={styles.sectionDivider} />
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionHeading}>Custom Guides</Text>
+              {inFreePromo && (
+                <View style={styles.promoBadge}>
+                  <Text style={styles.promoBadgeText}>FREE THRU JUNE</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.sectionSub}>
+              {customUnlocked
+                ? 'Tap the pencil to give your guide a name'
+                : 'Premium feature — upgrade to rename your personal guides'}
+            </Text>
+            {customGuides.map((guide) => (
+              <TouchableOpacity
+                key={guide.custom_slot}
+                style={styles.guideCard}
+                onPress={() => selectGuide(guide)}
+                activeOpacity={0.7}
+              >
+                {guide.image ? (
+                  <View style={[styles.guideImageContainer, { borderColor: '#fbbf24' }]}>
+                    <Image source={guide.image} style={styles.guideImage} resizeMode="cover" />
+                  </View>
+                ) : (
+                  <View style={[styles.guideIcon, { backgroundColor: guide.color }]}>
+                    <Ionicons name={guide.icon as any} size={40} color="#fff" />
+                  </View>
+                )}
+                <View style={styles.customNameRow}>
+                  <Text style={styles.guideName}>{guide.name}</Text>
+                  <TouchableOpacity
+                    style={styles.renameButton}
+                    onPress={(e) => {
+                      e?.stopPropagation?.();
+                      openRenameModal(guide.custom_slot as 'male' | 'female');
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="pencil" size={14} color="#fbbf24" />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.guideElement}>Custom</Text>
+                <Text style={styles.guideGender}>
+                  {guide.gender === 'feminine' ? '♀' : '♂'} {guide.gender}
+                </Text>
+                <Text style={styles.guideDescription}>{guide.description}</Text>
+                {!customUnlocked && (
+                  <View style={styles.lockOverlay}>
+                    <Ionicons name="lock-closed" size={20} color="#fbbf24" />
+                    <Text style={styles.lockText}>Premium</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
           </View>
         </ScrollView>
+
+        {/* Rename modal for Custom Guides */}
+        <Modal
+          visible={renameModal !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setRenameModal(null)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.renameBackdrop}
+          >
+            <View style={styles.renameCard}>
+              <Text style={styles.renameTitle}>
+                Name your {renameModal === 'male' ? 'masculine' : 'feminine'} guide
+              </Text>
+              <Text style={styles.renameSub}>
+                Give your personal spirit companion the name that resonates with you. Up to 32 characters.
+              </Text>
+              <TextInput
+                value={renameInput}
+                onChangeText={setRenameInput}
+                placeholder={renameModal === 'male' ? 'Male Guide' : 'Female Guide'}
+                placeholderTextColor="#7c6aa3"
+                style={styles.renameInput}
+                maxLength={32}
+                autoFocus
+              />
+              <View style={styles.renameButtons}>
+                <TouchableOpacity
+                  style={[styles.renameBtn, styles.renameBtnGhost]}
+                  onPress={() => setRenameModal(null)}
+                  disabled={renameSaving}
+                >
+                  <Text style={styles.renameBtnGhostText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.renameBtn, styles.renameBtnPrimary]}
+                  onPress={saveCustomName}
+                  disabled={renameSaving}
+                >
+                  {renameSaving ? (
+                    <ActivityIndicator color="#1a0033" />
+                  ) : (
+                    <Text style={styles.renameBtnPrimaryText}>Save Name</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        <Paywall
+          visible={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          feature="Custom Spirit Guides"
+        />
       </View>
     );
   }
@@ -1365,4 +1694,158 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#2d1b4e',
   },
+  sectionHeading: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#e9d5ff',
+    marginTop: 8,
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  sectionSub: {
+    fontSize: 13,
+    color: '#a78bd9',
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: 'rgba(168,85,247,0.25)',
+    marginVertical: 18,
+  },
+  rainbowDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#ec4899',
+    shadowColor: '#ec4899',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+  },
+  promoBadge: {
+    backgroundColor: 'rgba(251,191,36,0.15)',
+    borderColor: 'rgba(251,191,36,0.5)',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginLeft: 6,
+  },
+  promoBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#fbbf24',
+    letterSpacing: 1.2,
+  },
+  customNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  renameButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(251,191,36,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockOverlay: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(13,0,21,0.85)',
+    borderColor: 'rgba(251,191,36,0.5)',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  lockText: {
+    fontSize: 10,
+    color: '#fbbf24',
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  renameBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(8,0,15,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  renameCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#1a0033',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.4)',
+    padding: 22,
+    gap: 12,
+  },
+  renameTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fbbf24',
+    textAlign: 'center',
+  },
+  renameSub: {
+    fontSize: 13,
+    color: '#c4b5fd',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  renameInput: {
+    backgroundColor: 'rgba(45,27,78,0.6)',
+    borderColor: 'rgba(168,85,247,0.45)',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#e9d5ff',
+    fontSize: 15,
+    marginTop: 4,
+  },
+  renameButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  renameBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  renameBtnGhost: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.4)',
+  },
+  renameBtnGhostText: {
+    color: '#c4b5fd',
+    fontWeight: '600',
+  },
+  renameBtnPrimary: {
+    backgroundColor: '#fbbf24',
+  },
+  renameBtnPrimaryText: {
+    color: '#1a0033',
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
 });
