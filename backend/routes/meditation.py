@@ -307,7 +307,14 @@ async def generate_chakra_tone(chakra_id: str, duration: int = 60):
     return {
         "chakra_id": chakra_id,
         "chakra_name": chakra["name"],
+        "name": chakra["name"],
+        "sanskrit": chakra["sanskrit"],
         "frequency": frequency,
+        "color": chakra["color"],
+        "location": chakra["location"],
+        "element": chakra["element"],
+        "benefits": chakra["benefits"],
+        "affirmation": chakra["affirmation"],
         "duration_seconds": segment_duration,
         "audio_base64": audio_base64,
         "format": "wav",
@@ -668,7 +675,8 @@ Include pauses using [pause for X seconds] format. Focus on the {chakra['locatio
             "chakra_name": chakra["name"],
             "script": script,
             "duration_minutes": duration_minutes,
-            "frequency": chakra["frequency"]
+            "frequency": chakra["frequency"],
+            "color": chakra["color"]
         }
     except Exception as e:
         logging.error(f"Error generating chakra meditation: {e}")
