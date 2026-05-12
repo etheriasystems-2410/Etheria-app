@@ -143,8 +143,16 @@ export default function Signup() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Ionicons name="sparkles" size={60} color="#b794f6" />
+          <View style={styles.iconBubble}>
+            <Ionicons name="sparkles" size={36} color="#fbbf24" />
+          </View>
+          <Text style={styles.eyebrow}>✦ Join the Circle ✦</Text>
           <Text style={styles.title}>Create Account</Text>
+          <View style={styles.glyphRow}>
+            <View style={styles.glyphLine} />
+            <Ionicons name="sparkles" size={11} color="#fbbf24" style={{ marginHorizontal: 8 }} />
+            <View style={styles.glyphLine} />
+          </View>
           <Text style={styles.subtitle}>Begin your spiritual awakening</Text>
         </View>
 
@@ -268,19 +276,53 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 32,
   },
+  iconBubble: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: 'rgba(251,191,36,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    color: '#fbbf24',
+    marginBottom: 4,
+  },
+  glyphRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  glyphLine: { width: 32, height: 1, backgroundColor: 'rgba(251,191,36,0.55)' },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#e9d5ff',
-    marginTop: 16,
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 0.3,
+    textShadowColor: 'rgba(168,85,247,0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 13,
     color: '#c4b5fd',
-    marginTop: 8,
+    marginTop: 4,
     textAlign: 'center',
+    fontStyle: 'italic',
   },
   form: {
     width: '100%',

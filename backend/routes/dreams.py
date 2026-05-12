@@ -137,6 +137,7 @@ async def get_zodiac_element(birth_month: int, birth_day: int):
                 spirit_guide = {
                     "name": guide_name,
                     "element": element,
+                    "gender": guide_info.get("gender", ""),
                     "personality": guide_info["personality"],
                     "voice": guide_info["voice"]
                 }

@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -217,9 +218,18 @@ export default function AstralTravel() {
             style={styles.heroImage}
             contentFit="cover"
           />
+          <LinearGradient
+            colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.55)', 'rgba(13,0,21,0.95)']}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.heroOverlay}>
-            <Ionicons name="planet" size={50} color="#a855f7" />
+            <Text style={styles.heroEyebrow}>✦ Beyond the Veil ✦</Text>
             <Text style={styles.heroTitle}>Astral Travel</Text>
+            <View style={styles.heroGlyphRow}>
+              <View style={styles.heroGlyphLine} />
+              <Ionicons name="sparkles" size={11} color="#fbbf24" style={{ marginHorizontal: 8 }} />
+              <View style={styles.heroGlyphLine} />
+            </View>
             <Text style={styles.heroSubtitle}>Journey beyond the physical</Text>
           </View>
         </View>
@@ -341,7 +351,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   heroSection: {
-    height: 200,
+    height: 180,
     position: 'relative',
     marginHorizontal: -12,
     marginBottom: 16,
@@ -358,27 +368,42 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
+    bottom: 18,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
+  },
+  heroEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    color: '#fbbf24',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   heroTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#e9d5ff',
-    marginTop: 10,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 0.3,
     textAlign: 'center',
+    textShadowColor: 'rgba(168,85,247,0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
+  heroGlyphRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 4 },
+  heroGlyphLine: { width: 32, height: 1, backgroundColor: 'rgba(251,191,36,0.6)' },
   heroSubtitle: {
-    fontSize: 16,
-    color: '#c4b5fd',
-    marginTop: 6,
+    fontSize: 12,
+    color: '#e9d5ff',
     textAlign: 'center',
+    fontStyle: 'italic',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   warningCard: {
     backgroundColor: '#1a0033',

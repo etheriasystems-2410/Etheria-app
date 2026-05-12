@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { CosmicBackdrop } from '../components/ui';
+import { Mist } from '../components/ui';
+import { palette, spacing, radii } from '../theme/tokens';
 
 interface MeditationType {
   id: string;
@@ -70,122 +72,149 @@ export default function Meditation() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.scrollContent}>
-      {/* Hero Section with Image Background */}
-      <View style={styles.heroSection}>
-        <Image
-          source={require('../assets/backgrounds/meditation-bg.jpg')}
-          style={styles.heroImage}
-          contentFit="cover"
-        />
-        <View style={styles.heroOverlay}>
-          <Ionicons name="fitness" size={50} color={theme.accentLight} />
-          <Text style={styles.heroTitle}>{getHeaderTitle()}</Text>
-          <Text style={styles.heroSubtitle}>{getSubtitle()}</Text>
-        </View>
-      </View>
+    <View style={styles.root}>
+      <LinearGradient colors={['#1a0033', '#0d0015', '#000000']} style={StyleSheet.absoluteFill} />
+      <Mist count={6} intensity="soft" />
 
-      <View style={styles.typesContainer}>
-        {meditationTypeIds.map((type, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[styles.typeCard, { backgroundColor: theme.cardBackground }]}
-            onPress={() => router.push(type.route as any)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.typeIcon, { backgroundColor: type.color }]}>
-              <Ionicons name={type.icon as any} size={32} color="#fff" />
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        {/* Hero Section with Image Background */}
+        <View style={styles.heroSection}>
+          <Image
+            source={require('../assets/backgrounds/meditation-bg.jpg')}
+            style={styles.heroImage}
+            contentFit="cover"
+          />
+          <LinearGradient
+            colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.55)', 'rgba(13,0,21,0.95)']}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.heroOverlay}>
+            <Text style={styles.heroEyebrow}>✦ Inner Stillness ✦</Text>
+            <Text style={styles.heroTitle}>{getHeaderTitle()}</Text>
+            <View style={styles.heroGlyphRow}>
+              <View style={styles.heroGlyphLine} />
+              <Ionicons name="sparkles" size={11} color={palette.gold} style={{ marginHorizontal: 8 }} />
+              <View style={styles.heroGlyphLine} />
             </View>
-            <View style={styles.typeContent}>
-              <Text style={styles.typeTitle}>{getMeditationTitle(type.id)}</Text>
-              <Text style={styles.typeDescription}>{getMeditationDesc(type.id)}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={theme.accent} />
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ScrollView>
+            <Text style={styles.heroSubtitle}>{getSubtitle()}</Text>
+          </View>
+        </View>
+
+        {/* Section header */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionEyebrow}>PRACTICES</Text>
+          <Text style={styles.sectionTitle}>Select Your Path</Text>
+        </View>
+
+        <View style={styles.typesContainer}>
+          {meditationTypeIds.map((type, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => router.push(type.route as any)}
+              activeOpacity={0.85}
+              style={styles.typeRowWrap}
+            >
+              <View style={styles.typeRow}>
+                <LinearGradient
+                  colors={[`${type.color}55`, `${type.color}11`]}
+                  style={styles.typeIcon}
+                >
+                  <Ionicons name={type.icon as any} size={20} color={palette.gold} />
+                </LinearGradient>
+                <View style={styles.typeContent}>
+                  <Text style={styles.typeTitle}>{getMeditationTitle(type.id)}</Text>
+                  <Text style={styles.typeDescription} numberOfLines={1}>{getMeditationDesc(type.id)}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={14} color={palette.lavender} />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0d0015',
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
+  root: { flex: 1, backgroundColor: '#0d0015' },
+  container: { flex: 1 },
+  scrollContent: { flexGrow: 1, paddingBottom: spacing['4xl'] },
+
   heroSection: {
-    height: 220,
-    position: 'relative',
+    height: 180,
+    width: '100%',
     overflow: 'hidden',
   },
-  heroImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-  },
+  heroImage: { width: '100%', height: '100%' },
   heroOverlay: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(15, 3, 33, 0.6)',
+    bottom: 18,
+    paddingHorizontal: spacing.xl,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
+  },
+  heroEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    color: palette.gold,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   heroTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#e9d5ff',
-    marginTop: 12,
+    fontSize: 22,
+    fontWeight: '800',
+    color: palette.starWhite,
+    letterSpacing: 0.3,
     textAlign: 'center',
+    textShadowColor: 'rgba(168,85,247,0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
+  heroGlyphRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 4 },
+  heroGlyphLine: { width: 32, height: 1, backgroundColor: 'rgba(251,191,36,0.6)' },
   heroSubtitle: {
-    fontSize: 16,
-    color: '#c4b5fd',
-    marginTop: 8,
+    fontSize: 12,
+    color: palette.iceLavender,
     textAlign: 'center',
+    fontStyle: 'italic',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  typesContainer: {
-    padding: 16,
+
+  sectionHeader: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
   },
-  typeCard: {
+  sectionEyebrow: {
+    fontSize: 9, fontWeight: '700', letterSpacing: 1.6, color: palette.gold, marginBottom: 2,
+  },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: palette.iceLavender },
+
+  typesContainer: { paddingHorizontal: spacing.lg },
+  typeRowWrap: { marginBottom: 8 },
+  typeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a0033',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 16,
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radii.lg,
+    backgroundColor: 'rgba(168,85,247,0.07)',
     borderWidth: 1,
-    borderColor: '#2d1b4e',
+    borderColor: 'rgba(183,148,246,0.18)',
   },
   typeIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: palette.glassBorder,
   },
-  typeContent: {
-    flex: 1,
-  },
-  typeTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#e9d5ff',
-    marginBottom: 4,
-  },
-  typeDescription: {
-    fontSize: 14,
-    color: '#c4b5fd',
-  },
+  typeContent: { flex: 1 },
+  typeTitle: { fontSize: 13.5, fontWeight: '700', color: palette.starWhite },
+  typeDescription: { fontSize: 11, color: palette.mist, marginTop: 1 },
 });

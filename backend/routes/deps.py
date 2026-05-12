@@ -76,28 +76,28 @@ FREE_TIER_LIMITS = {
 # Spirit Guide Voice Configuration
 SPIRIT_GUIDE_VOICES = {
     "Ignis": {
+        "voice": "onyx",
+        "gender": "masculine",
         "element": "Fire",
-        "voice": "nova",
-        "personality": "Passionate, inspiring, transformative. Speaks with intensity and warmth.",
-        "description": "The Fire Spirit Guide, a fierce and protective force"
+        "personality": "passionate, direct, transformative"
     },
     "Aqua": {
-        "element": "Water",
         "voice": "shimmer",
-        "personality": "Calm, intuitive, flowing. Speaks with gentle wisdom and emotional depth.",
-        "description": "The Water Spirit Guide, a nurturing and healing presence"
+        "gender": "feminine",
+        "element": "Water",
+        "personality": "intuitive, healing, emotionally wise"
     },
     "Terra": {
-        "element": "Earth",
         "voice": "echo",
-        "personality": "Grounded, patient, stable. Speaks with reassuring strength and practicality.",
-        "description": "The Earth Spirit Guide, a grounding and protective force"
+        "gender": "masculine",
+        "element": "Earth",
+        "personality": "grounded, practical, stable"
     },
     "Aether": {
+        "voice": "nova",
+        "gender": "feminine",
         "element": "Air",
-        "voice": "alloy",
-        "personality": "Intellectual, communicative, expansive. Speaks with clarity and vision.",
-        "description": "The Air Spirit Guide, a messenger and visionary"
+        "personality": "intellectual, free-spirited, enlightening"
     }
 }
 

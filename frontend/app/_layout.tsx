@@ -262,66 +262,77 @@ function ProtectedLayout() {
         name="auth/login"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Sign In',
         }}
       />
       <Drawer.Screen
         name="auth/signup"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Create Account',
         }}
       />
       <Drawer.Screen
         name="auth/callback"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Signing In…',
         }}
       />
       <Drawer.Screen
         name="files"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Files',
         }}
       />
       <Drawer.Screen
         name="feedback"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Feedback',
         }}
       />
       <Drawer.Screen
         name="meditation/timed"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Timed Meditation',
         }}
       />
       <Drawer.Screen
         name="meditation/astral"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Astral Meditation',
         }}
       />
       <Drawer.Screen
         name="meditation/chakra"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Chakra Meditation',
         }}
       />
       <Drawer.Screen
         name="meditation/binaural"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Binaural Meditation',
         }}
       />
       <Drawer.Screen
         name="meditation/ai-guided"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'AI Guided Meditation',
         }}
       />
       <Drawer.Screen
         name="admin-panel"
         options={{
           drawerItemStyle: { display: 'none' },
+          title: 'Admin Panel',
         }}
       />
     </Drawer>
