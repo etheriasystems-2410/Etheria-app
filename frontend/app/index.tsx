@@ -282,8 +282,8 @@ export default function Home() {
       />
       <Mist count={8} intensity="medium" />
 
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing['5xl'] }}>
-        {/* Hero Banner */}
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing['4xl'] }}>
+        {/* Hero Banner — slim mystical strip */}
         <View style={styles.heroBanner}>
           <Image source={{ uri: HEADER_BANNER_IMAGE }} style={styles.heroBannerImage} contentFit="cover" />
           <LinearGradient
@@ -293,11 +293,6 @@ export default function Home() {
           <View style={styles.heroBannerContent}>
             <Text style={styles.heroEyebrow}>✦ Mystical Realm ✦</Text>
             <Text style={styles.heroBrand}>ETHERIA</Text>
-            <View style={styles.heroGlyphRow}>
-              <View style={styles.heroGlyphLine} />
-              <Ionicons name="sparkles" size={12} color={palette.gold} style={{ marginHorizontal: 10 }} />
-              <View style={styles.heroGlyphLine} />
-            </View>
           </View>
         </View>
 
@@ -308,7 +303,7 @@ export default function Home() {
               label={t('signIn')}
               icon="log-in"
               variant="gold"
-              size="md"
+              size="sm"
               onPress={() => router.push('/auth/login')}
               style={{ flex: 1 }}
             />
@@ -316,159 +311,144 @@ export default function Home() {
               label={t('signUp')}
               icon="person-add"
               variant="secondary"
-              size="md"
+              size="sm"
               onPress={() => router.push('/auth/signup')}
               style={{ flex: 1 }}
             />
           </View>
         ) : (
           <View style={styles.welcomePillWrap}>
-            <GlassCard variant="default" style={styles.welcomePill} padded={false}>
-              <View style={styles.welcomeRow}>
-                <View style={styles.avatarBubble}>
-                  <Ionicons name="person" size={18} color={palette.gold} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.welcomeEyebrow}>Welcome back</Text>
-                  <Text style={styles.welcomeName}>{user?.name || 'Seeker'}</Text>
-                </View>
-                {isPremium && (
-                  <View style={styles.premiumPill}>
-                    <Ionicons name="star" size={12} color={palette.gold} />
-                    <Text style={styles.premiumPillText}>Premium</Text>
-                  </View>
-                )}
+            <View style={styles.welcomePill}>
+              <View style={styles.avatarBubble}>
+                <Ionicons name="person" size={16} color={palette.gold} />
               </View>
-            </GlassCard>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.welcomeEyebrow}>Welcome back</Text>
+                <Text style={styles.welcomeName} numberOfLines={1}>{user?.name || 'Seeker'}</Text>
+              </View>
+              {isPremium && (
+                <View style={styles.premiumPill}>
+                  <Ionicons name="star" size={11} color={palette.gold} />
+                  <Text style={styles.premiumPillText}>Premium</Text>
+                </View>
+              )}
+            </View>
           </View>
         )}
 
-        {/* Hero Image with title */}
+        {/* Hero Image — keeps the mystical eye but with cleaner tagline */}
         <View style={styles.heroImageWrap}>
           <Image source={{ uri: ETHERIA_IMAGE }} style={styles.heroImageFull} contentFit="cover" />
           <LinearGradient
-            colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.4)', 'rgba(13,0,21,0.95)']}
+            colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.5)', 'rgba(13,0,21,0.95)']}
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.heroImageContent}>
-            <Text style={styles.heroTitle}>{t('welcomeMessage')}</Text>
+            <Text style={styles.heroTagline} numberOfLines={2}>
+              {getWelcomeText()}
+            </Text>
           </View>
         </View>
 
-        {/* Intro card */}
-        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
-          <GlassCard variant="strong" style={{ borderRadius: radii['2xl'] }}>
-            <Text style={styles.introText}>{getWelcomeText()}</Text>
-          </GlassCard>
-        </View>
-
-        {/* Subscription card (free users) */}
+        {/* Slim subscription pill (free users only) */}
         {!isPremium && (
-          <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
-            <GlassCard variant="gold" style={{ borderRadius: radii['2xl'] }}>
-              <View style={{ alignItems: 'center' }}>
-                <View style={styles.diamondBubble}>
-                  <Ionicons name="diamond" size={26} color={palette.gold} />
-                </View>
-                <Text style={styles.unlockTitle}>{getUnlockText()}</Text>
-                <Text style={styles.unlockText}>
-                  {languageCode === 'en' ? (
-                    <>Unlock everything Etheria offers for only </>
-                  ) : null}
-                  <Text style={styles.priceHighlight}>$3.99</Text>
-                  <Text style={styles.unlockText}>{languageCode === 'en' ? ' / month.' : `/${t('perMonth').replace('/', '')}`}</Text>
-                </Text>
-                <GlowButton
-                  label={getSubscribeText()}
-                  icon="star"
-                  variant="gold"
-                  size="md"
-                  onPress={() => router.push('/settings')}
-                  style={{ marginTop: spacing.lg }}
-                />
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.push('/settings')}
+            style={styles.subPillTouch}
+          >
+            <LinearGradient
+              colors={['rgba(251,191,36,0.20)', 'rgba(124,58,237,0.10)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.subPill}
+            >
+              <View style={styles.subPillIcon}>
+                <Ionicons name="diamond" size={14} color={palette.gold} />
               </View>
-            </GlassCard>
-          </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.subPillTitle}>Unlock Premium</Text>
+                <Text style={styles.subPillSub}>Everything Etheria offers · $3.99/mo</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={palette.gold} />
+            </LinearGradient>
+          </TouchableOpacity>
         )}
 
         {/* Prize Drawing */}
         {isAuthenticated && (
-          <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
-            <GlassCard style={{ borderRadius: radii['2xl'] }}>
+          <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md }}>
+            <View style={styles.prizeCard}>
               <View style={styles.prizeHeader}>
                 <View style={styles.giftBubble}>
-                  <Ionicons name="gift" size={20} color={palette.gold} />
+                  <Ionicons name="gift" size={16} color={palette.gold} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.prizeTitle}>Monthly Prize Drawing</Text>
                   <Text style={styles.prizeSubtitle}>Win a FREE month of Premium</Text>
                 </View>
               </View>
-              <Text style={styles.prizeBody}>
-                Use the app's free features for at least 30 minutes per week to be eligible.
-              </Text>
 
               {loadingPrizeStatus ? (
-                <ActivityIndicator color={palette.lavender} style={{ marginVertical: spacing.md }} />
+                <ActivityIndicator color={palette.lavender} style={{ marginVertical: 4 }} />
               ) : prizeDrawingStatus ? (
                 <>
-                  <View style={styles.usageProgress}>
-                    <View style={styles.usageRow}>
-                      <Text style={styles.usageLabel}>This Week's Usage</Text>
-                      <Text style={styles.usageValue}>
-                        {prizeDrawingStatus.weekly_usage_minutes.toFixed(0)} / {prizeDrawingStatus.required_minutes} min
-                      </Text>
-                    </View>
-                    <View style={styles.progressBar}>
-                      <LinearGradient
-                        colors={['#fcd34d', '#fbbf24']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={[
-                          styles.progressFill,
-                          { width: `${Math.min(100, (prizeDrawingStatus.weekly_usage_minutes / prizeDrawingStatus.required_minutes) * 100)}%` },
-                        ]}
-                      />
-                    </View>
+                  <View style={styles.usageRow}>
+                    <Text style={styles.usageLabel}>This week</Text>
+                    <Text style={styles.usageValue}>
+                      {prizeDrawingStatus.weekly_usage_minutes.toFixed(0)}/{prizeDrawingStatus.required_minutes} min
+                    </Text>
+                  </View>
+                  <View style={styles.progressBar}>
+                    <LinearGradient
+                      colors={['#fcd34d', '#fbbf24']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[
+                        styles.progressFill,
+                        { width: `${Math.min(100, (prizeDrawingStatus.weekly_usage_minutes / prizeDrawingStatus.required_minutes) * 100)}%` },
+                      ]}
+                    />
                   </View>
 
                   {prizeDrawingStatus.opted_in ? (
-                    <View style={styles.optedInContainer}>
+                    <View style={styles.optedInRow}>
                       <View style={styles.optedInBadge}>
-                        <Ionicons name="checkmark-circle" size={16} color={palette.success} />
-                        <Text style={styles.optedInText}>You're entered</Text>
+                        <Ionicons name="checkmark-circle" size={13} color={palette.success} />
+                        <Text style={styles.optedInText}>Entered</Text>
                       </View>
-                      {prizeDrawingStatus.next_drawing && (
-                        <Text style={styles.nextDrawingText}>
-                          Next drawing: {new Date(prizeDrawingStatus.next_drawing).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                        </Text>
-                      )}
-                      <TouchableOpacity onPress={() => handleOptInPrizeDrawing(false)} disabled={optingIn} style={styles.optOutBtn}>
-                        <Text style={styles.optOutText}>Opt Out</Text>
+                      <TouchableOpacity onPress={() => handleOptInPrizeDrawing(false)} disabled={optingIn} hitSlop={8}>
+                        <Text style={styles.optOutText}>Opt out</Text>
                       </TouchableOpacity>
                     </View>
                   ) : (
-                    <GlowButton
-                      label="Enter Drawing"
-                      icon="ticket"
-                      variant="gold"
-                      size="md"
+                    <TouchableOpacity
+                      activeOpacity={0.85}
                       onPress={() => handleOptInPrizeDrawing(true)}
-                      loading={optingIn}
-                      fullWidth
-                      style={{ marginTop: spacing.md }}
-                    />
+                      disabled={optingIn}
+                      style={styles.enterDrawingBtn}
+                    >
+                      {optingIn ? (
+                        <ActivityIndicator color="#1a0033" size="small" />
+                      ) : (
+                        <>
+                          <Ionicons name="ticket" size={14} color="#1a0033" />
+                          <Text style={styles.enterDrawingText}>Enter Drawing</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   )}
                 </>
-              ) : (
-                <Text style={styles.prizeBody}>Loading status...</Text>
-              )}
-            </GlassCard>
+              ) : null}
+            </View>
           </View>
         )}
 
         {/* Features */}
-        <SectionTitle title="Explore Features" subtitle="Tools for your spiritual path" icon="compass" />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionEyebrow}>EXPLORE</Text>
+          <Text style={styles.sectionTitle}>Your Spiritual Path</Text>
+        </View>
 
         <View style={styles.featuresContainer}>
           {features.map((feature, index) => (
@@ -476,52 +456,48 @@ export default function Home() {
               key={index}
               onPress={() => router.push(feature.route as any)}
               activeOpacity={0.85}
-              style={{ marginBottom: spacing.md }}
+              style={styles.featureRowWrap}
             >
-              <GlassCard style={styles.featureCard}>
-                <View style={styles.featureRow}>
-                  <LinearGradient
-                    colors={['rgba(168,85,247,0.30)', 'rgba(124,58,237,0.10)']}
-                    style={styles.featureIcon}
-                  >
-                    <Ionicons name={feature.icon} size={26} color={palette.gold} />
-                  </LinearGradient>
-                  <View style={styles.featureContent}>
-                    <Text style={styles.featureTitle}>{feature.title}</Text>
-                    <Text style={styles.featureDescription} numberOfLines={2}>
-                      {feature.description}
-                    </Text>
-                  </View>
-                  <View style={styles.chevronBubble}>
-                    <Ionicons name="chevron-forward" size={16} color={palette.lavender} />
-                  </View>
+              <View style={styles.featureRow}>
+                <LinearGradient
+                  colors={['rgba(168,85,247,0.30)', 'rgba(124,58,237,0.10)']}
+                  style={styles.featureIcon}
+                >
+                  <Ionicons name={feature.icon} size={20} color={palette.gold} />
+                </LinearGradient>
+                <View style={styles.featureContent}>
+                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                  <Text style={styles.featureDescription} numberOfLines={1}>
+                    {feature.description}
+                  </Text>
                 </View>
-              </GlassCard>
+                <Ionicons name="chevron-forward" size={14} color={palette.lavender} />
+              </View>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Community */}
         {isAuthenticated && (
-          <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md }}>
-            <TouchableOpacity onPress={() => router.push('/community')} activeOpacity={0.85}>
-              <GlassCard variant="gold" style={styles.communityCard}>
-                <View style={styles.featureRow}>
-                  <LinearGradient
-                    colors={['rgba(251,191,36,0.30)', 'rgba(217,119,6,0.10)']}
-                    style={styles.featureIcon}
-                  >
-                    <Ionicons name="people" size={26} color={palette.gold} />
-                  </LinearGradient>
-                  <View style={styles.featureContent}>
-                    <Text style={styles.featureTitle}>Join the Community</Text>
-                    <Text style={styles.featureDescription}>Connect with fellow seekers</Text>
-                  </View>
-                  <View style={styles.chevronBubble}>
-                    <Ionicons name="chevron-forward" size={16} color={palette.gold} />
-                  </View>
+          <View style={styles.featuresContainer}>
+            <TouchableOpacity
+              onPress={() => router.push('/community')}
+              activeOpacity={0.85}
+              style={styles.featureRowWrap}
+            >
+              <View style={[styles.featureRow, styles.communityHighlight]}>
+                <LinearGradient
+                  colors={['rgba(251,191,36,0.30)', 'rgba(217,119,6,0.10)']}
+                  style={styles.featureIcon}
+                >
+                  <Ionicons name="people" size={20} color={palette.gold} />
+                </LinearGradient>
+                <View style={styles.featureContent}>
+                  <Text style={styles.featureTitle}>Join the Community</Text>
+                  <Text style={styles.featureDescription}>Connect with fellow seekers</Text>
                 </View>
-              </GlassCard>
+                <Ionicons name="chevron-forward" size={14} color={palette.gold} />
+              </View>
             </TouchableOpacity>
           </View>
         )}
@@ -530,7 +506,7 @@ export default function Home() {
         <View style={styles.footer}>
           <View style={styles.footerGlyphRow}>
             <View style={styles.footerLine} />
-            <Ionicons name="sparkles" size={11} color={palette.gold} style={{ marginHorizontal: 8 }} />
+            <Ionicons name="sparkles" size={9} color={palette.gold} style={{ marginHorizontal: 6 }} />
             <View style={styles.footerLine} />
           </View>
           <Text style={styles.footerText}>We hope you enjoy our first application from Etheria Systems.</Text>
@@ -545,33 +521,30 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0d0015' },
   container: { flex: 1 },
 
-  // Hero banner
+  // Hero banner — slim mystical strip
   heroBanner: {
-    height: 130,
+    height: 110,
     width: '100%',
     overflow: 'hidden',
-    borderBottomLeftRadius: radii.lg,
-    borderBottomRightRadius: radii.lg,
   },
   heroBannerImage: { width: '100%', height: '100%' },
   heroBannerContent: {
     position: 'absolute',
-    bottom: 0, left: 0, right: 0,
+    bottom: 10, left: 0, right: 0,
     alignItems: 'center',
-    paddingBottom: spacing.md,
   },
   heroEyebrow: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 1.4,
+    letterSpacing: 1.6,
     color: palette.gold,
-    marginBottom: 4,
+    marginBottom: 2,
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
   heroBrand: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
     color: palette.starWhite,
     letterSpacing: 5,
@@ -579,8 +552,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
-  heroGlyphRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  heroGlyphLine: { width: 32, height: 1, backgroundColor: 'rgba(251,191,36,0.6)' },
 
   // Auth section
   authSection: {
@@ -592,16 +563,25 @@ const styles = StyleSheet.create({
 
   // Welcome pill
   welcomePillWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-  welcomePill: { borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: 8 },
-  welcomeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  welcomePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(168,85,247,0.10)',
+    borderColor: 'rgba(183,148,246,0.25)',
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
   avatarBubble: {
-    width: 32, height: 32, borderRadius: radii.pill,
+    width: 28, height: 28, borderRadius: 14,
     backgroundColor: 'rgba(251,191,36,0.15)',
     borderWidth: 1, borderColor: palette.goldBorder,
     alignItems: 'center', justifyContent: 'center',
   },
-  welcomeEyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2, color: palette.mist, textTransform: 'uppercase' },
-  welcomeName: { fontSize: 15, fontWeight: '700', color: palette.iceLavender, marginTop: 1 },
+  welcomeEyebrow: { fontSize: 8, fontWeight: '700', letterSpacing: 1.2, color: palette.mist, textTransform: 'uppercase' },
+  welcomeName: { fontSize: 13, fontWeight: '700', color: palette.iceLavender, marginTop: 1 },
   premiumPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(251,191,36,0.15)',
@@ -611,123 +591,144 @@ const styles = StyleSheet.create({
   },
   premiumPillText: { color: palette.gold, fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
 
-  // Hero image
+  // Hero image — keeps eye, tagline overlay
   heroImageWrap: {
-    height: 180,
+    height: 200,
     width: '100%',
     marginTop: spacing.md,
     overflow: 'hidden',
   },
   heroImageFull: { width: '100%', height: '100%' },
   heroImageContent: {
-    position: 'absolute', left: 0, right: 0, bottom: 16,
-    paddingHorizontal: spacing.lg,
+    position: 'absolute', left: 0, right: 0, bottom: 18,
+    paddingHorizontal: spacing.xl,
   },
-  heroTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: palette.starWhite,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.85)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
-  },
-
-  // Intro card
-  introText: {
-    fontSize: 13.5,
+  heroTagline: {
+    fontSize: 14,
     lineHeight: 20,
-    color: palette.mist,
+    color: palette.iceLavender,
     textAlign: 'center',
+    fontStyle: 'italic',
+    fontWeight: '500',
+    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
   },
 
-  // Subscription/unlock card
-  diamondBubble: {
-    width: 44, height: 44, borderRadius: radii.pill,
-    backgroundColor: 'rgba(251,191,36,0.12)',
+  // Slim subscription pill
+  subPillTouch: { paddingHorizontal: spacing.lg, marginTop: spacing.md },
+  subPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: palette.goldBorder,
+  },
+  subPillIcon: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: 'rgba(251,191,36,0.18)',
     borderWidth: 1, borderColor: palette.goldBorder,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: spacing.sm,
   },
-  unlockTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: palette.gold,
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  unlockText: {
-    fontSize: 13,
-    color: palette.mist,
-    textAlign: 'center',
-    lineHeight: 19,
-  },
-  priceHighlight: {
-    color: palette.gold,
-    fontWeight: '800',
-    fontSize: 16,
-  },
+  subPillTitle: { fontSize: 13, fontWeight: '700', color: palette.gold, letterSpacing: 0.2 },
+  subPillSub: { fontSize: 11, color: palette.mist, marginTop: 1 },
 
-  // Prize drawing
-  prizeHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 6 },
+  // Prize drawing — slim card
+  prizeCard: {
+    backgroundColor: 'rgba(168,85,247,0.08)',
+    borderColor: 'rgba(183,148,246,0.22)',
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: 12,
+  },
+  prizeHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   giftBubble: {
-    width: 34, height: 34, borderRadius: radii.pill,
-    backgroundColor: 'rgba(251,191,36,0.12)',
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: 'rgba(251,191,36,0.15)',
     borderWidth: 1, borderColor: palette.goldBorder,
     alignItems: 'center', justifyContent: 'center',
   },
-  prizeTitle: { fontSize: 15, fontWeight: '700', color: palette.iceLavender },
-  prizeSubtitle: { fontSize: 11, fontWeight: '600', letterSpacing: 0.3, color: palette.gold, marginTop: 1 },
-  prizeBody: { fontSize: 12.5, color: palette.mist, lineHeight: 18, marginBottom: spacing.sm },
-  usageProgress: { marginBottom: spacing.sm },
+  prizeTitle: { fontSize: 13, fontWeight: '700', color: palette.iceLavender },
+  prizeSubtitle: { fontSize: 10, fontWeight: '600', letterSpacing: 0.3, color: palette.gold, marginTop: 1 },
   usageRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  usageLabel: { fontSize: 11, color: palette.lavender, fontWeight: '500' },
-  usageValue: { fontSize: 11, color: palette.iceLavender, fontWeight: '700' },
+  usageLabel: { fontSize: 10, color: palette.lavender, fontWeight: '500' },
+  usageValue: { fontSize: 10, color: palette.iceLavender, fontWeight: '700' },
   progressBar: {
-    height: 6,
+    height: 5,
     backgroundColor: 'rgba(124,58,237,0.25)',
     borderRadius: radii.pill,
     overflow: 'hidden',
+    marginBottom: 8,
   },
   progressFill: { height: '100%', borderRadius: radii.pill },
-  optedInContainer: { alignItems: 'center', gap: 6, paddingTop: 6 },
+  optedInRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
   optedInBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(16,185,129,0.15)',
     borderColor: 'rgba(16,185,129,0.4)', borderWidth: 1,
-    paddingHorizontal: 12, paddingVertical: 5, borderRadius: radii.pill,
+    paddingHorizontal: 10, paddingVertical: 3, borderRadius: radii.pill,
   },
-  optedInText: { color: palette.success, fontSize: 12, fontWeight: '700' },
-  nextDrawingText: { color: palette.lavender, fontSize: 11 },
-  optOutBtn: { marginTop: 2, paddingVertical: 4, paddingHorizontal: 14 },
-  optOutText: { color: palette.danger, fontSize: 12, fontWeight: '600' },
+  optedInText: { color: palette.success, fontSize: 11, fontWeight: '700' },
+  optOutText: { color: palette.danger, fontSize: 11, fontWeight: '600' },
+  enterDrawingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: palette.gold,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+  },
+  enterDrawingText: { color: '#1a0033', fontSize: 12, fontWeight: '800', letterSpacing: 0.3 },
+
+  // Section header (Explore Features)
+  sectionHeader: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
+  },
+  sectionEyebrow: {
+    fontSize: 9, fontWeight: '700', letterSpacing: 1.6, color: palette.gold, marginBottom: 2,
+  },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: palette.iceLavender },
 
   // Features
-  featuresContainer: { paddingHorizontal: spacing.lg, marginTop: spacing.xs },
-  featureCard: { borderRadius: radii.lg },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  featuresContainer: { paddingHorizontal: spacing.lg },
+  featureRowWrap: { marginBottom: 8 },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radii.lg,
+    backgroundColor: 'rgba(168,85,247,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(183,148,246,0.18)',
+  },
+  communityHighlight: {
+    backgroundColor: 'rgba(251,191,36,0.07)',
+    borderColor: 'rgba(251,191,36,0.32)',
+  },
   featureIcon: {
-    width: 40, height: 40, borderRadius: radii.md,
+    width: 36, height: 36, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: palette.glassBorder,
   },
   featureContent: { flex: 1 },
-  featureTitle: { fontSize: 15, fontWeight: '700', color: palette.starWhite, marginBottom: 1 },
-  featureDescription: { fontSize: 12, color: palette.mist, lineHeight: 16 },
-  chevronBubble: {
-    width: 24, height: 24, borderRadius: radii.pill,
-    backgroundColor: 'rgba(183,148,246,0.10)',
-    borderWidth: 1, borderColor: 'rgba(183,148,246,0.3)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-
-  // Community
-  communityCard: { borderRadius: radii.lg },
+  featureTitle: { fontSize: 13.5, fontWeight: '700', color: palette.starWhite },
+  featureDescription: { fontSize: 11, color: palette.mist, marginTop: 1 },
 
   // Footer
   footer: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.lg, alignItems: 'center' },
-  footerGlyphRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  footerLine: { width: 32, height: 1, backgroundColor: 'rgba(251,191,36,0.4)' },
-  footerText: { fontSize: 12, color: palette.lavender, textAlign: 'center', fontStyle: 'italic', lineHeight: 18 },
-  signature: { fontSize: 11, fontWeight: '600', letterSpacing: 1.0, color: palette.gold, marginTop: 6 },
+  footerGlyphRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  footerLine: { width: 28, height: 1, backgroundColor: 'rgba(251,191,36,0.4)' },
+  footerText: { fontSize: 11, color: palette.lavender, textAlign: 'center', fontStyle: 'italic', lineHeight: 16 },
+  signature: { fontSize: 10, fontWeight: '600', letterSpacing: 1.0, color: palette.gold, marginTop: 4 },
 });
+
