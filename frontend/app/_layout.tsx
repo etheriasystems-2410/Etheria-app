@@ -49,6 +49,7 @@ const menuStyles = StyleSheet.create({
 import { Text } from 'react-native';
 import useDMUnread from '../hooks/useDMUnread';
 import usePushNotifications from '../hooks/usePushNotifications';
+import SplashVideo from '../components/SplashVideo';
 
 function MessagesDrawerLabel({ color }: { color: string }) {
   const { unread } = useDMUnread(true);
@@ -328,12 +329,14 @@ function ProtectedLayout() {
 }
 
 export default function RootLayout() {
+  const [splashDone, setSplashDone] = React.useState(false);
   return (
     <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
           <GestureHandlerRootView style={styles.container}>
             <ProtectedLayout />
+            {!splashDone && <SplashVideo onDone={() => setSplashDone(true)} />}
           </GestureHandlerRootView>
         </AuthProvider>
       </LanguageProvider>
