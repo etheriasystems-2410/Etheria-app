@@ -372,12 +372,142 @@ async def generate_realign_all_tone(duration: int = 300):
     }
 
 
+@router.get("/binaural/audio/{frequency_id}")
+async def get_binaural_audio_info(frequency_id: str):
+    """Get binaural audio information and streaming URL"""
+    audio_urls = {
+        "delta": "https://www.soundhealing.com/samples/delta-waves.mp3",
+        "theta": "https://www.soundhealing.com/samples/theta-waves.mp3",
+        "alpha": "https://www.soundhealing.com/samples/alpha-waves.mp3",
+        "beta": "https://www.soundhealing.com/samples/beta-waves.mp3",
+        "gamma": "https://www.soundhealing.com/samples/gamma-waves.mp3"
+    }
+    return {
+        "frequency_id": frequency_id,
+        "audio_url": audio_urls.get(frequency_id),
+        "format": "mp3",
+        "duration_minutes": 30,
+        "sample_rate": 44100,
+        "note": "For production, replace with actual binaural beat audio files"
+    }
+
+
+@router.get("/chakra/stream-realign")
+async def stream_realign_tone(duration: int = 60):
+    """Stream morphing chakra frequency progression as WAV audio"""
+    sample_rate = 22050
+    duration_seconds = min(duration, 60)
+    num_samples = int(sample_rate * duration_seconds)
+
+    chakra_order = ["root", "sacral", "solar", "heart", "throat", "third-eye", "crown"]
+    frequencies = [CHAKRA_DATA[c]["frequency"] for c in chakra_order]
+
+    time_per_chakra = duration_seconds / len(chakra_order)
+
+    t = np.linspace(0, duration_seconds, num_samples, dtype=np.float32)
+    audio = np.zeros(num_samples, dtype=np.float32)
+
+    for i, freq in enumerate(frequencies):
+        start_time = i * time_per_chakra
+        end_time = (i + 1) * time_per_chakra
+
+        for j in range(num_samples):
+            current_time = j / sample_rate
+            if start_time <= current_time < end_time:
+                progress = (current_time - start_time) / time_per_chakra
+
+                if progress < 0.1:
+                    envelope = progress / 0.1
+                elif progress > 0.9:
+                    envelope = (1 - progress) / 0.1
+                else:
+                    envelope = 1.0
+
+                audio[j] += envelope * 0.5 * np.sin(2 * np.pi * freq * current_time)
+                audio[j] += envelope * 0.15 * np.sin(2 * np.pi * freq * 2 * current_time)
+
+    fade_samples = int(sample_rate * 1)
+    audio[:fade_samples] *= np.linspace(0, 1, fade_samples, dtype=np.float32)
+    audio[-fade_samples:] *= np.linspace(1, 0, fade_samples, dtype=np.float32)
+
+    audio = audio / np.max(np.abs(audio)) * 0.7
+    audio_int16 = (audio * 32767).astype(np.int16)
+
+    buffer = io.BytesIO()
+    wavfile.write(buffer, sample_rate, audio_int16)
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="audio/wav",
+        headers={
+            "Content-Disposition": "inline; filename=chakra_realign.wav",
+            "Accept-Ranges": "bytes"
+        }
+    )
+
+
+@router.post("/chakra/generate-realign")
+async def generate_realign_all_meditation(duration_minutes: int = 15):
+    """Generate a guided meditation that works through all chakras"""
+    chakra_order = ["root", "sacral", "solar", "heart", "throat", "third-eye", "crown"]
+    chakra_info = [f"- {CHAKRA_DATA[c]['name']} ({CHAKRA_DATA[c]['location']}): {CHAKRA_DATA[c]['affirmation']}" for c in chakra_order]
+
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"chakra-realign-{uuid.uuid4()}",
+            system_message=f"""You are a chakra healing meditation guide. Create a {duration_minutes}-minute full chakra realignment meditation that moves through all seven chakras from root to crown.
+
+IMPORTANT FORMATTING RULES:
+1. Include pauses using EXACTLY this format: [pause for X seconds] where X is between 3 and 15
+2. Spend roughly equal time on each chakra
+3. Include smooth transitions between chakras
+4. Use color visualization for each chakra
+5. Include each chakra's affirmation
+6. The tone will automatically shift to match each chakra, so mention when moving to next chakra
+7. DO NOT use any markdown formatting - no asterisks (*), no hash symbols (#), no bullet points
+8. Write in plain flowing prose that sounds natural when spoken aloud"""
+        ).with_model("gemini", "gemini-2.5-pro")
+
+        prompt = f"""Create a complete {duration_minutes}-minute chakra realignment meditation that moves through all seven chakras:
+
+{chr(10).join(chakra_info)}
+
+Structure:
+1. Opening and grounding
+2. Root Chakra (red) - grounding and security
+3. Sacral Chakra (orange) - creativity and emotions  
+4. Solar Plexus Chakra (yellow) - personal power
+5. Heart Chakra (green) - love and compassion
+6. Throat Chakra (blue) - communication and truth
+7. Third Eye Chakra (indigo) - intuition and wisdom
+8. Crown Chakra (violet) - spiritual connection
+9. Integration and closing
+
+Use [pause for X seconds] for breathing and integration moments.
+Write in plain prose without any markdown formatting - this will be read aloud."""
+
+        user_message = UserMessage(text=prompt)
+        script = await chat.send_message(user_message)
+
+        return {
+            "type": "realign_all",
+            "script": script,
+            "duration_minutes": duration_minutes,
+            "chakra_order": chakra_order
+        }
+    except Exception as e:
+        logging.error(f"Error generating realign meditation: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate meditation")
+
+
 @router.get("/chakra/stream/{chakra_id}")
 async def stream_chakra_tone(chakra_id: str, duration: int = 30):
     """Stream chakra frequency tone as WAV audio"""
     if chakra_id not in CHAKRA_DATA:
         raise HTTPException(status_code=404, detail="Chakra not found")
-    
+
     chakra = CHAKRA_DATA[chakra_id]
     frequency = chakra["frequency"]
     
