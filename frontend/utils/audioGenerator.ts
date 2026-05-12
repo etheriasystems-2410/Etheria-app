@@ -54,38 +54,22 @@ export const BINAURAL_FREQUENCIES: BinauralFrequency[] = [
  * For production, you would use pre-recorded binaural beat files
  * or integrate with a binaural beat generation service
  */
-export const getBinauralAudioUrl = (frequencyId: string): string | null => {
-  // These are placeholder URLs - in production, you would:
-  // 1. Use pre-recorded binaural beat audio files
-  // 2. Use a binaural beat generation API
-  // 3. Generate them using Web Audio API (browser only)
-  
-  const audioMap: { [key: string]: string } = {
-    delta: 'https://example.com/audio/delta-binaural.mp3',
-    theta: 'https://example.com/audio/theta-binaural.mp3',
-    alpha: 'https://example.com/audio/alpha-binaural.mp3',
-    beta: 'https://example.com/audio/beta-binaural.mp3',
-    gamma: 'https://example.com/audio/gamma-binaural.mp3',
-  };
-
-  return audioMap[frequencyId] || null;
+export const getBinauralAudioUrl = (_frequencyId: string): string | null => {
+  // Placeholder integration point. Real audio files are not bundled with the
+  // app yet — returning null so callers fall back to their silent/visual mode.
+  // To enable real binaural beats, host audio files on a CDN and either:
+  //   1) Hardcode URLs here, or
+  //   2) Read from an env var, or
+  //   3) Fetch via a backend endpoint
+  return null;
 };
 
 /**
  * Get ambient sound URL
  */
-export const getAmbientSoundUrl = (soundId: string): string | null => {
-  // Placeholder URLs for ambient sounds
-  // In production, use actual audio files hosted on your server or CDN
-  const soundMap: { [key: string]: string } = {
-    ocean: 'https://example.com/audio/ocean-waves.mp3',
-    rain: 'https://example.com/audio/rainfall.mp3',
-    forest: 'https://example.com/audio/forest-sounds.mp3',
-    'singing-bowl': 'https://example.com/audio/singing-bowl.mp3',
-    silence: null as any,
-  };
-
-  return soundMap[soundId] || null;
+export const getAmbientSoundUrl = (_soundId: string): string | null => {
+  // Placeholder integration point — see getBinauralAudioUrl above.
+  return null;
 };
 
 /**
