@@ -171,8 +171,35 @@ const customGuidesBase: Guide[] = [
   },
 ];
 
+const divineGuides: Guide[] = [
+  {
+    name: 'Helios',
+    element: 'Sun',
+    description: 'Divine Masculine — sacred will, light, and protection',
+    color: '#fbbf24',
+    icon: 'sunny',
+    gender: 'masculine',
+    personality: 'radiant, eternal, sacred',
+    voice_id: 'onyx',
+    image: require('../assets/guides/divine-pair.jpg'),
+    category: 'divine',
+  },
+  {
+    name: 'Selene',
+    element: 'Moon',
+    description: 'Divine Feminine — sacred intuition, grace, and mystery',
+    color: '#a78bfa',
+    icon: 'moon',
+    gender: 'feminine',
+    personality: 'luminous, intuitive, sacred',
+    voice_id: 'shimmer',
+    image: require('../assets/guides/divine-pair.jpg'),
+    category: 'divine',
+  },
+];
+
 // All guides combined — used for chat session lookups across the page
-const guides: Guide[] = [...elementalGuides, ...lgbtqGuides, ...customGuidesBase];
+const guides: Guide[] = [...elementalGuides, ...lgbtqGuides, ...customGuidesBase, ...divineGuides];
 
 export default function SpiritGuides() {
   const { isPremium, checkFeatureAccess } = useAuth();
@@ -204,10 +231,12 @@ export default function SpiritGuides() {
     female: 'Female Guide',
   });
   const [customUnlocked, setCustomUnlocked] = useState<boolean>(true);
+  const [divineUnlocked, setDivineUnlocked] = useState<boolean>(false);
   const [inFreePromo, setInFreePromo] = useState<boolean>(true);
   const [renameModal, setRenameModal] = useState<null | 'male' | 'female'>(null);
   const [renameInput, setRenameInput] = useState<string>('');
   const [renameSaving, setRenameSaving] = useState<boolean>(false);
+  const [divinePairMode, setDivinePairMode] = useState<boolean>(false);
   
   // Check if guide is currently "talking" (loading response, generating audio, or playing audio)
   const isTalking = loading || generatingAudio || playingAudioIndex !== null;
@@ -315,6 +344,7 @@ export default function SpiritGuides() {
       if (accessRes.ok) {
         const data = await accessRes.json();
         setCustomUnlocked(!!data.custom_unlocked);
+        setDivineUnlocked(!!data.divine_unlocked);
         setInFreePromo(!!data.in_free_promo);
       }
     } catch (e) {
@@ -575,6 +605,50 @@ export default function SpiritGuides() {
     setLoading(true);
 
     try {
+      // Special path: Divine Pair mode → call /chat-pair which returns 3 sequenced messages
+      if (divinePairMode) {
+        const token = await AsyncStorage.getItem('session_token');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const response = await fetch(`${BACKEND_URL}/api/spirit-guides/chat-pair`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            message: inputText,
+            history: messages,
+            language: languageCode,
+          }),
+        });
+        if (response.status === 401) {
+          Alert.alert('Sign in required', 'Please sign in to commune with the Divine pair.');
+          setLoading(false);
+          return;
+        }
+        if (response.status === 403) {
+          setShowPaywall(true);
+          setLoading(false);
+          return;
+        }
+        const data = await response.json();
+        if (!data.success || !data.messages) {
+          throw new Error('Pair chat failed');
+        }
+        // Append each pair message as a separate assistant message
+        const pairMsgs: Message[] = data.messages.map((m: any) => ({
+          role: 'assistant',
+          content: `${m.guide}: ${m.text}`,
+          hasAudio: !!m.audio_base64,
+          audioBase64: m.audio_base64 || undefined,
+        }));
+        setMessages((prev) => [...prev, ...pairMsgs]);
+        // Auto-play the first one (Helios's dialogue) if not muted; user can tap others
+        if (!isMuted && pairMsgs[0]?.audioBase64) {
+          await playAudio(pairMsgs[0].audioBase64);
+        }
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(`${BACKEND_URL}/api/spirit-guides/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -943,6 +1017,77 @@ export default function SpiritGuides() {
                 )}
               </TouchableOpacity>
             ))}
+
+            <View style={styles.sectionDivider} />
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionHeading}>Divine Guides</Text>
+              <View style={styles.divineDot} />
+            </View>
+            <Text style={styles.sectionSub}>
+              {divineUnlocked
+                ? 'Helios & Selene — Sacred Masculine and Sacred Feminine'
+                : 'Premium feature — commune with the Divine Pair'}
+            </Text>
+            {divineGuides.map((guide) => (
+              <TouchableOpacity
+                key={guide.name}
+                style={styles.guideCard}
+                onPress={() => {
+                  if (!divineUnlocked) {
+                    setShowPaywall(true);
+                    return;
+                  }
+                  setDivinePairMode(false);
+                  selectGuide(guide);
+                }}
+                activeOpacity={0.7}
+              >
+                {guide.image ? (
+                  <View style={[styles.guideImageContainer, { borderColor: guide.color }]}>
+                    <Image source={guide.image} style={styles.guideImage} resizeMode="cover" />
+                  </View>
+                ) : (
+                  <View style={[styles.guideIcon, { backgroundColor: guide.color }]}>
+                    <Ionicons name={guide.icon as any} size={40} color="#fff" />
+                  </View>
+                )}
+                <Text style={styles.guideName}>{guide.name}</Text>
+                <Text style={styles.guideElement}>{guide.element}</Text>
+                <Text style={styles.guideGender}>
+                  {guide.gender === 'feminine' ? '♀' : '♂'} {guide.gender}
+                </Text>
+                <Text style={styles.guideDescription}>{guide.description}</Text>
+                {!divineUnlocked && (
+                  <View style={styles.lockOverlay}>
+                    <Ionicons name="lock-closed" size={20} color="#fbbf24" />
+                    <Text style={styles.lockText}>Premium</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={[styles.talkBothBtn, !divineUnlocked && styles.talkBothBtnLocked]}
+              onPress={() => {
+                if (!divineUnlocked) {
+                  setShowPaywall(true);
+                  return;
+                }
+                setDivinePairMode(true);
+                // Use Helios as the primary "selectedGuide" so the chat UI mounts.
+                // The chat header will detect divinePairMode and render the pair view.
+                selectGuide({
+                  ...divineGuides[0],
+                  name: 'Helios & Selene',
+                  description: 'Divine Pair — Sacred Union',
+                });
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="sparkles" size={18} color="#1a0033" />
+              <Text style={styles.talkBothBtnText}>Talk to Both Together</Text>
+              {!divineUnlocked && <Ionicons name="lock-closed" size={14} color="#1a0033" style={{ marginLeft: 6 }} />}
+            </TouchableOpacity>
           </View>
         </ScrollView>
 
@@ -1017,6 +1162,7 @@ export default function SpiritGuides() {
           onPress={() => {
             setSelectedGuide(null);
             setMessages([]);
+            setDivinePairMode(false);
           }}
           style={styles.backButton}
         >
@@ -1727,6 +1873,41 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 6,
+  },
+  divineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#fbbf24',
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+  },
+  talkBothBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#fbbf24',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    marginTop: 12,
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  talkBothBtnLocked: {
+    backgroundColor: 'rgba(251,191,36,0.35)',
+  },
+  talkBothBtnText: {
+    color: '#1a0033',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.4,
   },
   promoBadge: {
     backgroundColor: 'rgba(251,191,36,0.15)',

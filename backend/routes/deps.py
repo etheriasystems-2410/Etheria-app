@@ -149,6 +149,28 @@ SPIRIT_GUIDE_VOICES = {
         "personality": "boundless, fluid, deeply wise — a guide of authentic self and transformation",
         "category": "lgbtq",
         "image": "lgbtq-trans"
+    },
+
+    # ===== Divine Guides (premium-only, no promo; interact alone or together) =====
+    "Helios": {
+        "voice": "onyx",
+        "speed": 0.88,
+        "gender": "masculine",
+        "element": "Sun",
+        "personality": "radiant, eternal, sacred — Divine Masculine archetype of light, will, and protection",
+        "category": "divine",
+        "image": "divine-pair",
+        "pair": "Selene"
+    },
+    "Selene": {
+        "voice": "shimmer",
+        "speed": 0.88,
+        "gender": "feminine",
+        "element": "Moon",
+        "personality": "luminous, intuitive, sacred — Divine Feminine archetype of mystery, wisdom, and grace",
+        "category": "divine",
+        "image": "divine-pair",
+        "pair": "Helios"
     }
 }
 
