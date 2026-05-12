@@ -325,8 +325,12 @@ async def _maybe_email_recipient(recipient_id: Optional[str], sender: dict, thre
 
         now = datetime.now(timezone.utc)
         throttle = await _db.dm_email_throttle.find_one({"user_id": recipient_id, "thread_id": thread_id})
-        if throttle and (now - throttle["last_email_at"]).total_seconds() < _EMAIL_THROTTLE_MIN * 60:
-            return
+        if throttle and throttle.get("last_email_at"):
+            last = throttle["last_email_at"]
+            if isinstance(last, datetime) and last.tzinfo is None:
+                last = last.replace(tzinfo=timezone.utc)
+            if (now - last).total_seconds() < _EMAIL_THROTTLE_MIN * 60:
+                return
 
         from services.email_service import send_email
         sender_name = sender.get("display_name") or sender.get("name") or "A seeker"
