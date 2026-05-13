@@ -496,14 +496,15 @@ export default function SpiritGuides() {
     return elements[element]?.[lang] || elements[element]?.en || element;
   };
 
-  const selectGuide = async (guide: Guide) => {
+  const selectGuide = async (guide: Guide, opts?: { divinePair?: boolean }) => {
     setSelectedGuide(guide);
     setAudioError(null);
 
     // Special path: Divine Pair mode → fetch a two-part intro (Helios + Selene each
-    // introduce themselves with their own voice). Falls back to a single greeting if
-    // the endpoint is unavailable.
-    if (divinePairMode) {
+    // introduce themselves with their own voice). The caller passes opts.divinePair=true
+    // because the divinePairMode state setter is async and hasn't applied yet.
+    const isPair = opts?.divinePair ?? divinePairMode;
+    if (isPair) {
       try {
         const token = await AsyncStorage.getItem('session_token');
         const headers: Record<string, string> = {};
@@ -1177,12 +1178,13 @@ export default function SpiritGuides() {
                 }
                 setDivinePairMode(true);
                 // Use Helios as the primary "selectedGuide" so the chat UI mounts.
-                // The chat header will detect divinePairMode and render the pair view.
+                // Pass divinePair:true explicitly because the state setter above is
+                // async — selectGuide would otherwise see divinePairMode === false.
                 selectGuide({
                   ...divineGuides[0],
                   name: 'Helios & Selene',
                   description: 'Divine Pair — Sacred Union',
-                });
+                }, { divinePair: true });
               }}
               activeOpacity={0.85}
             >
