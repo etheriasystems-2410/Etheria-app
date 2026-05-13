@@ -361,25 +361,42 @@ async def get_divine_intro(request: Request, lang: str = "en"):
     helios_text = helios_intros.get(lang, helios_intros["en"])
     selene_text = selene_intros.get(lang, selene_intros["en"])
 
-    async def tts(text: str, voice_cfg: dict) -> Optional[str]:
+    async def tts_bytes(text: str, voice_cfg: dict) -> Optional[bytes]:
+        """Like the tts helper above but returns raw MP3 bytes instead of base64."""
         try:
             if not (EMERGENT_LLM_KEY and openai_tts and text):
                 return None
-            return await openai_tts.generate_speech_base64(
+            b64 = await openai_tts.generate_speech_base64(
                 text=text,
                 voice=voice_cfg["voice"],
                 model="tts-1",
                 response_format="mp3",
                 speed=float(voice_cfg.get("speed", 1.0)),
             )
+            if not b64:
+                return None
+            import base64 as _b64
+            return _b64.b64decode(b64)
         except Exception as e:
-            logging.error(f"Divine intro TTS error: {e}")
+            logging.error(f"Divine intro TTS bytes error: {e}")
             return None
 
-    helios_audio, selene_audio = await asyncio.gather(
-        tts(helios_text, helios_voice),
-        tts(selene_text, selene_voice),
+    helios_bytes, selene_bytes = await asyncio.gather(
+        tts_bytes(helios_text, helios_voice),
+        tts_bytes(selene_text, selene_voice),
     )
+
+    import base64 as _b64
+    helios_audio = _b64.b64encode(helios_bytes).decode() if helios_bytes else None
+    selene_audio = _b64.b64encode(selene_bytes).decode() if selene_bytes else None
+
+    # Concatenate the two MP3 byte streams into a single seamless clip. MP3 is a
+    # frame-based format so most decoders (HTML5 audio, expo-av) handle a raw concat
+    # of two same-encoder streams without artifacts. This eliminates the player
+    # unload/load gap entirely on the client side.
+    combined_audio = None
+    if helios_bytes and selene_bytes:
+        combined_audio = _b64.b64encode(helios_bytes + selene_bytes).decode()
 
     return {
         "success": True,
@@ -387,6 +404,9 @@ async def get_divine_intro(request: Request, lang: str = "en"):
             {"guide": "Helios", "voice": helios_voice["voice"], "speed": helios_voice.get("speed", 1.0), "text": helios_text, "audio_base64": helios_audio, "kind": "intro"},
             {"guide": "Selene", "voice": selene_voice["voice"], "speed": selene_voice.get("speed", 1.0), "text": selene_text, "audio_base64": selene_audio, "kind": "intro"},
         ],
+        # When present, the client should prefer this single seamless clip over chaining
+        # the two individual `audio_base64` clips above.
+        "combined_audio_base64": combined_audio,
     }
 
 

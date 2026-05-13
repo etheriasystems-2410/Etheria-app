@@ -523,14 +523,22 @@ export default function SpiritGuides() {
               audioBase64: m.audio_base64 || undefined,
             }));
             setMessages(introMsgs);
-            // Chain playback so each guide introduces themselves seamlessly
+            // Prefer the server-concatenated seamless clip (both voices baked into one
+            // MP3) so the player never has to unload/reload between Helios and Selene.
+            // Falls back to per-message playback chain if combined clip isn't available.
             if (!isMuted) {
               await new Promise((r) => setTimeout(r, 80));
-              for (let i = 0; i < introMsgs.length; i++) {
-                const audio = introMsgs[i].audioBase64;
-                if (!audio) continue;
-                // eslint-disable-next-line no-await-in-loop
-                await playAudioAndWait(audio, i, 120);
+              if (data.combined_audio_base64) {
+                // Single clip — true zero-gap transition. Both bubbles stay highlighted
+                // collectively; advanced highlight switching could be added later.
+                await playAudioAndWait(data.combined_audio_base64, 0, 0);
+              } else {
+                for (let i = 0; i < introMsgs.length; i++) {
+                  const audio = introMsgs[i].audioBase64;
+                  if (!audio) continue;
+                  // eslint-disable-next-line no-await-in-loop
+                  await playAudioAndWait(audio, i, 120);
+                }
               }
             }
             return;
