@@ -40,6 +40,8 @@ interface Guide {
   gender: string;
   personality: string;
   voice_id: string;
+  ringColors?: string[];
+  genderSymbol?: string;
   image?: any;
   category: 'elemental' | 'lgbtq' | 'custom';
   custom_slot?: 'male' | 'female';
@@ -111,10 +113,12 @@ const lgbtqGuides: Guide[] = [
     color: '#f59e0b',
     icon: 'sunny',
     gender: 'masculine',
+    genderSymbol: '⚣',
     personality: 'radiant, courageous, affirming',
     voice_id: 'fable',
     image: require('../assets/guides/lgbtq-male.jpg'),
     category: 'lgbtq',
+    ringColors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'],
   },
   {
     name: 'Aurora',
@@ -123,22 +127,26 @@ const lgbtqGuides: Guide[] = [
     color: '#ec4899',
     icon: 'flower',
     gender: 'feminine',
+    genderSymbol: '⚢',
     personality: 'luminous, gentle, joyful',
     voice_id: 'alloy',
     image: require('../assets/guides/lgbtq-female.jpg'),
     category: 'lgbtq',
+    ringColors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'],
   },
   {
     name: 'Spectrum',
     element: 'Rainbow',
     description: 'Boundless and authentic, guides through transformation',
-    color: '#8b5cf6',
-    icon: 'color-palette',
+    color: '#5BCFFA',
+    icon: 'transgender',
     gender: 'transgender',
+    genderSymbol: '⚧',
     personality: 'boundless, fluid, deeply wise',
     voice_id: 'sage',
     image: require('../assets/guides/lgbtq-trans.jpg'),
     category: 'lgbtq',
+    ringColors: ['#5BCFFA', '#F5A9B8', '#FFFFFF', '#F5A9B8', '#5BCFFA'],
   },
 ];
 
@@ -1066,7 +1074,7 @@ export default function SpiritGuides() {
                 <Text style={styles.guideName}>{guide.name}</Text>
                 <Text style={styles.guideElement}>{guide.element}</Text>
                 <Text style={styles.guideGender}>
-                  {guide.gender === 'transgender' ? '⚧' : guide.gender === 'non-binary' ? '⚧' : guide.gender === 'feminine' ? '♀' : '♂'} {guide.gender}
+                  {guide.genderSymbol || (guide.gender === 'transgender' ? '⚧' : guide.gender === 'non-binary' ? '⚧' : guide.gender === 'feminine' ? '♀' : '♂')} {guide.gender}
                 </Text>
                 <Text style={styles.guideDescription}>{guide.description}</Text>
               </TouchableOpacity>
@@ -1283,8 +1291,28 @@ export default function SpiritGuides() {
         
         {/* Guide Picture in Header with Pulsating Ring */}
         <View style={styles.chatHeaderImageWrapper}>
-          {/* Animated pulsating ring */}
-          {isTalking && (
+          {/* Animated pulsating ring(s) */}
+          {isTalking && selectedGuide.ringColors && selectedGuide.ringColors.length > 0 ? (
+            selectedGuide.ringColors.map((c, idx) => {
+              const sizeBoost = idx * 6; // each ring 6px larger
+              return (
+                <Animated.View
+                  key={`ring-${idx}`}
+                  style={[
+                    styles.pulseRing,
+                    {
+                      width: 56 + sizeBoost,
+                      height: 56 + sizeBoost,
+                      borderRadius: (56 + sizeBoost) / 2,
+                      borderColor: c,
+                      transform: [{ scale: pulseAnim }],
+                      opacity: glowAnim,
+                    },
+                  ]}
+                />
+              );
+            })
+          ) : isTalking ? (
             <Animated.View
               style={[
                 styles.pulseRing,
@@ -1295,7 +1323,7 @@ export default function SpiritGuides() {
                 },
               ]}
             />
-          )}
+          ) : null}
           {selectedGuide.image ? (
             <View style={[
               styles.chatHeaderImageContainer,
