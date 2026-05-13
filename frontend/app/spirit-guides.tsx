@@ -692,16 +692,16 @@ export default function SpiritGuides() {
         setLoading(false);
 
         // Chain audio playback so the dialogue feels unbroken:
-        //   Helios → (brief breath) → Selene → (brief breath) → Unified blessing.
+        //   Helios → (whisper-thin breath) → Selene → (slightly longer breath) → Unified blessing.
         // Each step awaits the previous clip's didJustFinish before starting the next.
         if (!isMuted) {
           // Small pre-roll so the UI has a moment to render the bubbles
-          await new Promise((r) => setTimeout(r, 200));
+          await new Promise((r) => setTimeout(r, 80));
           for (let i = 0; i < pairMsgs.length; i++) {
             const audio = pairMsgs[i].audioBase64;
             if (!audio) continue;
-            // Slightly longer gap before the final unified blessing for sacred punctuation
-            const gap = i === pairMsgs.length - 1 ? 700 : 350;
+            // 120ms between Helios and Selene = imperceptible breath; 400ms before unified for sacred punctuation
+            const gap = i === pairMsgs.length - 1 ? 400 : 120;
             // eslint-disable-next-line no-await-in-loop
             await playAudioAndWait(audio, startIndex + i, gap);
           }

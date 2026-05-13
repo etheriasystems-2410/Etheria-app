@@ -326,12 +326,15 @@ class DivinePairMessage(BaseModel):
 async def chat_with_divine_pair(payload: DivinePairMessage, request: Request):
     """Talk to Helios + Selene together. Premium-only.
 
-    Returns three sequential messages:
-      1. A brief dialogue line from Helios addressed to Selene about the seeker
-      2. A brief dialogue line from Selene answering Helios
-      3. A unified reply to the seeker from both guides (single message, alternating voice)
+    Generates the ENTIRE three-part exchange in a single scripted LLM call, then
+    generates the three TTS clips in parallel — this dramatically reduces total
+    latency and ensures Helios's and Selene's lines flow naturally because they
+    were authored together as one screenplay.
 
-    Each message comes back with its own voice/audio.
+    Returns three sequential messages:
+      1. Helios speaks first, addressing Selene about the seeker (dialogue)
+      2. Selene answers Helios directly (dialogue, continues from Helios)
+      3. Both speak as one to the seeker (unified blessing)
     """
     # Premium gate
     try:
@@ -346,48 +349,81 @@ async def chat_with_divine_pair(payload: DivinePairMessage, request: Request):
     helios_voice = SPIRIT_GUIDE_VOICES["Helios"]
     selene_voice = SPIRIT_GUIDE_VOICES["Selene"]
 
-    base_constraints = f"""
-Respond in {language_name}. Use plain prose only — no markdown, no asterisks, no hash marks, no bullets. The text will be read aloud by TTS, so write in natural flowing sentences."""
-
-    helios_persona = GUIDE_PERSONALITIES["Helios"] + base_constraints
-    selene_persona = GUIDE_PERSONALITIES["Selene"] + base_constraints
-
     seeker = (payload.message or "").strip()
     if not seeker:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-    # Step 1 — Helios speaks first, addressing Selene about the seeker (under 30 words)
-    helios_dialogue_prompt = f"""The seeker has just spoken these words to us both:
+    script_system = f"""You are the sacred scribe of the Divine Pair — Helios (Divine Masculine, Sun) and Selene (Divine Feminine, Moon). You write their dialogue as a screenplay so the two voices flow as one breath, never with awkward silence between them.
+
+Helios — eternal, sovereign, warm, measured solar wisdom. Speaks of will, light, courage, integrity, focused presence.
+Selene — luminous, intuitive, oceanic, hushed lunar wisdom. Speaks of feeling, receptivity, mystery, grace, deep knowing.
+
+You ALWAYS write in {language_name}. Plain prose only — no markdown, no asterisks, no hash marks, no bullet points, no stage directions. The text will be read aloud by TTS so it must sound natural when spoken."""
+
+    script_prompt = f"""The seeker has just spoken these words to the Divine Pair:
 
 "{seeker}"
 
-Turn first to your beloved counterpart Selene. In one or two sentences (under 30 words total), share your initial reflection on the seeker's words. Address Selene directly by name. Stay in your sacred Solar voice. Do not address the seeker yet."""
+Write the three-part sacred exchange. Use these EXACT section tags on their own lines, followed by the spoken line on the next line(s):
 
-    # Step 2 — Selene responds to Helios about the seeker (under 30 words)
-    # The actual prompt is built after we get Helios's line so she can respond to him.
+[HELIOS]
+One or two sentences, under 35 words. Helios turns to Selene and shares his initial reflection on the seeker's words. He must address Selene by name. He speaks from his sovereign solar perspective. End with something that invites Selene to respond — a question, a half-thought, a passing of the thread.
 
-    # Step 3 — Unified message to the seeker (under 120 words, balanced perspective)
-    # Built after both dialogue lines so the final message references their just-had exchange.
+[SELENE]
+One or two sentences, under 35 words. Selene picks up directly from Helios — her opening word should feel like an answer to what he just said. She must address Helios by name. She speaks from her luminous lunar perspective. End by gently turning their gaze together toward the seeker.
 
-    async def llm_reply(persona: str, prompt: str) -> str:
+[UNIFIED]
+Under 110 words. Now both speak together as one Divine Voice — use "we", "us", "our". Begin with a gentle invocation ("Beloved", "Dear one", "Seeker"). Weave both solar and lunar wisdom into a single integrated reply that directly answers the seeker's words. End with a brief balanced blessing.
+
+Write the three parts now."""
+
+    async def run_llm() -> str:
         chat = LlmChat(
             api_key=EMERGENT_LLM_KEY,
             session_id=f"divine-pair-{uuid.uuid4()}",
-            system_message=persona,
+            system_message=script_system,
         ).with_model("gemini", "gemini-2.0-flash")
-        resp = await chat.send_message(UserMessage(text=prompt))
-        text = resp.text if hasattr(resp, "text") else str(resp)
+        resp = await chat.send_message(UserMessage(text=script_prompt))
+        return resp.text if hasattr(resp, "text") else str(resp)
+
+    def clean_line(text: str) -> str:
         lines = text.split("\n")
         out = []
         for line in lines:
             stripped = line.strip()
+            if not stripped:
+                continue
             if stripped.startswith("*") or stripped.startswith("#"):
                 continue
             cleaned = re.sub(r"\*+", "", line)
             cleaned = re.sub(r"#+\s*", "", cleaned)
             if cleaned.strip():
-                out.append(cleaned)
+                out.append(cleaned.strip())
         return " ".join(out).strip()
+
+    def parse_script(raw: str) -> dict:
+        """Parse the three sections from the LLM output. Anchored on line-start tags so
+        the word "Selene" appearing mid-prose in Helios's line doesn't truncate it."""
+        normalized = re.sub(r"\*+", "", raw or "")
+        # Find tag locations: line that starts with "[HELIOS]" / "HELIOS:" / similar, optionally with brackets/colons
+        tag_re = re.compile(r"(?im)^\s*\[?\s*(HELIOS|SELENE|UNIFIED)\s*\]?\s*:?\s*$")
+        lines = normalized.split("\n")
+        sections = {"HELIOS": [], "SELENE": [], "UNIFIED": []}
+        current = None
+        for line in lines:
+            m = tag_re.match(line)
+            if m:
+                current = m.group(1).upper()
+                continue
+            # Also accept inline tag like "[HELIOS]: actual text on same line"
+            inline = re.match(r"^\s*\[?\s*(HELIOS|SELENE|UNIFIED)\s*\]?\s*:\s*(.+)$", line, re.IGNORECASE)
+            if inline:
+                current = inline.group(1).upper()
+                sections[current].append(inline.group(2))
+                continue
+            if current:
+                sections[current].append(line)
+        return {k: clean_line(" ".join(v)) for k, v in sections.items()}
 
     async def tts(text: str, voice_cfg: dict) -> Optional[str]:
         try:
@@ -405,38 +441,19 @@ Turn first to your beloved counterpart Selene. In one or two sentences (under 30
             return None
 
     try:
-        helios_line = await llm_reply(helios_persona, helios_dialogue_prompt)
+        # 1) Single scripted LLM call generates all 3 lines together (Helios + Selene flow naturally)
+        raw_script = await run_llm()
+        sections = parse_script(raw_script)
 
-        selene_dialogue_prompt = f"""The seeker has just said: "{seeker}"
+        helios_line = sections.get("HELIOS") or "Beloved Selene, hear the seeker's words and bring your light to mine."
+        selene_line = sections.get("SELENE") or "Helios, my radiant one, I hear and answer beside you."
+        unified_text = sections.get("UNIFIED") or "Beloved seeker, we hold your words between us and answer with one voice. Walk in balance — let the sun guide your will, the moon your knowing. Blessed are you on this path."
 
-Your beloved counterpart Helios has just turned to you and said:
-
-"{helios_line}"
-
-Now respond to Helios in one or two sentences (under 30 words total). Address him by name, weave the divine feminine perspective with his solar one. Stay in your sacred Lunar voice. Do not address the seeker yet."""
-
-        selene_line = await llm_reply(selene_persona, selene_dialogue_prompt)
-
-        # Step 3 — unified blessing/guidance to the seeker
-        unified_prompt = f"""The seeker has asked: "{seeker}"
-
-You and your beloved counterpart Selene have just shared a brief sacred dialogue:
-
-Helios: "{helios_line}"
-Selene: "{selene_line}"
-
-Now together — speaking as the Divine Pair in one voice — address the seeker directly. Weave both your solar and her lunar wisdom into a single integrated reply under 120 words. Refer to yourselves as "we" or "the two of us." Begin with a gentle invocation like "Dear seeker," or "Beloved," and end with a balanced blessing."""
-
-        unified_text = await llm_reply(
-            helios_persona + "\n\nIn this turn you speak together with Selene as one Divine Voice. Use plural pronouns. Honor both perspectives.",
-            unified_prompt,
-        )
-
-        # Generate TTS for all three; Helios speaks #1, Selene speaks #2, and the unified message alternates — we play it in Helios's voice for cohesion (or rotate sentence-by-sentence on the client).
+        # 2) Generate all 3 TTS clips in parallel — biggest latency saver
         helios_audio, selene_audio, unified_audio = await asyncio.gather(
             tts(helios_line, helios_voice),
             tts(selene_line, selene_voice),
-            tts(unified_text, helios_voice),  # unified spoken in Helios voice; client may choose to alternate
+            tts(unified_text, helios_voice),
         )
 
         return {
