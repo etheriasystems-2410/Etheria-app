@@ -521,19 +521,24 @@ Write the three parts now."""
                 sections[current].append(line)
         return {k: clean_line(" ".join(v)) for k, v in sections.items()}
 
-    async def tts(text: str, voice_cfg: dict) -> Optional[str]:
+    async def tts_bytes_pair(text: str, voice_cfg: dict) -> Optional[bytes]:
+        """Returns raw MP3 bytes (so we can concatenate)."""
         try:
             if not (EMERGENT_LLM_KEY and openai_tts and text):
                 return None
-            return await openai_tts.generate_speech_base64(
+            b64 = await openai_tts.generate_speech_base64(
                 text=text,
                 voice=voice_cfg["voice"],
                 model="tts-1",
                 response_format="mp3",
                 speed=float(voice_cfg.get("speed", 1.0)),
             )
+            if not b64:
+                return None
+            import base64 as _b64
+            return _b64.b64decode(b64)
         except Exception as e:
-            logging.error(f"Divine TTS error: {e}")
+            logging.error(f"Divine pair TTS bytes error: {e}")
             return None
 
     try:
@@ -545,12 +550,24 @@ Write the three parts now."""
         selene_line = sections.get("SELENE") or "Helios, my radiant one, I hear and answer beside you."
         unified_text = sections.get("UNIFIED") or "Beloved seeker, we hold your words between us and answer with one voice. Walk in balance — let the sun guide your will, the moon your knowing. Blessed are you on this path."
 
-        # 2) Generate all 3 TTS clips in parallel — biggest latency saver
-        helios_audio, selene_audio, unified_audio = await asyncio.gather(
-            tts(helios_line, helios_voice),
-            tts(selene_line, selene_voice),
-            tts(unified_text, helios_voice),
+        # 2) Generate all 3 TTS clips in parallel as raw bytes — biggest latency saver
+        helios_bytes, selene_bytes, unified_bytes = await asyncio.gather(
+            tts_bytes_pair(helios_line, helios_voice),
+            tts_bytes_pair(selene_line, selene_voice),
+            tts_bytes_pair(unified_text, helios_voice),
         )
+
+        import base64 as _b64
+        helios_audio = _b64.b64encode(helios_bytes).decode() if helios_bytes else None
+        selene_audio = _b64.b64encode(selene_bytes).decode() if selene_bytes else None
+        unified_audio = _b64.b64encode(unified_bytes).decode() if unified_bytes else None
+
+        # Concatenate the 3 MP3 byte streams into a single seamless clip. MP3 is a
+        # frame-based format so raw concat of same-encoder streams plays without gaps
+        # or overlap. This is what the client should prefer over chaining 3 clips.
+        combined_audio = None
+        if helios_bytes and selene_bytes and unified_bytes:
+            combined_audio = _b64.b64encode(helios_bytes + selene_bytes + unified_bytes).decode()
 
         return {
             "success": True,
@@ -559,6 +576,7 @@ Write the three parts now."""
                 {"guide": "Selene", "voice": selene_voice["voice"], "speed": selene_voice.get("speed", 1.0), "text": selene_line, "audio_base64": selene_audio, "kind": "dialogue"},
                 {"guide": "Divine Pair", "voice": helios_voice["voice"], "speed": helios_voice.get("speed", 1.0), "text": unified_text, "audio_base64": unified_audio, "kind": "unified"},
             ],
+            "combined_audio_base64": combined_audio,
         }
     except HTTPException:
         raise

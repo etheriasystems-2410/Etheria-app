@@ -108,7 +108,7 @@ const elementalGuides: Guide[] = [
 const lgbtqGuides: Guide[] = [
   {
     name: 'Solis',
-    element: 'Light',
+    element: 'Rainbow',
     description: 'Radiant and affirming, guides through pride and joy',
     color: '#f59e0b',
     icon: 'sunny',
@@ -122,7 +122,7 @@ const lgbtqGuides: Guide[] = [
   },
   {
     name: 'Aurora',
-    element: 'Light',
+    element: 'Rainbow',
     description: 'Luminous and tender, guides through self-love',
     color: '#ec4899',
     icon: 'flower',
@@ -430,10 +430,11 @@ export default function SpiritGuides() {
 
   const checkBirthdayStored = async () => {
     try {
-      const stored = await AsyncStorage.getItem('user_birthday');
-      if (!stored) {
-        setShowBirthdayInput(true);
-      }
+      // Don't auto-popup the birthday picker when entering Spirit Guides.
+      // Users can tap the "Enter birthday for guide pairing" link if they
+      // want to get a paired suggestion.
+      // (Previously this would force-open the modal when no birthday was stored.)
+      return;
     } catch (error) {
       console.error('Error checking birthday:', error);
     }
@@ -751,18 +752,28 @@ export default function SpiritGuides() {
         setLoading(false);
 
         // Chain audio playback so the dialogue feels unbroken:
-        //   Helios → (whisper-thin breath) → Selene → (slightly longer breath) → Unified blessing.
-        // Each step awaits the previous clip's didJustFinish before starting the next.
+        //   Helios → Selene → Unified blessing.
+        // PREFER the single combined MP3 stream (raw byte-concat of all 3 clips
+        // returned by the backend) — playing one continuous clip eliminates the
+        // dead-air gap and the accidental overlap that can occur when chaining
+        // three separate audio loads.
         if (!isMuted) {
           // Small pre-roll so the UI has a moment to render the bubbles
           await new Promise((r) => setTimeout(r, 80));
-          for (let i = 0; i < pairMsgs.length; i++) {
-            const audio = pairMsgs[i].audioBase64;
-            if (!audio) continue;
-            // 120ms between Helios and Selene = imperceptible breath; 400ms before unified for sacred punctuation
-            const gap = i === pairMsgs.length - 1 ? 400 : 120;
-            // eslint-disable-next-line no-await-in-loop
-            await playAudioAndWait(audio, startIndex + i, gap);
+          if (data.combined_audio_base64) {
+            // Single seamless clip — highlight Helios bubble first; we don't
+            // currently know precise timestamps so we keep one highlight active
+            // for the whole duration (acceptable since the audio plays as one).
+            await playAudioAndWait(data.combined_audio_base64, startIndex, 0);
+          } else {
+            // Fallback: chain the three clips individually
+            for (let i = 0; i < pairMsgs.length; i++) {
+              const audio = pairMsgs[i].audioBase64;
+              if (!audio) continue;
+              const gap = i === pairMsgs.length - 1 ? 400 : 120;
+              // eslint-disable-next-line no-await-in-loop
+              await playAudioAndWait(audio, startIndex + i, gap);
+            }
           }
         }
         return;
@@ -1053,6 +1064,11 @@ export default function SpiritGuides() {
             <View style={styles.sectionTitleRow}>
               <Text style={styles.sectionHeading}>LGBTQ+ Guides</Text>
               <View style={styles.rainbowDot} />
+              {inFreePromo && (
+                <View style={styles.promoBadge}>
+                  <Text style={styles.promoBadgeText}>FREE THRU JUNE</Text>
+                </View>
+              )}
             </View>
             <Text style={styles.sectionSub}>Open to every seeker — free for all</Text>
             {lgbtqGuides.map((guide) => (
