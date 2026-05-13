@@ -496,9 +496,51 @@ export default function SpiritGuides() {
     return elements[element]?.[lang] || elements[element]?.en || element;
   };
 
-  const selectGuide = (guide: Guide) => {
+  const selectGuide = async (guide: Guide) => {
     setSelectedGuide(guide);
     setAudioError(null);
+
+    // Special path: Divine Pair mode → fetch a two-part intro (Helios + Selene each
+    // introduce themselves with their own voice). Falls back to a single greeting if
+    // the endpoint is unavailable.
+    if (divinePairMode) {
+      try {
+        const token = await AsyncStorage.getItem('session_token');
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(
+          `${BACKEND_URL}/api/spirit-guides/divine-intro?lang=${encodeURIComponent(languageCode)}`,
+          { headers }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.messages?.length) {
+            const introMsgs: Message[] = data.messages.map((m: any) => ({
+              role: 'assistant',
+              content: `${m.guide}: ${m.text}`,
+              hasAudio: !!m.audio_base64,
+              audioBase64: m.audio_base64 || undefined,
+            }));
+            setMessages(introMsgs);
+            // Chain playback so each guide introduces themselves seamlessly
+            if (!isMuted) {
+              await new Promise((r) => setTimeout(r, 80));
+              for (let i = 0; i < introMsgs.length; i++) {
+                const audio = introMsgs[i].audioBase64;
+                if (!audio) continue;
+                // eslint-disable-next-line no-await-in-loop
+                await playAudioAndWait(audio, i, 120);
+              }
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Divine intro fetch failed, falling back:', e);
+      }
+      // Fallback to generic greeting if the endpoint failed
+    }
+
     const elementName = getElementName(guide.element, languageCode);
     const greeting = getGreeting(guide.name, elementName, languageCode);
     setMessages([
