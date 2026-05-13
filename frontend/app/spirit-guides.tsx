@@ -596,6 +596,52 @@ export default function SpiritGuides() {
     }
   };
 
+  /**
+   * Plays an audio clip and resolves the promise when playback finishes (or fails).
+   * Used by the Divine Pair flow to chain Helios → Selene → Unified seamlessly.
+   * Honors a short inter-clip gap to give the dialogue a natural breath between speakers.
+   */
+  const playAudioAndWait = (audioBase64: string, messageIndex: number, gapMs = 350): Promise<void> => {
+    return new Promise(async (resolve) => {
+      if (isMuted) {
+        resolve();
+        return;
+      }
+      if (!audioBase64 || audioBase64.length < 100) {
+        resolve();
+        return;
+      }
+      try {
+        if (audioPlayerRef.current) {
+          await audioPlayerRef.current.unload();
+        }
+        const player = new AudioPlayerManager();
+        const audioUri = `data:audio/mpeg;base64,${audioBase64}`;
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          setPlayingAudioIndex(null);
+          setTimeout(resolve, gapMs);
+        };
+        player.onPlaybackStatusChange((status) => {
+          if (status.didJustFinish) {
+            finish();
+          }
+        });
+        await player.loadAndPlay(audioUri);
+        audioPlayerRef.current = player;
+        setPlayingAudioIndex(messageIndex);
+        // Fail-safe — if no callback fires in 60s, resolve anyway so chat doesn't hang
+        setTimeout(finish, 60_000);
+      } catch (error) {
+        console.error('playAudioAndWait error:', error);
+        setPlayingAudioIndex(null);
+        resolve();
+      }
+    });
+  };
+
   const sendMessage = async () => {
     if (!inputText.trim() || !selectedGuide) return;
 
@@ -640,12 +686,26 @@ export default function SpiritGuides() {
           hasAudio: !!m.audio_base64,
           audioBase64: m.audio_base64 || undefined,
         }));
+        // Capture the index where the new messages will land so we can highlight each as it plays.
+        const startIndex = messages.length + 1; // +1 for the user message we just appended
         setMessages((prev) => [...prev, ...pairMsgs]);
-        // Auto-play the first one (Helios's dialogue) if not muted; user can tap others
-        if (!isMuted && pairMsgs[0]?.audioBase64) {
-          await playAudio(pairMsgs[0].audioBase64);
-        }
         setLoading(false);
+
+        // Chain audio playback so the dialogue feels unbroken:
+        //   Helios → (brief breath) → Selene → (brief breath) → Unified blessing.
+        // Each step awaits the previous clip's didJustFinish before starting the next.
+        if (!isMuted) {
+          // Small pre-roll so the UI has a moment to render the bubbles
+          await new Promise((r) => setTimeout(r, 200));
+          for (let i = 0; i < pairMsgs.length; i++) {
+            const audio = pairMsgs[i].audioBase64;
+            if (!audio) continue;
+            // Slightly longer gap before the final unified blessing for sacred punctuation
+            const gap = i === pairMsgs.length - 1 ? 700 : 350;
+            // eslint-disable-next-line no-await-in-loop
+            await playAudioAndWait(audio, startIndex + i, gap);
+          }
+        }
         return;
       }
 
