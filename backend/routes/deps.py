@@ -127,7 +127,7 @@ SPIRIT_GUIDE_VOICES = {
 
     # ===== LGBTQ+ Guides (free; NOT in birthdate picking) =====
     "Solis": {
-        "voice": "fable",
+        "voice": "ash",
         "gender": "masculine",
         "element": "Light",
         "personality": "radiant, courageous, affirming — a guide of pride and inner light",

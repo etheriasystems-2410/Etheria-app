@@ -115,7 +115,7 @@ const lgbtqGuides: Guide[] = [
     gender: 'masculine',
     genderSymbol: '⚣',
     personality: 'radiant, courageous, affirming',
-    voice_id: 'fable',
+    voice_id: 'ash',
     image: require('../assets/guides/lgbtq-male.jpg'),
     category: 'lgbtq',
     ringColors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'],
