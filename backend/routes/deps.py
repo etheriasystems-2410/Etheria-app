@@ -135,15 +135,15 @@ SPIRIT_GUIDE_VOICES = {
         "image": "lgbtq-male"
     },
     "Aurora": {
-        "voice": "alloy",
+        "voice": "sage",
         "gender": "feminine",
-        "element": "Light",
+        "element": "Rainbow",
         "personality": "luminous, gentle, joyful — a guide of dawn and self-love",
         "category": "lgbtq",
         "image": "lgbtq-female"
     },
     "Spectrum": {
-        "voice": "sage",
+        "voice": "alloy",
         "gender": "transgender",
         "element": "Rainbow",
         "personality": "boundless, fluid, deeply wise — a transgender guide of authentic self and transformation",

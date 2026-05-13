@@ -129,7 +129,7 @@ const lgbtqGuides: Guide[] = [
     gender: 'feminine',
     genderSymbol: '⚢',
     personality: 'luminous, gentle, joyful',
-    voice_id: 'alloy',
+    voice_id: 'sage',
     image: require('../assets/guides/lgbtq-female.jpg'),
     category: 'lgbtq',
     ringColors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'],
@@ -143,7 +143,7 @@ const lgbtqGuides: Guide[] = [
     gender: 'transgender',
     genderSymbol: '⚧',
     personality: 'boundless, fluid, deeply wise',
-    voice_id: 'sage',
+    voice_id: 'alloy',
     image: require('../assets/guides/lgbtq-trans.jpg'),
     category: 'lgbtq',
     ringColors: ['#5BCFFA', '#F5A9B8', '#FFFFFF', '#F5A9B8', '#5BCFFA'],
@@ -1361,7 +1361,9 @@ export default function SpiritGuides() {
         <View style={styles.chatHeaderInfo}>
           <Text style={styles.chatHeaderName}>{selectedGuide.name}</Text>
           <Text style={styles.chatHeaderElement}>
-            Guide of {selectedGuide.element} • {selectedGuide.gender}
+            {divinePairMode
+              ? 'Guides of the Sun and Moon'
+              : `Guide of ${selectedGuide.element} • ${selectedGuide.gender}`}
           </Text>
         </View>
         <View style={styles.chatHeaderRight}>
