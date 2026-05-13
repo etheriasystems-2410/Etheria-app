@@ -125,7 +125,7 @@ const lgbtqGuides: Guide[] = [
     gender: 'feminine',
     personality: 'luminous, gentle, joyful',
     voice_id: 'alloy',
-    image: require('../assets/guides/lgbtq-female.jpg'),
+    image: require('../assets/guides/lgbtq-trans.jpg'),
     category: 'lgbtq',
   },
   {
@@ -137,7 +137,7 @@ const lgbtqGuides: Guide[] = [
     gender: 'non-binary',
     personality: 'boundless, fluid, deeply wise',
     voice_id: 'sage',
-    image: require('../assets/guides/lgbtq-trans.jpg'),
+    image: require('../assets/guides/lgbtq-female.jpg'),
     category: 'lgbtq',
   },
 ];
