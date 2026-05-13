@@ -125,7 +125,7 @@ const lgbtqGuides: Guide[] = [
     gender: 'feminine',
     personality: 'luminous, gentle, joyful',
     voice_id: 'alloy',
-    image: require('../assets/guides/lgbtq-trans.jpg'),
+    image: require('../assets/guides/lgbtq-female.jpg'),
     category: 'lgbtq',
   },
   {
@@ -134,10 +134,10 @@ const lgbtqGuides: Guide[] = [
     description: 'Boundless and authentic, guides through transformation',
     color: '#8b5cf6',
     icon: 'color-palette',
-    gender: 'non-binary',
+    gender: 'transgender',
     personality: 'boundless, fluid, deeply wise',
     voice_id: 'sage',
-    image: require('../assets/guides/lgbtq-female.jpg'),
+    image: require('../assets/guides/lgbtq-trans.jpg'),
     category: 'lgbtq',
   },
 ];
@@ -1066,7 +1066,7 @@ export default function SpiritGuides() {
                 <Text style={styles.guideName}>{guide.name}</Text>
                 <Text style={styles.guideElement}>{guide.element}</Text>
                 <Text style={styles.guideGender}>
-                  {guide.gender === 'non-binary' ? '⚧' : guide.gender === 'feminine' ? '♀' : '♂'} {guide.gender}
+                  {guide.gender === 'transgender' ? '⚧' : guide.gender === 'non-binary' ? '⚧' : guide.gender === 'feminine' ? '♀' : '♂'} {guide.gender}
                 </Text>
                 <Text style={styles.guideDescription}>{guide.description}</Text>
               </TouchableOpacity>

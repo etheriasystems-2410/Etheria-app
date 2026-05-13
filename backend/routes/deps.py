@@ -144,9 +144,9 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Spectrum": {
         "voice": "sage",
-        "gender": "non-binary",
+        "gender": "transgender",
         "element": "Rainbow",
-        "personality": "boundless, fluid, deeply wise — a guide of authentic self and transformation",
+        "personality": "boundless, fluid, deeply wise — a transgender guide of authentic self and transformation",
         "category": "lgbtq",
         "image": "lgbtq-trans"
     },
