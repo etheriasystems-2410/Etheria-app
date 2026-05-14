@@ -1099,9 +1099,10 @@ export default function SpiritGuides() {
             <View style={styles.sectionDivider} />
             <View style={styles.sectionTitleRow}>
               <Text style={styles.sectionHeading}>Custom Guides</Text>
-              {inFreePromo && (
-                <View style={styles.promoBadge}>
-                  <Text style={styles.promoBadgeText}>FREE THRU JUNE</Text>
+              {!customUnlocked && (
+                <View style={styles.premiumBadge}>
+                  <Ionicons name="lock-closed" size={11} color="#fbbf24" style={{ marginRight: 4 }} />
+                  <Text style={styles.premiumBadgeText}>PREMIUM SUBSCRIPTION REQUIRED</Text>
                 </View>
               )}
             </View>
@@ -2081,6 +2082,23 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fbbf24',
     letterSpacing: 1.2,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(251,191,36,0.12)',
+    borderColor: 'rgba(251,191,36,0.55)',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginLeft: 6,
+  },
+  premiumBadgeText: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#fbbf24',
+    letterSpacing: 0.9,
   },
   customNameRow: {
     flexDirection: 'row',
