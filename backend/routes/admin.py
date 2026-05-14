@@ -12,8 +12,8 @@ import random
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from .deps import (
     db, EMERGENT_LLM_KEY, ADMIN_SECRET, GMAIL_EMAIL, GMAIL_APP_PASSWORD,
-    MYSTICAL_PREFIXES, MYSTICAL_MIDDLES, MYSTICAL_SUFFIXES, 
-    SPIRIT_GUIDE_VOICES, openai_tts
+    MYSTICAL_PREFIXES, MYSTICAL_MIDDLES, MYSTICAL_SUFFIXES,
+    SPIRIT_GUIDE_VOICES, openai_tts, elevenlabs_tts,
 )
 from .auth_utils import get_current_user
 
@@ -40,19 +40,21 @@ class TTSResponse(BaseModel):
 async def generate_tts(request: TTSRequest):
     """Generate text-to-speech audio using OpenAI TTS"""
     try:
-        # Determine which voice to use
+        # Determine which voice & per-guide TTS settings to use
+        voice_info = None
         if request.guide_name and request.guide_name in SPIRIT_GUIDE_VOICES:
-            voice = SPIRIT_GUIDE_VOICES[request.guide_name]["voice"]
+            voice_info = SPIRIT_GUIDE_VOICES[request.guide_name]
+            voice = voice_info["voice"]
             guide_name = request.guide_name
         elif request.voice_id:
             voice = request.voice_id
             guide_name = None
         else:
-            # Default to Aether (Air guide)
-            voice = SPIRIT_GUIDE_VOICES["Aether"]["voice"]
+            voice_info = SPIRIT_GUIDE_VOICES["Aether"]
+            voice = voice_info["voice"]
             guide_name = "Aether"
 
-        if not EMERGENT_LLM_KEY:
+        if not elevenlabs_tts.enabled:
             return TTSResponse(
                 audio_base64=None,
                 text=request.text,
@@ -85,7 +87,8 @@ async def generate_tts(request: TTSRequest):
                 success=False
             )
 
-        # Validate and truncate text if too long (OpenAI TTS limit is 4096 chars)
+        # Validate and truncate text if too long (ElevenLabs supports much longer
+        # than OpenAI but we keep a sane cap to bound cost/latency)
         if len(text_to_speak) > 4000:
             truncated = text_to_speak[:4000]
             last_period = truncated.rfind('.')
@@ -98,11 +101,13 @@ async def generate_tts(request: TTSRequest):
                 text_to_speak = truncated
             logging.info(f"TTS text truncated from {len(request.text)} to {len(text_to_speak)} characters")
 
-        audio_base64 = await openai_tts.generate_speech_base64(
+        audio_base64 = await elevenlabs_tts.generate_speech_base64(
             text=text_to_speak,
-            voice=voice,
-            model="tts-1",
-            response_format="mp3"
+            voice_id=voice,
+            stability=float(voice_info.get("stability", 0.45)) if voice_info else 0.45,
+            style=float(voice_info.get("style", 0.45)) if voice_info else 0.45,
+            similarity_boost=0.75,
+            speed=float(voice_info.get("speed", 1.0)) if voice_info else 1.0,
         )
 
         return TTSResponse(

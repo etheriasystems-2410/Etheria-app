@@ -63,7 +63,7 @@ const elementalGuides: Guide[] = [
     icon: 'flame',
     gender: 'masculine',
     personality: 'passionate, direct, transformative',
-    voice_id: 'TxGEqnHWrfWFTfGW9XjX',
+    voice_id: 'SOYHLrjzK2X1ezoPC6cr', // Harry — fierce warrior
     image: require('../assets/images/guide-ignis.jpg'),
     category: 'elemental',
   },
@@ -75,7 +75,7 @@ const elementalGuides: Guide[] = [
     icon: 'water',
     gender: 'feminine',
     personality: 'intuitive, healing, emotionally wise',
-    voice_id: 'EXAVITQu4vr4xnSDxMaL',
+    voice_id: 'hpp4J3VqNfWAUOO0d1Us', // Bella — bright, warm
     image: require('../assets/images/guide-aqua.jpg'),
     category: 'elemental',
   },
@@ -87,7 +87,7 @@ const elementalGuides: Guide[] = [
     icon: 'leaf',
     gender: 'masculine',
     personality: 'grounded, practical, stable',
-    voice_id: 'VR6AewLTigWG4xSOukaG',
+    voice_id: 'pqHfZKP75CvOlQylNhV4', // Bill — wise, mature, old
     image: require('../assets/images/guide-terra.webp'),
     category: 'elemental',
   },
@@ -99,7 +99,7 @@ const elementalGuides: Guide[] = [
     icon: 'cloudy',
     gender: 'feminine',
     personality: 'intellectual, free-spirited, enlightening',
-    voice_id: 'ThT5KcBeYPX3keUQqHPh',
+    voice_id: 'Xb7hH8MSUJpSbSDYk0k2', // Alice — clear British educator
     image: require('../assets/images/guide-aether.jpg'),
     category: 'elemental',
   },
@@ -115,7 +115,7 @@ const lgbtqGuides: Guide[] = [
     gender: 'masculine',
     genderSymbol: '⚣',
     personality: 'radiant, courageous, affirming',
-    voice_id: 'ash',
+    voice_id: 'nPczCjzI2devNBz1zQrb', // Brian — DEEP, resonant
     image: require('../assets/guides/lgbtq-male.jpg'),
     category: 'lgbtq',
     ringColors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'],
@@ -129,7 +129,7 @@ const lgbtqGuides: Guide[] = [
     gender: 'feminine',
     genderSymbol: '⚢',
     personality: 'luminous, gentle, joyful',
-    voice_id: 'sage',
+    voice_id: 'cgSgspJ2msm6clMCkdW9', // Jessica — playful, bright, warm
     image: require('../assets/guides/lgbtq-female.jpg'),
     category: 'lgbtq',
     ringColors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'],
@@ -143,7 +143,7 @@ const lgbtqGuides: Guide[] = [
     gender: 'transgender',
     genderSymbol: '⚧',
     personality: 'boundless, fluid, deeply wise',
-    voice_id: 'alloy',
+    voice_id: 'SAz9YHcvj6GT2YYXdXww', // River — NEUTRAL gender
     image: require('../assets/guides/lgbtq-trans.jpg'),
     category: 'lgbtq',
     ringColors: ['#5BCFFA', '#F5A9B8', '#FFFFFF', '#F5A9B8', '#5BCFFA'],
@@ -159,7 +159,7 @@ const customGuidesBase: Guide[] = [
     icon: 'person',
     gender: 'masculine',
     personality: 'warm, supportive, attentive',
-    voice_id: 'ash',
+    voice_id: 'cjVigY5qzO86Huf0OWal', // Eric — smooth, trustworthy
     image: require('../assets/guides/custom-male.jpg'),
     category: 'custom',
     custom_slot: 'male',
@@ -172,7 +172,7 @@ const customGuidesBase: Guide[] = [
     icon: 'person',
     gender: 'feminine',
     personality: 'nurturing, intuitive, compassionate',
-    voice_id: 'coral',
+    voice_id: 'EXAVITQu4vr4xnSDxMaL', // Sarah — mature, reassuring
     image: require('../assets/guides/custom-female.jpg'),
     category: 'custom',
     custom_slot: 'female',
@@ -188,7 +188,7 @@ const divineGuides: Guide[] = [
     icon: 'sunny',
     gender: 'masculine',
     personality: 'radiant, eternal, sacred',
-    voice_id: 'onyx',
+    voice_id: 'JBFqnCBsd6RMkjVDRZzb', // George — warm captivating British storyteller
     image: require('../assets/guides/divine-pair.jpg'),
     category: 'divine',
   },
@@ -200,7 +200,7 @@ const divineGuides: Guide[] = [
     icon: 'moon',
     gender: 'feminine',
     personality: 'luminous, intuitive, sacred',
-    voice_id: 'shimmer',
+    voice_id: 'pFZP5JQG7iQjIQuC4Bku', // Lily — velvety British actress
     image: require('../assets/guides/divine-pair.jpg'),
     category: 'divine',
   },

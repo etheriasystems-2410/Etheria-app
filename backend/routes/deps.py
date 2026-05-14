@@ -10,6 +10,11 @@ from emergentintegrations.llm.openai import OpenAITextToSpeech
 from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 
+# ElevenLabs TTS (now the default for Spirit Guides — far richer emotional inflection)
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).parent.parent))
+from services.elevenlabs_service import elevenlabs_tts  # noqa: E402
+
 ROOT_DIR = Path(__file__).parent.parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -74,31 +79,37 @@ FREE_TIER_LIMITS = {
 }
 
 # Spirit Guide Voice Configuration
+# `voice` is the ElevenLabs voice_id. Settings tune emotional inflection per guide.
+# (stability lower = more dynamic; style higher = more expressive)
 SPIRIT_GUIDE_VOICES = {
     # ===== Elemental Guides (zodiac/birthdate-matched) =====
     "Ignis": {
-        "voice": "onyx",
+        "voice": "SOYHLrjzK2X1ezoPC6cr",  # Harry — fierce warrior
+        "stability": 0.40, "style": 0.55,
         "gender": "masculine",
         "element": "Fire",
         "personality": "passionate, direct, transformative",
         "category": "elemental"
     },
     "Aqua": {
-        "voice": "shimmer",
+        "voice": "hpp4J3VqNfWAUOO0d1Us",  # Bella — professional, bright, warm
+        "stability": 0.50, "style": 0.40,
         "gender": "feminine",
         "element": "Water",
         "personality": "intuitive, healing, emotionally wise",
         "category": "elemental"
     },
     "Terra": {
-        "voice": "echo",
+        "voice": "pqHfZKP75CvOlQylNhV4",  # Bill — wise, mature, balanced (old)
+        "stability": 0.55, "style": 0.35,
         "gender": "masculine",
         "element": "Earth",
         "personality": "grounded, practical, stable",
         "category": "elemental"
     },
     "Aether": {
-        "voice": "nova",
+        "voice": "Xb7hH8MSUJpSbSDYk0k2",  # Alice — clear British educator
+        "stability": 0.50, "style": 0.45,
         "gender": "feminine",
         "element": "Air",
         "personality": "intellectual, free-spirited, enlightening",
@@ -107,7 +118,8 @@ SPIRIT_GUIDE_VOICES = {
 
     # ===== Custom Guides (premium, renamable; NOT in birthdate picking) =====
     "Male Guide": {
-        "voice": "ash",
+        "voice": "cjVigY5qzO86Huf0OWal",  # Eric — smooth, trustworthy
+        "stability": 0.50, "style": 0.40,
         "gender": "masculine",
         "element": "Custom",
         "personality": "warm, supportive, attentive — a personal spirit companion",
@@ -116,7 +128,8 @@ SPIRIT_GUIDE_VOICES = {
         "image": "custom-male"
     },
     "Female Guide": {
-        "voice": "coral",
+        "voice": "EXAVITQu4vr4xnSDxMaL",  # Sarah — mature, reassuring
+        "stability": 0.50, "style": 0.40,
         "gender": "feminine",
         "element": "Custom",
         "personality": "nurturing, intuitive, compassionate — a personal spirit companion",
@@ -127,7 +140,8 @@ SPIRIT_GUIDE_VOICES = {
 
     # ===== LGBTQ+ Guides (free; NOT in birthdate picking) =====
     "Solis": {
-        "voice": "ash",
+        "voice": "nPczCjzI2devNBz1zQrb",  # Brian — DEEP, resonant, comforting
+        "stability": 0.45, "style": 0.45,
         "gender": "masculine",
         "element": "Light",
         "personality": "radiant, courageous, affirming — a guide of pride and inner light",
@@ -135,7 +149,8 @@ SPIRIT_GUIDE_VOICES = {
         "image": "lgbtq-male"
     },
     "Aurora": {
-        "voice": "sage",
+        "voice": "cgSgspJ2msm6clMCkdW9",  # Jessica — playful, bright, warm
+        "stability": 0.40, "style": 0.55,
         "gender": "feminine",
         "element": "Rainbow",
         "personality": "luminous, gentle, joyful — a guide of dawn and self-love",
@@ -143,7 +158,8 @@ SPIRIT_GUIDE_VOICES = {
         "image": "lgbtq-female"
     },
     "Spectrum": {
-        "voice": "alloy",
+        "voice": "SAz9YHcvj6GT2YYXdXww",  # River — NEUTRAL gender
+        "stability": 0.45, "style": 0.45,
         "gender": "transgender",
         "element": "Rainbow",
         "personality": "boundless, fluid, deeply wise — a transgender guide of authentic self and transformation",
@@ -153,8 +169,8 @@ SPIRIT_GUIDE_VOICES = {
 
     # ===== Divine Guides (premium-only, no promo; interact alone or together) =====
     "Helios": {
-        "voice": "onyx",
-        "speed": 0.88,
+        "voice": "JBFqnCBsd6RMkjVDRZzb",  # George — warm captivating storyteller (British)
+        "stability": 0.45, "style": 0.55,
         "gender": "masculine",
         "element": "Sun",
         "personality": "radiant, eternal, sacred — Divine Masculine archetype of light, will, and protection",
@@ -163,8 +179,8 @@ SPIRIT_GUIDE_VOICES = {
         "pair": "Selene"
     },
     "Selene": {
-        "voice": "shimmer",
-        "speed": 0.88,
+        "voice": "pFZP5JQG7iQjIQuC4Bku",  # Lily — velvety British actress
+        "stability": 0.45, "style": 0.55,
         "gender": "feminine",
         "element": "Moon",
         "personality": "luminous, intuitive, sacred — Divine Feminine archetype of mystery, wisdom, and grace",
