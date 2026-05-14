@@ -1,6 +1,8 @@
 """
 Shared dependencies for route modules
 """
+import logging
+from typing import Optional
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from dotenv import load_dotenv
@@ -79,12 +81,14 @@ FREE_TIER_LIMITS = {
 }
 
 # Spirit Guide Voice Configuration
-# `voice` is the ElevenLabs voice_id. Settings tune emotional inflection per guide.
+# `voice` is the ElevenLabs voice_id (primary). `openai_voice` is the
+# fallback used when ElevenLabs is unavailable (quota / network / etc.).
 # (stability lower = more dynamic; style higher = more expressive)
 SPIRIT_GUIDE_VOICES = {
     # ===== Elemental Guides (zodiac/birthdate-matched) =====
     "Ignis": {
         "voice": "SOYHLrjzK2X1ezoPC6cr",  # Harry — fierce warrior
+        "openai_voice": "onyx",
         "stability": 0.40, "style": 0.55,
         "gender": "masculine",
         "element": "Fire",
@@ -93,6 +97,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Aqua": {
         "voice": "hpp4J3VqNfWAUOO0d1Us",  # Bella — professional, bright, warm
+        "openai_voice": "shimmer",
         "stability": 0.50, "style": 0.40,
         "gender": "feminine",
         "element": "Water",
@@ -101,6 +106,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Terra": {
         "voice": "pqHfZKP75CvOlQylNhV4",  # Bill — wise, mature, balanced (old)
+        "openai_voice": "echo",
         "stability": 0.55, "style": 0.35,
         "gender": "masculine",
         "element": "Earth",
@@ -109,6 +115,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Aether": {
         "voice": "Xb7hH8MSUJpSbSDYk0k2",  # Alice — clear British educator
+        "openai_voice": "nova",
         "stability": 0.50, "style": 0.45,
         "gender": "feminine",
         "element": "Air",
@@ -119,6 +126,7 @@ SPIRIT_GUIDE_VOICES = {
     # ===== Custom Guides (premium, renamable; NOT in birthdate picking) =====
     "Male Guide": {
         "voice": "cjVigY5qzO86Huf0OWal",  # Eric — smooth, trustworthy
+        "openai_voice": "ash",
         "stability": 0.50, "style": 0.40,
         "gender": "masculine",
         "element": "Custom",
@@ -129,6 +137,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Female Guide": {
         "voice": "EXAVITQu4vr4xnSDxMaL",  # Sarah — mature, reassuring
+        "openai_voice": "coral",
         "stability": 0.50, "style": 0.40,
         "gender": "feminine",
         "element": "Custom",
@@ -141,6 +150,7 @@ SPIRIT_GUIDE_VOICES = {
     # ===== LGBTQ+ Guides (free; NOT in birthdate picking) =====
     "Solis": {
         "voice": "nPczCjzI2devNBz1zQrb",  # Brian — DEEP, resonant, comforting
+        "openai_voice": "ash",
         "stability": 0.45, "style": 0.45,
         "gender": "masculine",
         "element": "Light",
@@ -150,6 +160,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Aurora": {
         "voice": "cgSgspJ2msm6clMCkdW9",  # Jessica — playful, bright, warm
+        "openai_voice": "sage",
         "stability": 0.40, "style": 0.55,
         "gender": "feminine",
         "element": "Rainbow",
@@ -159,6 +170,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Spectrum": {
         "voice": "SAz9YHcvj6GT2YYXdXww",  # River — NEUTRAL gender
+        "openai_voice": "alloy",
         "stability": 0.45, "style": 0.45,
         "gender": "transgender",
         "element": "Rainbow",
@@ -170,6 +182,7 @@ SPIRIT_GUIDE_VOICES = {
     # ===== Divine Guides (premium-only, no promo; interact alone or together) =====
     "Helios": {
         "voice": "JBFqnCBsd6RMkjVDRZzb",  # George — warm captivating storyteller (British)
+        "openai_voice": "onyx",
         "stability": 0.45, "style": 0.55,
         "gender": "masculine",
         "element": "Sun",
@@ -180,6 +193,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Selene": {
         "voice": "pFZP5JQG7iQjIQuC4Bku",  # Lily — velvety British actress
+        "openai_voice": "shimmer",
         "stability": 0.45, "style": 0.55,
         "gender": "feminine",
         "element": "Moon",
@@ -189,6 +203,59 @@ SPIRIT_GUIDE_VOICES = {
         "pair": "Helios"
     }
 }
+
+
+# ===== TTS helper with automatic ElevenLabs → OpenAI fallback =====
+async def tts_with_fallback(
+    text: str,
+    voice_cfg: dict,
+    voice_id_override: Optional[str] = None,
+) -> Optional[bytes]:
+    """Synthesise `text` and return raw MP3 bytes.
+
+    Tries ElevenLabs first (the rich voice), and seamlessly falls back to
+    OpenAI TTS when ElevenLabs is unavailable (quota exceeded, network
+    error, no API key, etc.). This guarantees the user always hears their
+    guide speak even after monthly ElevenLabs credits run out.
+    """
+    import base64 as _b64
+    if not text or not text.strip():
+        return None
+
+    # 1) Primary: ElevenLabs
+    if elevenlabs_tts.enabled:
+        eleven_voice = voice_id_override if (voice_id_override and len(voice_id_override) >= 15) else voice_cfg.get("voice")
+        if eleven_voice:
+            audio_bytes = await elevenlabs_tts.generate_speech_bytes(
+                text=text,
+                voice_id=eleven_voice,
+                stability=float(voice_cfg.get("stability", 0.45)),
+                style=float(voice_cfg.get("style", 0.45)),
+                similarity_boost=0.75,
+                speed=float(voice_cfg.get("speed", 1.0)),
+            )
+            if audio_bytes:
+                return audio_bytes
+            logging.warning("ElevenLabs returned no audio — falling back to OpenAI TTS")
+
+    # 2) Fallback: OpenAI TTS
+    if openai_tts and EMERGENT_LLM_KEY:
+        try:
+            openai_voice = voice_cfg.get("openai_voice", "alloy")
+            b64 = await openai_tts.generate_speech_base64(
+                text=text,
+                voice=openai_voice,
+                model="tts-1-hd",
+                response_format="mp3",
+                speed=float(voice_cfg.get("speed", 1.0)),
+            )
+            if b64:
+                return _b64.b64decode(b64)
+        except Exception as e:
+            logging.error(f"OpenAI TTS fallback also failed: {e}")
+
+    return None
+
 
 # Mystical code word lists
 MYSTICAL_PREFIXES = ["LUNA", "STELLAR", "COSMIC", "MYSTIC", "ETHEREAL", "ASTRAL", "CELESTIAL", "DIVINE", "SACRED", "ORACLE"]

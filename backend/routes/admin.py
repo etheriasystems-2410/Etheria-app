@@ -13,7 +13,7 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 from .deps import (
     db, EMERGENT_LLM_KEY, ADMIN_SECRET, GMAIL_EMAIL, GMAIL_APP_PASSWORD,
     MYSTICAL_PREFIXES, MYSTICAL_MIDDLES, MYSTICAL_SUFFIXES,
-    SPIRIT_GUIDE_VOICES, openai_tts, elevenlabs_tts,
+    SPIRIT_GUIDE_VOICES, openai_tts, elevenlabs_tts, tts_with_fallback,
 )
 from .auth_utils import get_current_user
 
@@ -101,14 +101,15 @@ async def generate_tts(request: TTSRequest):
                 text_to_speak = truncated
             logging.info(f"TTS text truncated from {len(request.text)} to {len(text_to_speak)} characters")
 
-        audio_base64 = await elevenlabs_tts.generate_speech_base64(
-            text=text_to_speak,
-            voice_id=voice,
-            stability=float(voice_info.get("stability", 0.45)) if voice_info else 0.45,
-            style=float(voice_info.get("style", 0.45)) if voice_info else 0.45,
-            similarity_boost=0.75,
-            speed=float(voice_info.get("speed", 1.0)) if voice_info else 1.0,
-        )
+        if not voice_info:
+            voice_info = SPIRIT_GUIDE_VOICES.get(guide_name) if guide_name else None
+        if not voice_info:
+            # Build a synthetic voice_cfg around the raw voice_id so fallback still works.
+            voice_info = {"voice": voice, "openai_voice": "alloy"}
+
+        audio_bytes = await tts_with_fallback(text=text_to_speak, voice_cfg=voice_info)
+        import base64 as _b64
+        audio_base64 = _b64.b64encode(audio_bytes).decode() if audio_bytes else None
 
         return TTSResponse(
             audio_base64=audio_base64,

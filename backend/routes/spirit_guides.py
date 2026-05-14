@@ -11,7 +11,7 @@ import re
 import asyncio
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
-from .deps import db, EMERGENT_LLM_KEY, SPIRIT_GUIDE_VOICES, LANGUAGE_NAMES, openai_tts, elevenlabs_tts
+from .deps import db, EMERGENT_LLM_KEY, SPIRIT_GUIDE_VOICES, LANGUAGE_NAMES, openai_tts, elevenlabs_tts, tts_with_fallback
 from .auth_utils import get_current_user
 
 router = APIRouter(prefix="/spirit-guides", tags=["spirit-guides"])
@@ -149,22 +149,18 @@ IMPORTANT: DO NOT use any markdown formatting in your response - no asterisks (*
             voice_info = SPIRIT_GUIDE_VOICES["Aether"]
 
         # Frontend may pass an ElevenLabs voice_id directly (e.g. for renamed
-        # custom guides). Use it if it looks like a real ElevenLabs ID (20 chars).
-        if message.voice_id and len(message.voice_id) >= 15 and message.voice_id.isalnum():
-            voice = message.voice_id
-        else:
-            voice = voice_info["voice"]
-
+        # custom guides). The fallback helper handles bad/empty overrides.
+        voice = voice_info["voice"]
         try:
-            if cleaned_response.strip() and elevenlabs_tts.enabled:
-                audio_base64 = await elevenlabs_tts.generate_speech_base64(
+            if cleaned_response.strip():
+                audio_bytes = await tts_with_fallback(
                     text=cleaned_response,
-                    voice_id=voice,
-                    stability=float(voice_info.get("stability", 0.45)),
-                    style=float(voice_info.get("style", 0.45)),
-                    similarity_boost=0.75,
-                    speed=float(voice_info.get("speed", 1.0)),
+                    voice_cfg=voice_info,
+                    voice_id_override=message.voice_id,
                 )
+                if audio_bytes:
+                    import base64 as _b64
+                    audio_base64 = _b64.b64encode(audio_bytes).decode()
         except Exception as tts_error:
             logging.error(f"Error generating TTS for spirit guide: {tts_error}")
 
@@ -362,21 +358,9 @@ async def get_divine_intro(request: Request, lang: str = "en"):
     selene_text = selene_intros.get(lang, selene_intros["en"])
 
     async def tts_bytes(text: str, voice_cfg: dict) -> Optional[bytes]:
-        """Synthesise via ElevenLabs and return raw MP3 bytes (so we can concat)."""
-        try:
-            if not (elevenlabs_tts.enabled and text):
-                return None
-            return await elevenlabs_tts.generate_speech_bytes(
-                text=text,
-                voice_id=voice_cfg["voice"],
-                stability=float(voice_cfg.get("stability", 0.45)),
-                style=float(voice_cfg.get("style", 0.55)),
-                similarity_boost=0.75,
-                speed=float(voice_cfg.get("speed", 1.0)),
-            )
-        except Exception as e:
-            logging.error(f"Divine intro TTS bytes error: {e}")
-            return None
+        """Synthesise via ElevenLabs → OpenAI fallback. Returns raw MP3 bytes
+        (so we can concat the dual-voice intro into one seamless clip)."""
+        return await tts_with_fallback(text=text, voice_cfg=voice_cfg)
 
     helios_bytes, selene_bytes = await asyncio.gather(
         tts_bytes(helios_text, helios_voice),
@@ -534,22 +518,9 @@ Write the three parts now."""
         return {k: clean_line(" ".join(v)) for k, v in sections.items()}
 
     async def tts_bytes_pair(text: str, voice_cfg: dict) -> Optional[bytes]:
-        """Synthesise via ElevenLabs; returns raw MP3 bytes so we can concat
-        Helios + Selene + Unified into a single seamless clip."""
-        try:
-            if not (elevenlabs_tts.enabled and text):
-                return None
-            return await elevenlabs_tts.generate_speech_bytes(
-                text=text,
-                voice_id=voice_cfg["voice"],
-                stability=float(voice_cfg.get("stability", 0.45)),
-                style=float(voice_cfg.get("style", 0.55)),
-                similarity_boost=0.75,
-                speed=float(voice_cfg.get("speed", 1.0)),
-            )
-        except Exception as e:
-            logging.error(f"Divine pair TTS bytes error: {e}")
-            return None
+        """Synthesise via ElevenLabs → OpenAI fallback; returns raw MP3 bytes so
+        we can concat Helios + Selene + Unified into a single seamless clip."""
+        return await tts_with_fallback(text=text, voice_cfg=voice_cfg)
 
     try:
         # 1) Single scripted LLM call generates all 3 lines together (Helios + Selene flow naturally)
