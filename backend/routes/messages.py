@@ -132,6 +132,61 @@ async def _resolve_user_brief(user_id: str) -> Optional[dict]:
 
 # ---------- Endpoints ----------
 
+@router.get("/users")
+async def list_messageable_users(request: Request, q: Optional[str] = None, limit: int = 200):
+    """List all users the current user can message.
+
+    Returns a directory used by the Users screen so people can pick someone to
+    start a DM with. Excludes:
+      • The caller themselves
+      • Users who have blocked the caller (or vice-versa) — handled at thread
+        creation, but we surface them here too for nicer UX
+      • Suspended / deleted accounts
+
+    Supports a `q` query string for name / email prefix filtering and a `limit`.
+    """
+    me = await _get_user_from_token(request)
+    me_id = me["user_id"]
+
+    # Block list (either direction)
+    blocked_pairs = await _db.dm_blocks.find({
+        "$or": [{"blocker_id": me_id}, {"blocked_id": me_id}],
+    }).to_list(length=2000)
+    blocked_ids = set()
+    for b in blocked_pairs:
+        blocked_ids.add(b.get("blocker_id"))
+        blocked_ids.add(b.get("blocked_id"))
+    blocked_ids.discard(me_id)
+
+    base = {
+        "user_id": {"$ne": me_id},
+        "status": {"$nin": ["deleted", "cancelled"]},
+    }
+    if blocked_ids:
+        base["user_id"] = {"$ne": me_id, "$nin": list(blocked_ids)}
+
+    if q and q.strip():
+        rx = {"$regex": q.strip(), "$options": "i"}
+        base["$or"] = [{"display_name": rx}, {"name": rx}, {"email": rx}]
+
+    cursor = _db.users.find(
+        base,
+        projection={"user_id": 1, "display_name": 1, "name": 1, "picture": 1, "email": 1, "is_admin": 1, "is_premium": 1, "_id": 0},
+    ).sort("display_name", 1).limit(max(1, min(limit, 500)))
+
+    out = []
+    async for u in cursor:
+        out.append({
+            "user_id": u.get("user_id"),
+            "name": u.get("display_name") or u.get("name") or "Seeker",
+            "picture": u.get("picture"),
+            "email": u.get("email"),
+            "is_admin": bool(u.get("is_admin")),
+            "is_premium": bool(u.get("is_premium")),
+        })
+    return {"users": out, "count": len(out)}
+
+
 @router.post("/threads")
 async def create_or_get_thread(req: CreateThreadRequest, request: Request):
     """

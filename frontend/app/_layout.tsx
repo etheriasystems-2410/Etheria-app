@@ -214,9 +214,32 @@ function ProtectedLayout() {
         name="messages"
         options={{
           drawerLabel: ({ color }) => <MessagesDrawerLabel color={color} />,
-          title: 'Messages',
+          title: 'Inbox',
           drawerIcon: ({ color, size }) => (
             <Ionicons name="mail" size={size} color={color} />
+          ),
+          // Stylish divider between Journal and Inbox: gold top-border with
+          // breathing room above/below, separating the spiritual-content
+          // section from the social section of the drawer.
+          drawerItemStyle: {
+            marginTop: 14,
+            paddingTop: 12,
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(251, 191, 36, 0.45)',
+            shadowColor: '#fbbf24',
+            shadowOffset: { width: 0, height: -1 },
+            shadowOpacity: 0.35,
+            shadowRadius: 4,
+          },
+        }}
+      />
+      <Drawer.Screen
+        name="users"
+        options={{
+          drawerLabel: 'Users',
+          title: 'Users',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="people-circle" size={size} color={color} />
           ),
         }}
       />
