@@ -1,5 +1,9 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Drawer } from 'expo-router/drawer';
+import {
+  DrawerContentScrollView,
+  DrawerItem,
+} from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { DrawerActions } from '@react-navigation/native';
@@ -78,8 +82,99 @@ function MessagesDrawerLabel({ color }: { color: string }) {
   );
 }
 
-function ProtectedLayout() {
-  const { isAuthenticated, loading } = useAuth();
+/**
+ * Custom drawer content — keeps every route working but inserts a stylish
+ * silver divider directly above the Inbox row, separating the spiritual
+ * content section from the social section.
+ */
+function CustomDrawerContent(props: any) {
+  const { state, descriptors, navigation } = props;
+  return (
+    <DrawerContentScrollView {...props}>
+      {state.routes.map((route: any, index: number) => {
+        const { options } = descriptors[route.key];
+        // Respect drawerItemStyle: display none (hidden routes)
+        if (options.drawerItemStyle && options.drawerItemStyle.display === 'none') {
+          return null;
+        }
+        const focused = state.index === index;
+        const labelEl =
+          typeof options.drawerLabel === 'function'
+            ? options.drawerLabel({
+                color: focused ? '#fff' : options.drawerInactiveTintColor || '#c0c0c0',
+                focused,
+              })
+            : options.drawerLabel ?? options.title ?? route.name;
+
+        return (
+          <React.Fragment key={route.key}>
+            {route.name === 'messages' && (
+              <View style={drawerExtraStyles.dividerWrap}>
+                <View style={drawerExtraStyles.dividerLine} />
+                <Ionicons
+                  name="ellipse"
+                  size={5}
+                  color="#d1d5db"
+                  style={drawerExtraStyles.dividerDot}
+                />
+                <View style={drawerExtraStyles.dividerLine} />
+              </View>
+            )}
+            <DrawerItem
+              label={() =>
+                typeof labelEl === 'string' ? (
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: focused ? '#fff' : '#c0c0c0', fontWeight: '600' }}>
+                      {labelEl}
+                    </Text>
+                  </View>
+                ) : (
+                  labelEl
+                )
+              }
+              icon={options.drawerIcon}
+              focused={focused}
+              activeTintColor={'#fff'}
+              inactiveTintColor={'#c0c0c0'}
+              onPress={() => {
+                const event = navigation.emit({
+                  type: 'drawerItemPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
+                if (!event.defaultPrevented) {
+                  navigation.navigate(route.name);
+                }
+              }}
+            />
+          </React.Fragment>
+        );
+      })}
+    </DrawerContentScrollView>
+  );
+}
+
+const drawerExtraStyles = StyleSheet.create({
+  dividerWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    marginBottom: 6,
+    marginHorizontal: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(192, 192, 192, 0.55)', // silver
+  },
+  dividerDot: {
+    marginHorizontal: 8,
+    opacity: 0.85,
+  },
+});
+
+
+function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
   const { theme } = useTheme();
   const { t } = useLanguage();
   const segments = useSegments();
@@ -114,6 +209,7 @@ function ProtectedLayout() {
 
   return (
     <Drawer
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={({ navigation }) => ({
         drawerStyle: {
           backgroundColor: theme.cardBackground,
@@ -218,19 +314,6 @@ function ProtectedLayout() {
           drawerIcon: ({ color, size }) => (
             <Ionicons name="mail" size={size} color={color} />
           ),
-          // Stylish divider between Journal and Inbox: gold top-border with
-          // breathing room above/below, separating the spiritual-content
-          // section from the social section of the drawer.
-          drawerItemStyle: {
-            marginTop: 14,
-            paddingTop: 12,
-            borderTopWidth: 1,
-            borderTopColor: 'rgba(251, 191, 36, 0.45)',
-            shadowColor: '#fbbf24',
-            shadowOffset: { width: 0, height: -1 },
-            shadowOpacity: 0.35,
-            shadowRadius: 4,
-          },
         }}
       />
       <Drawer.Screen
