@@ -211,7 +211,7 @@ const divineGuides: Guide[] = [
 const guides: Guide[] = [...elementalGuides, ...lgbtqGuides, ...customGuidesBase, ...divineGuides];
 
 export default function SpiritGuides() {
-  const { isPremium, checkFeatureAccess } = useAuth();
+  const { isPremium, previewAsFree, checkFeatureAccess } = useAuth();
   const { languageCode, t } = useLanguage();
   const router = useRouter();
   const [showPaywall, setShowPaywall] = useState(false);
@@ -300,7 +300,7 @@ export default function SpiritGuides() {
       setupAudioMode();
       loadCustomGuideInfo();
     }
-  }, [hasAccess]);
+  }, [hasAccess, previewAsFree]);
 
   useEffect(() => {
     return () => {
@@ -352,9 +352,20 @@ export default function SpiritGuides() {
       }
       if (accessRes.ok) {
         const data = await accessRes.json();
-        setCustomUnlocked(!!data.custom_unlocked);
-        setDivineUnlocked(!!data.divine_unlocked);
-        setInFreePromo(!!data.in_free_promo);
+        // When the admin is using the dev "Preview as Free" toggle, drop the
+        // premium-derived unlocks and behave like a non-premium user.
+        if (previewAsFree) {
+          const launchPromo = data.custom_free_until
+            ? new Date() < new Date(data.custom_free_until)
+            : false;
+          setCustomUnlocked(launchPromo); // free only during launch promo
+          setDivineUnlocked(false);       // divine is always paid
+          setInFreePromo(launchPromo);
+        } else {
+          setCustomUnlocked(!!data.custom_unlocked);
+          setDivineUnlocked(!!data.divine_unlocked);
+          setInFreePromo(!!data.in_free_promo);
+        }
       }
     } catch (e) {
       console.warn('Failed to load custom guide info', e);

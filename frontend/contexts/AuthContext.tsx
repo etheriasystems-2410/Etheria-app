@@ -37,6 +37,12 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isPremium: boolean;
+  /** True premium flag from the server, ignoring any admin Preview-as-Free override. */
+  isPremiumRaw: boolean;
+  /** Admin-only dev toggle: when true, isPremium reads `false` to preview the
+   *  app as a non-paying user. Persisted in AsyncStorage under "preview_as_free". */
+  previewAsFree: boolean;
+  setPreviewAsFree: (v: boolean) => Promise<void>;
   subscription: SubscriptionStatus | null;
   refreshSubscription: () => Promise<void>;
   checkFeatureAccess: (feature: string) => boolean;
@@ -62,6 +68,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [previewAsFree, setPreviewAsFreeState] = useState<boolean>(false);
+
+  // Load persisted preview-as-free flag on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const v = await AsyncStorage.getItem('preview_as_free');
+        if (v === '1') setPreviewAsFreeState(true);
+      } catch {}
+    })();
+  }, []);
+
+  const setPreviewAsFree = async (v: boolean) => {
+    try {
+      if (v) {
+        await AsyncStorage.setItem('preview_as_free', '1');
+      } else {
+        await AsyncStorage.removeItem('preview_as_free');
+      }
+    } catch {}
+    setPreviewAsFreeState(v);
+  };
 
   useEffect(() => {
     // CRITICAL: If returning from OAuth callback, skip the /me check.
@@ -263,6 +291,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await checkAuth();
   };
 
+  // Effective premium flag: server-side truth, with an admin-only
+  // Preview-as-Free override (only honored when the user is admin).
+  const rawPremium = subscription?.is_premium || false;
+  const allowOverride = !!user?.is_admin;
+  const effectivePremium = allowOverride && previewAsFree ? false : rawPremium;
+
   return (
     <AuthContext.Provider
       value={{
@@ -272,7 +306,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signup,
         logout,
         isAuthenticated: !!user,
-        isPremium: subscription?.is_premium || false,
+        isPremium: effectivePremium,
+        isPremiumRaw: rawPremium,
+        previewAsFree: allowOverride && previewAsFree,
+        setPreviewAsFree,
         subscription,
         refreshSubscription,
         checkFeatureAccess,

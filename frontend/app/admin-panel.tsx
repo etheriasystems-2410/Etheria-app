@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Modal,
   TextInput,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -106,7 +107,7 @@ interface PendingFlag {
 }
 
 export default function AdminPanel() {
-  const { user, authToken } = useAuth();
+  const { user, authToken, previewAsFree, setPreviewAsFree, refreshAuth } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
@@ -832,6 +833,28 @@ export default function AdminPanel() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Developer Tools — Preview as Free User toggle */}
+      <View style={styles.devToolsBar}>
+        <View style={styles.devToolsLeft}>
+          <Ionicons name="construct" size={14} color="#fbbf24" />
+          <Text style={styles.devToolsTitle}>Preview as Free User</Text>
+        </View>
+        <View style={styles.devToolsRight}>
+          <Text style={styles.devToolsHint}>
+            {previewAsFree ? 'ON — paywalls visible' : 'OFF — using your real plan'}
+          </Text>
+          <Switch
+            value={previewAsFree}
+            onValueChange={async (v) => {
+              await setPreviewAsFree(v);
+              await refreshAuth();
+            }}
+            trackColor={{ false: 'rgba(255,255,255,0.15)', true: 'rgba(251,191,36,0.55)' }}
+            thumbColor={previewAsFree ? '#fbbf24' : '#9ca3af'}
+          />
+        </View>
+      </View>
 
       <ScrollView
         style={styles.content}
@@ -1965,6 +1988,24 @@ const styles = StyleSheet.create({
   successText: { flex: 1, color: '#10b981', fontSize: 14 },
   errorBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.1)', padding: 12, marginHorizontal: 16, borderRadius: 8, gap: 8 },
   errorText: { flex: 1, color: '#ef4444', fontSize: 14 },
+  devToolsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(251,191,36,0.06)',
+    borderColor: 'rgba(251,191,36,0.4)',
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: 10,
+  },
+  devToolsLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  devToolsTitle: { color: '#fbbf24', fontSize: 13, fontWeight: '700' },
+  devToolsRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  devToolsHint: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorTitle: { fontSize: 24, fontWeight: 'bold', color: '#ef4444', marginTop: 16 },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
