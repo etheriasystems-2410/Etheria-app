@@ -15,8 +15,9 @@ import {
   Animated,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-
 import { Ionicons } from '@expo/vector-icons';
+
+import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -1100,16 +1101,13 @@ export default function SpiritGuides() {
             <View style={styles.sectionTitleRow}>
               <Text style={styles.sectionHeading}>Custom Guides</Text>
               {!customUnlocked && (
-                <View style={styles.premiumBadge}>
-                  <Ionicons name="lock-closed" size={11} color="#fbbf24" style={{ marginRight: 4 }} />
-                  <Text style={styles.premiumBadgeText}>PREMIUM SUBSCRIPTION REQUIRED</Text>
-                </View>
+                <SubscriptionOnlyBanner variant="badge" style={{ marginLeft: 6 }} />
               )}
             </View>
             <Text style={styles.sectionSub}>
               {customUnlocked
                 ? 'Tap the pencil to give your guide a name'
-                : 'Premium feature — upgrade to rename your personal guides'}
+                : 'Personal companions — name them, befriend them, walk with them'}
             </Text>
             {customGuides.map((guide) => (
               <TouchableOpacity
@@ -1158,11 +1156,14 @@ export default function SpiritGuides() {
             <View style={styles.sectionTitleRow}>
               <Text style={styles.sectionHeading}>Divine Guides</Text>
               <View style={styles.divineDot} />
+              {!divineUnlocked && (
+                <SubscriptionOnlyBanner variant="badge" style={{ marginLeft: 6 }} />
+              )}
             </View>
             <Text style={styles.sectionSub}>
               {divineUnlocked
                 ? 'Helios & Selene — Sacred Masculine and Sacred Feminine'
-                : 'Premium feature — commune with the Divine Pair'}
+                : 'Commune with the Divine Pair — Helios & Selene'}
             </Text>
             {divineGuides.map((guide) => (
               <TouchableOpacity

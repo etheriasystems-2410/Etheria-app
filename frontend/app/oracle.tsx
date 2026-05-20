@@ -22,6 +22,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import HeaderBanner from '../components/HeaderBanner';
 import { Paywall } from '../components/Paywall';
+import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
 import { Mist } from '../components/ui';
 import { palette, radii, spacing } from '../theme/tokens';
 
@@ -390,10 +391,7 @@ export default function Oracle() {
                             <Text style={styles.freeBadgeText}>FREE</Text>
                           </View>
                         ) : (
-                          <View style={styles.premiumBadge}>
-                            <Ionicons name="diamond" size={10} color="#ffd700" />
-                            <Text style={styles.premiumBadgeText}>Premium</Text>
-                          </View>
+                          <SubscriptionOnlyBanner variant="badge" />
                         )}
                       </View>
                       <Text style={[styles.spreadName, isLocked && styles.lockedText]}>{spread.name}</Text>

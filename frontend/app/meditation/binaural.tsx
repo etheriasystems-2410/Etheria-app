@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
+import SubscriptionOnlyBanner from '../../components/SubscriptionOnlyBanner';
 import { Paywall } from '../../components/Paywall';
 import { AudioPlayerManager, setupAudioMode } from '../../utils/audioPlayer';
 
@@ -413,9 +414,7 @@ export default function BinauralMeditation() {
                     </View>
                   )}
                   {isLocked && (
-                    <View style={styles.premiumBadge}>
-                      <Ionicons name="lock-closed" size={12} color="#ffd700" />
-                    </View>
+                    <SubscriptionOnlyBanner variant="badge" />
                   )}
                 </View>
                 <Text style={styles.programFrequency}>{program.frequency_range}</Text>

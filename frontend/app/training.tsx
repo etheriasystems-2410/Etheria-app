@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Paywall } from '../components/Paywall';
+import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
 import HeaderBanner from '../components/HeaderBanner';
 import { AudioPlayerManager } from '../utils/audioPlayer';
 import { CosmicBackdrop } from '../components/ui';
@@ -425,10 +426,7 @@ export default function Training() {
           </View>
 
           {isLocked ? (
-            <View style={styles.lockBadge}>
-              <Ionicons name="lock-closed" size={14} color="#fbbf24" />
-              <Text style={styles.lockText}>Premium</Text>
-            </View>
+            <SubscriptionOnlyBanner variant="badge" />
           ) : (
             <View style={styles.freeBadge}>
               <Ionicons name="checkmark-circle" size={14} color="#10b981" />

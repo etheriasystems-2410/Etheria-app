@@ -20,6 +20,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Paywall } from '../components/Paywall';
+import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
 import HeaderBanner from '../components/HeaderBanner';
 import { Image } from 'expo-image';
 import { CosmicBackdrop } from '../components/ui';
@@ -501,10 +502,7 @@ export default function Community() {
         </View>
 
         {!isPremium && (
-          <View style={styles.premiumBanner}>
-            <Ionicons name="diamond" size={20} color="#ffd700" />
-            <Text style={styles.premiumBannerText}>Premium feature - Upgrade to join</Text>
-          </View>
+          <SubscriptionOnlyBanner variant="banner" style={{ marginTop: 12 }} />
         )}
       </View>
       
