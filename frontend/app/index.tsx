@@ -230,15 +230,15 @@ export default function Home() {
   // Welcome text translations
   const getWelcomeText = (): string => {
     const texts: Record<string, string> = {
-      en: 'Toolkit designed to aid you on your quest to enlightenment and to help form and develop psychic awareness.',
-      es: 'Conjunto de herramientas diseñado para ayudarte en tu búsqueda de la iluminación y a formar y desarrollar tu conciencia psíquica.',
-      fr: 'Trousse conçue pour vous accompagner dans votre quête de l\'illumination et vous aider à former et développer votre conscience psychique.',
-      de: 'Werkzeugset, das Sie auf Ihrer Reise zur Erleuchtung begleitet und Ihnen hilft, psychisches Bewusstsein zu formen und zu entwickeln.',
-      it: 'Toolkit progettato per assisterti nella tua ricerca dell\'illuminazione e per aiutarti a formare e sviluppare la consapevolezza psichica.',
-      pt: 'Kit de ferramentas concebido para apoiá-lo em sua busca pela iluminação e para ajudar a formar e desenvolver a consciência psíquica.',
-      ja: '悟りへの探求を支え、サイキックな意識を形成し発達させるためのツールキットです。',
-      ko: '깨달음을 향한 여정을 돕고 영적 의식을 형성하고 발전시키도록 설계된 도구 모음입니다.',
-      zh: '一套助您追寻觉悟之旅、塑造并发展心灵觉知的工具集。',
+      en: 'Toolkit designed to aid you on your quest to enlightenment.',
+      es: 'Conjunto de herramientas diseñado para ayudarte en tu búsqueda de la iluminación.',
+      fr: 'Trousse conçue pour vous accompagner dans votre quête de l\'illumination.',
+      de: 'Werkzeugset, das Sie auf Ihrer Reise zur Erleuchtung begleitet.',
+      it: 'Toolkit progettato per assisterti nella tua ricerca dell\'illuminazione.',
+      pt: 'Kit de ferramentas concebido para apoiá-lo em sua busca pela iluminação.',
+      ja: '悟りへの探求を支えるためのツールキットです。',
+      ko: '깨달음을 향한 여정을 돕도록 설계된 도구 모음입니다.',
+      zh: '一套助您追寻觉悟之旅的工具集。',
     };
     return texts[languageCode] || texts.en;
   };
