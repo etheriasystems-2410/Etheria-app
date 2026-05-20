@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { AudioPlayerManager } from '../../utils/audioPlayer';
+import { useAuth } from '../../contexts/AuthContext';
+import SubscriptionOnlyBanner from '../../components/SubscriptionOnlyBanner';
 
 const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
                     process.env.EXPO_PUBLIC_BACKEND_URL || '';
@@ -41,6 +43,7 @@ const DURATION_OPTIONS = [
 
 export default function ChakraMeditation() {
   const router = useRouter();
+  const { isPremium } = useAuth();
   const [chakras, setChakras] = useState<Chakra[]>([]);
   const [selectedChakra, setSelectedChakra] = useState<Chakra | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -244,6 +247,10 @@ export default function ChakraMeditation() {
   };
 
   const handleRealignPress = () => {
+    if (!isPremium) {
+      router.push('/settings');
+      return;
+    }
     setPendingChakra(null);
     setShowDurationPicker(true);
   };
@@ -472,6 +479,9 @@ export default function ChakraMeditation() {
                 <Ionicons name="infinite" size={24} color="#fff" />
                 <Text style={styles.realignButtonText}>Begin Journey</Text>
               </View>
+              {!isPremium && (
+                <SubscriptionOnlyBanner variant="badge" style={{ marginTop: 10 }} />
+              )}
             </View>
           </TouchableOpacity>
 

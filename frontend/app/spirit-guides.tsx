@@ -242,6 +242,7 @@ export default function SpiritGuides() {
   const [customUnlocked, setCustomUnlocked] = useState<boolean>(true);
   const [divineUnlocked, setDivineUnlocked] = useState<boolean>(false);
   const [inFreePromo, setInFreePromo] = useState<boolean>(true);
+  const [prideMonth, setPrideMonth] = useState<boolean>(false);
   const [renameModal, setRenameModal] = useState<null | 'male' | 'female'>(null);
   const [renameInput, setRenameInput] = useState<string>('');
   const [renameSaving, setRenameSaving] = useState<boolean>(false);
@@ -352,19 +353,19 @@ export default function SpiritGuides() {
       }
       if (accessRes.ok) {
         const data = await accessRes.json();
-        // When the admin is using the dev "Preview as Free" toggle, drop the
-        // premium-derived unlocks and behave like a non-premium user.
+        // When the admin is using the dev "Preview as Free" toggle, ignore
+        // both the Custom launch promo and Pride Month — show the world as a
+        // permanently non-paying user would see it (all paywalls visible).
         if (previewAsFree) {
-          const launchPromo = data.custom_free_until
-            ? new Date() < new Date(data.custom_free_until)
-            : false;
-          setCustomUnlocked(launchPromo); // free only during launch promo
-          setDivineUnlocked(false);       // divine is always paid
-          setInFreePromo(launchPromo);
+          setCustomUnlocked(false);
+          setDivineUnlocked(false);
+          setInFreePromo(false);
+          setPrideMonth(false);
         } else {
           setCustomUnlocked(!!data.custom_unlocked);
           setDivineUnlocked(!!data.divine_unlocked);
           setInFreePromo(!!data.in_free_promo);
+          setPrideMonth(!!data.pride_month);
         }
       }
     } catch (e) {
@@ -1076,7 +1077,7 @@ export default function SpiritGuides() {
             <View style={styles.sectionTitleRow}>
               <Text style={styles.sectionHeading}>LGBTQ+ Guides</Text>
               <View style={styles.rainbowDot} />
-              {inFreePromo ? (
+              {prideMonth ? (
                 <View style={styles.promoBadge}>
                   <Text style={styles.promoBadgeText}>FREE THRU JUNE</Text>
                 </View>
@@ -1085,7 +1086,7 @@ export default function SpiritGuides() {
               ) : null}
             </View>
             <Text style={styles.sectionSub}>
-              {inFreePromo
+              {prideMonth
                 ? 'Open to every seeker — free through June (Pride Month)'
                 : 'Affirming companions through pride, self-love, and authenticity'}
             </Text>
@@ -1096,7 +1097,7 @@ export default function SpiritGuides() {
                 onPress={() => {
                   // Free for everyone during the June Pride Month promo; otherwise
                   // requires an active subscription.
-                  if (!inFreePromo && !isPremium) {
+                  if (!prideMonth && !isPremium) {
                     setShowPaywall(true);
                     return;
                   }
