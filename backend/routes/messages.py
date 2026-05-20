@@ -243,26 +243,60 @@ async def list_threads(request: Request):
     me = await _get_user_from_token(request)
     cursor = _db.dm_threads.find({"participants": me["user_id"]}).sort("last_message_at", -1)
     threads = await cursor.to_list(length=200)
+    me_id = me["user_id"]
+    if not threads:
+        return {"threads": []}
+
+    # ---------- Batch resolve other-user briefs (1 query instead of N) ----------
+    other_ids: List[str] = []
+    thread_to_other: Dict[str, Optional[str]] = {}
+    for t in threads:
+        oid = next((p for p in t.get("participants", []) if p != me_id), None)
+        thread_to_other[str(t["_id"])] = oid
+        if oid:
+            other_ids.append(oid)
+
+    user_briefs: Dict[str, dict] = {}
+    if other_ids:
+        async for u in _db.users.find(
+            {"user_id": {"$in": other_ids}},
+            projection={"user_id": 1, "display_name": 1, "name": 1, "picture": 1, "_id": 0},
+        ):
+            user_briefs[u["user_id"]] = {
+                "user_id": u.get("user_id"),
+                "name": u.get("display_name") or u.get("name") or "Seeker",
+                "picture": u.get("picture"),
+            }
+
+    # ---------- Batch unread counts (single aggregation) ----------
+    thread_ids = [str(t["_id"]) for t in threads]
+    unread_map: Dict[str, int] = {tid: 0 for tid in thread_ids}
+    if thread_ids:
+        pipeline = [
+            {"$match": {
+                "thread_id": {"$in": thread_ids},
+                "sender_id": {"$ne": me_id},
+                "read_by": {"$ne": me_id},
+                "deleted_for": {"$ne": me_id},
+            }},
+            {"$group": {"_id": "$thread_id", "count": {"$sum": 1}}},
+        ]
+        async for row in _db.dm_messages.aggregate(pipeline):
+            unread_map[row["_id"]] = int(row.get("count", 0))
 
     out = []
     for t in threads:
-        other_id = next((p for p in t["participants"] if p != me["user_id"]), None)
-        other = await _resolve_user_brief(other_id) if other_id else None
-        # Unread count: messages in this thread not yet read by me, not sent by me
-        unread = await _db.dm_messages.count_documents({
-            "thread_id": str(t["_id"]),
-            "sender_id": {"$ne": me["user_id"]},
-            "read_by": {"$ne": me["user_id"]},
-            "deleted_for": {"$ne": me["user_id"]},
-        })
+        tid = str(t["_id"])
+        other_id = thread_to_other.get(tid)
+        other = user_briefs.get(other_id) if other_id else None
         out.append({
-            "thread_id": str(t["_id"]),
+            "thread_id": tid,
             "other_user": other,
             "last_message_at": (t.get("last_message_at") or t.get("created_at")).isoformat()
                 if isinstance(t.get("last_message_at") or t.get("created_at"), datetime)
                 else t.get("last_message_at"),
             "last_message_preview": t.get("last_message_preview", ""),
-            "unread_count": unread,
+            "unread_count": unread_map.get(tid, 0),
         })
     return {"threads": out}
 

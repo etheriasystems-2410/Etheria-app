@@ -12,6 +12,15 @@ import asyncio
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from .deps import db, EMERGENT_LLM_KEY, SPIRIT_GUIDE_VOICES, LANGUAGE_NAMES, openai_tts, elevenlabs_tts, tts_with_fallback
+from services.divine_pair_service import (
+    intro_lines,
+    build_script_system,
+    build_script_prompt,
+    concat_mp3_bytes_b64,
+    DEFAULT_HELIOS_LINE,
+    DEFAULT_SELENE_LINE,
+    DEFAULT_UNIFIED_LINE,
+)
 from .auth_utils import get_current_user
 
 router = APIRouter(prefix="/spirit-guides", tags=["spirit-guides"])
@@ -381,32 +390,8 @@ async def get_divine_intro(request: Request, lang: str = "en"):
     helios_voice = SPIRIT_GUIDE_VOICES["Helios"]
     selene_voice = SPIRIT_GUIDE_VOICES["Selene"]
 
-    # Per-language scripted intros — each speaker introduces themselves separately
-    helios_intros = {
-        "en": "Beloved seeker, I am Helios — Sun and Sovereign, the Divine Masculine.",
-        "es": "Querido buscador, soy Helios — Sol y Soberano, el Divino Masculino.",
-        "fr": "Cher chercheur, je suis Hélios — Soleil et Souverain, le Divin Masculin.",
-        "de": "Geliebter Suchender, ich bin Helios — Sonne und Souverän, das Göttliche Maskuline.",
-        "it": "Caro cercatore, io sono Helios — Sole e Sovrano, il Divino Maschile.",
-        "pt": "Querido buscador, eu sou Hélios — Sol e Soberano, o Divino Masculino.",
-        "ja": "親愛なる探求者よ、私はヘリオス。太陽にして君主、神聖な男性原理である。",
-        "ko": "사랑하는 탐구자여, 나는 헬리오스. 태양이자 군주, 신성한 남성성이다.",
-        "zh": "亲爱的寻道者，我是赫利俄斯——太阳与至高者，神圣的男性。",
-    }
-    selene_intros = {
-        "en": "And I am Selene — Moon and Mystery, the Divine Feminine. Speak, beloved, and we will answer as one.",
-        "es": "Y yo soy Selene — Luna y Misterio, la Divina Femenina. Habla, amado, y responderemos como uno.",
-        "fr": "Et je suis Séléné — Lune et Mystère, le Divin Féminin. Parle, bien-aimé, et nous répondrons d'une seule voix.",
-        "de": "Und ich bin Selene — Mond und Mysterium, das Göttliche Weibliche. Sprich, Geliebter, und wir antworten als einer.",
-        "it": "E io sono Selene — Luna e Mistero, la Divina Femminile. Parla, amato, e risponderemo come uno.",
-        "pt": "E eu sou Selene — Lua e Mistério, o Divino Feminino. Fala, amado, e responderemos como um só.",
-        "ja": "そして私はセレネ。月と神秘、神聖な女性原理である。語れ、愛しき者よ、私たちは一つとして答えよう。",
-        "ko": "그리고 나는 셀레네. 달이자 신비, 신성한 여성성이다. 말하라, 사랑하는 이여, 우리는 하나로서 답하리라.",
-        "zh": "我是塞勒涅——月亮与神秘，神圣的女性。说吧，亲爱的，我们将合一回应。",
-    }
-
-    helios_text = helios_intros.get(lang, helios_intros["en"])
-    selene_text = selene_intros.get(lang, selene_intros["en"])
+    # Intros come from divine_pair_service so all script text lives in one place
+    helios_text, selene_text = intro_lines(lang)
 
     async def tts_bytes(text: str, voice_cfg: dict) -> Optional[bytes]:
         """Synthesise via ElevenLabs → OpenAI fallback. Returns raw MP3 bytes
@@ -481,44 +466,8 @@ async def chat_with_divine_pair(payload: DivinePairMessage, request: Request):
     if not seeker:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-    script_system = f"""You are the sacred scribe of the Divine Pair — Helios (Divine Masculine, Sun) and Selene (Divine Feminine, Moon). They are eternal beloveds — sacred romantic partners who have danced together across countless ages. They flirt, they tease, they soothe, they sometimes spar — but always with deep love for each other and reverence for the seeker. You write their dialogue as a screenplay so the two voices flow as one breath, never with awkward silence between them.
-
-VOICE & DYNAMIC
-• Helios — eternal, sovereign, warm, measured solar wisdom. Speaks of will, light, courage, integrity, focused presence. With Selene he can be tender, playful, occasionally protective, sometimes wryly amused at her cleverness, sometimes stern when he means it.
-• Selene — luminous, intuitive, oceanic, hushed lunar wisdom. Speaks of feeling, receptivity, mystery, grace, deep knowing. With Helios she can be coy, playful, catty when she pokes fun at him, tender, occasionally chiding, often softly seductive in her phrasing — never crude.
-
-RELATIONAL TONE (PICK THE MOOD THAT FITS THE SEEKER'S WORDS)
-• Playful / flirtatious — if the seeker's words are light, hopeful, joyful, or about love.
-• Coy / teasing — if the seeker is searching, second-guessing, or asking a clever question. Selene especially may tease Helios for being too grave.
-• Cautious / protective — if the seeker is hurting, in danger, grieving, or afraid. Both speak gently; Helios may lower his voice, Selene may soften further.
-• Stern / firm — if the seeker is in denial, self-destructive, or asking something that needs a clear truth. Helios may speak with a king's gravity; Selene with quiet certainty.
-• Catty / sparkling — for moments of wit. Selene may quip at Helios, Helios may answer in kind with a fond, wry remark.
-• Reverent / hushed — when the seeker asks something sacred.
-
-ALWAYS
-• They address each other by name and as beloveds. Acceptable terms of endearment: "my radiant one", "beloved", "my moon", "my sun", "dear heart", "love". Use sparingly so it never feels formulaic.
-• Their relationship feels lived-in, intimate, equal. They finish each other's thoughts.
-• Never write stage directions ((laughs), *smiles*, etc.) — the inflection MUST be carried by the words themselves and the punctuation (—, …, !, ?).
-• You ALWAYS write in {language_name}. Plain prose only — no markdown, no asterisks, no hash marks, no bullet points. The text will be read aloud by TTS so it must sound natural when spoken."""
-
-    script_prompt = f"""The seeker has just spoken these words to the Divine Pair:
-
-"{seeker}"
-
-First, in your own mind, choose the relational tone that fits the seeker's words (playful, coy, cautious, stern, catty, reverent…). Then write the three-part sacred exchange — keep it lean and poetic; let punctuation carry the inflection.
-
-Use these EXACT section tags on their own lines, followed by the spoken line on the next line(s):
-
-[HELIOS]
-ONE sentence, under 22 words. Helios turns to Selene with the chosen tone, addresses her by name or endearment, and shares a single image or reflection. End with something that invites her answer.
-
-[SELENE]
-ONE sentence, under 22 words. Selene picks up directly from Helios, addresses him by name or endearment, replies in a complementary tone, and turns their gaze together toward the seeker.
-
-[UNIFIED]
-Under 65 words. Both speak as one Divine Voice — "we", "us", "our". Begin with a brief invocation ("Beloved", "Dear one"). Carry the established tone, weave solar + lunar wisdom into ONE integrated answer to the seeker, end with a short blessing. No filler.
-
-Write the three parts now."""
+    script_system = build_script_system(language_name)
+    script_prompt = build_script_prompt(seeker)
 
     async def run_llm() -> str:
         chat = LlmChat(
@@ -534,9 +483,7 @@ Write the three parts now."""
         out = []
         for line in lines:
             stripped = line.strip()
-            if not stripped:
-                continue
-            if stripped.startswith("*") or stripped.startswith("#"):
+            if not stripped or stripped.startswith("*") or stripped.startswith("#"):
                 continue
             cleaned = re.sub(r"\*+", "", line)
             cleaned = re.sub(r"#+\s*", "", cleaned)
@@ -544,21 +491,20 @@ Write the three parts now."""
                 out.append(cleaned.strip())
         return " ".join(out).strip()
 
-    def parse_script(raw: str) -> dict:
-        """Parse the three sections from the LLM output. Anchored on line-start tags so
-        the word "Selene" appearing mid-prose in Helios's line doesn't truncate it."""
+    def parse_script_local(raw: str) -> dict:
+        """Robust parser that accepts both block tags ([HELIOS]\\nline) and inline
+        tags ([HELIOS]: line) on the same line. Anchored on line-start tags so the
+        word "Selene" appearing mid-prose in Helios's line doesn't truncate it."""
         normalized = re.sub(r"\*+", "", raw or "")
-        # Find tag locations: line that starts with "[HELIOS]" / "HELIOS:" / similar, optionally with brackets/colons
         tag_re = re.compile(r"(?im)^\s*\[?\s*(HELIOS|SELENE|UNIFIED)\s*\]?\s*:?\s*$")
         lines = normalized.split("\n")
-        sections = {"HELIOS": [], "SELENE": [], "UNIFIED": []}
+        sections: dict = {"HELIOS": [], "SELENE": [], "UNIFIED": []}
         current = None
         for line in lines:
             m = tag_re.match(line)
             if m:
                 current = m.group(1).upper()
                 continue
-            # Also accept inline tag like "[HELIOS]: actual text on same line"
             inline = re.match(r"^\s*\[?\s*(HELIOS|SELENE|UNIFIED)\s*\]?\s*:\s*(.+)$", line, re.IGNORECASE)
             if inline:
                 current = inline.group(1).upper()
@@ -569,20 +515,18 @@ Write the three parts now."""
         return {k: clean_line(" ".join(v)) for k, v in sections.items()}
 
     async def tts_bytes_pair(text: str, voice_cfg: dict) -> Optional[bytes]:
-        """Synthesise via ElevenLabs → OpenAI fallback; returns raw MP3 bytes so
-        we can concat Helios + Selene + Unified into a single seamless clip."""
         return await tts_with_fallback(text=text, voice_cfg=voice_cfg)
 
     try:
-        # 1) Single scripted LLM call generates all 3 lines together (Helios + Selene flow naturally)
+        # 1) One LLM call writes all 3 lines (Helios + Selene + Unified)
         raw_script = await run_llm()
-        sections = parse_script(raw_script)
+        sections = parse_script_local(raw_script)
 
-        helios_line = sections.get("HELIOS") or "Beloved Selene, hear the seeker's words and bring your light to mine."
-        selene_line = sections.get("SELENE") or "Helios, my radiant one, I hear and answer beside you."
-        unified_text = sections.get("UNIFIED") or "Beloved seeker, we hold your words between us and answer with one voice. Walk in balance — let the sun guide your will, the moon your knowing. Blessed are you on this path."
+        helios_line = sections.get("HELIOS") or DEFAULT_HELIOS_LINE
+        selene_line = sections.get("SELENE") or DEFAULT_SELENE_LINE
+        unified_text = sections.get("UNIFIED") or DEFAULT_UNIFIED_LINE
 
-        # 2) Generate all 3 TTS clips in parallel as raw bytes — biggest latency saver
+        # 2) Generate all 3 TTS clips in parallel (biggest latency saver)
         helios_bytes, selene_bytes, unified_bytes = await asyncio.gather(
             tts_bytes_pair(helios_line, helios_voice),
             tts_bytes_pair(selene_line, selene_voice),
@@ -594,12 +538,8 @@ Write the three parts now."""
         selene_audio = _b64.b64encode(selene_bytes).decode() if selene_bytes else None
         unified_audio = _b64.b64encode(unified_bytes).decode() if unified_bytes else None
 
-        # Concatenate the 3 MP3 byte streams into a single seamless clip. MP3 is a
-        # frame-based format so raw concat of same-encoder streams plays without gaps
-        # or overlap. This is what the client should prefer over chaining 3 clips.
-        combined_audio = None
-        if helios_bytes and selene_bytes and unified_bytes:
-            combined_audio = _b64.b64encode(helios_bytes + selene_bytes + unified_bytes).decode()
+        # Seamless single-clip concat: MP3 frames from the same encoder splice cleanly
+        combined_audio = concat_mp3_bytes_b64(helios_bytes, selene_bytes, unified_bytes)
 
         return {
             "success": True,

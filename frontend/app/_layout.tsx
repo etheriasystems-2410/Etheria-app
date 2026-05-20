@@ -1,177 +1,19 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Drawer } from 'expo-router/drawer';
-import {
-  DrawerContentScrollView,
-  DrawerItem,
-} from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
-import { DrawerActions } from '@react-navigation/native';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 import { useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
 
-const ETHERIA_MENU_ICON = 'https://customer-assets.emergentagent.com/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/x7m8d3fn_8196.png';
-
-function MenuButton({ navigation }: { navigation: any }) {
-  return (
-    <TouchableOpacity
-      onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-      style={menuStyles.button}
-      hitSlop={8}
-      activeOpacity={0.7}
-    >
-      <Image source={{ uri: ETHERIA_MENU_ICON }} style={menuStyles.image} />
-    </TouchableOpacity>
-  );
-}
-
-const menuStyles = StyleSheet.create({
-  button: {
-    marginLeft: 12,
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.5)',
-    shadowColor: '#7c3aed',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-});
-
-// Drawer label for Messages with an unread badge
-import { Text } from 'react-native';
-import useDMUnread from '../hooks/useDMUnread';
+// Drawer-related components (extracted)
+import MenuButton from '../components/drawer/MenuButton';
+import MessagesDrawerLabel from '../components/drawer/MessagesDrawerLabel';
+import CustomDrawerContent from '../components/drawer/CustomDrawerContent';
 import usePushNotifications from '../hooks/usePushNotifications';
 import SplashVideo from '../components/SplashVideo';
-
-function MessagesDrawerLabel({ color }: { color: string }) {
-  const { unread } = useDMUnread(true);
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-      <Text style={{ color, fontSize: 14, fontWeight: '500', flex: 1 }}>Messages</Text>
-      {unread > 0 && (
-        <View
-          style={{
-            backgroundColor: '#fbbf24',
-            minWidth: 22,
-            height: 22,
-            borderRadius: 11,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 6,
-            marginRight: 8,
-          }}
-        >
-          <Text style={{ color: '#1a0033', fontSize: 11, fontWeight: '800' }}>
-            {unread > 99 ? '99+' : unread}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-/**
- * Custom drawer content — keeps every route working but inserts a stylish
- * silver divider directly above the Inbox row, separating the spiritual
- * content section from the social section.
- */
-function CustomDrawerContent(props: any) {
-  const { state, descriptors, navigation } = props;
-  return (
-    <DrawerContentScrollView {...props}>
-      {state.routes.map((route: any, index: number) => {
-        const { options } = descriptors[route.key];
-        // Respect drawerItemStyle: display none (hidden routes)
-        if (options.drawerItemStyle && options.drawerItemStyle.display === 'none') {
-          return null;
-        }
-        const focused = state.index === index;
-        const labelEl =
-          typeof options.drawerLabel === 'function'
-            ? options.drawerLabel({
-                color: focused ? '#fff' : options.drawerInactiveTintColor || '#c0c0c0',
-                focused,
-              })
-            : options.drawerLabel ?? options.title ?? route.name;
-
-        return (
-          <React.Fragment key={route.key}>
-            {route.name === 'messages' && (
-              <View style={drawerExtraStyles.dividerWrap}>
-                <View style={drawerExtraStyles.dividerLine} />
-                <Ionicons
-                  name="ellipse"
-                  size={5}
-                  color="#d1d5db"
-                  style={drawerExtraStyles.dividerDot}
-                />
-                <View style={drawerExtraStyles.dividerLine} />
-              </View>
-            )}
-            <DrawerItem
-              label={() =>
-                typeof labelEl === 'string' ? (
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: focused ? '#fff' : '#c0c0c0', fontWeight: '600' }}>
-                      {labelEl}
-                    </Text>
-                  </View>
-                ) : (
-                  labelEl
-                )
-              }
-              icon={options.drawerIcon}
-              focused={focused}
-              activeTintColor={'#fff'}
-              inactiveTintColor={'#c0c0c0'}
-              onPress={() => {
-                const event = navigation.emit({
-                  type: 'drawerItemPress',
-                  target: route.key,
-                  canPreventDefault: true,
-                });
-                if (!event.defaultPrevented) {
-                  navigation.navigate(route.name);
-                }
-              }}
-            />
-          </React.Fragment>
-        );
-      })}
-    </DrawerContentScrollView>
-  );
-}
-
-const drawerExtraStyles = StyleSheet.create({
-  dividerWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 14,
-    marginBottom: 6,
-    marginHorizontal: 18,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(192, 192, 192, 0.55)', // silver
-  },
-  dividerDot: {
-    marginHorizontal: 8,
-    opacity: 0.85,
-  },
-});
 
 
 function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
