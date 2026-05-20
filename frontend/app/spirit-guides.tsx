@@ -1065,18 +1065,32 @@ export default function SpiritGuides() {
             <View style={styles.sectionTitleRow}>
               <Text style={styles.sectionHeading}>LGBTQ+ Guides</Text>
               <View style={styles.rainbowDot} />
-              {inFreePromo && (
+              {inFreePromo ? (
                 <View style={styles.promoBadge}>
                   <Text style={styles.promoBadgeText}>FREE THRU JUNE</Text>
                 </View>
-              )}
+              ) : !isPremium ? (
+                <SubscriptionOnlyBanner variant="badge" style={{ marginLeft: 6 }} />
+              ) : null}
             </View>
-            <Text style={styles.sectionSub}>Open to every seeker — free for all</Text>
+            <Text style={styles.sectionSub}>
+              {inFreePromo
+                ? 'Open to every seeker — free through June (Pride Month)'
+                : 'Affirming companions through pride, self-love, and authenticity'}
+            </Text>
             {lgbtqGuides.map((guide) => (
               <TouchableOpacity
                 key={guide.name}
                 style={styles.guideCard}
-                onPress={() => selectGuide(guide)}
+                onPress={() => {
+                  // Free for everyone during the June Pride Month promo; otherwise
+                  // requires an active subscription.
+                  if (!inFreePromo && !isPremium) {
+                    setShowPaywall(true);
+                    return;
+                  }
+                  selectGuide(guide);
+                }}
                 activeOpacity={0.7}
               >
                 {guide.image ? (

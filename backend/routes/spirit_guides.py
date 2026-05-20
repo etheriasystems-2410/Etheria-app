@@ -16,9 +16,15 @@ from .auth_utils import get_current_user
 
 router = APIRouter(prefix="/spirit-guides", tags=["spirit-guides"])
 
-# Free-access promo window: Custom Guides are free for everyone through end of June 2026.
-# After this cutoff, Custom Guides become premium-only (LGBTQ+ + Elemental guides remain free).
+# Custom Guides — free for everyone through end of June 2026 (one-time promo).
+# After this cutoff, Custom Guides become subscription-only.
 CUSTOM_GUIDE_FREE_UNTIL = datetime(2026, 7, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+
+def _is_pride_month_now() -> bool:
+    """LGBTQ+ Guides are subscription-only EXCEPT during June (Pride Month) every
+    year, when they are automatically unlocked for all users."""
+    return datetime.now(timezone.utc).month == 6
 
 
 # Models
@@ -68,8 +74,48 @@ GUIDE_PERSONALITIES = {
 
 
 @router.post("/chat", response_model=SpiritGuideResponse)
-async def chat_with_spirit_guide(message: SpiritGuideMessage):
-    """Chat with a spirit guide - returns text and TTS audio"""
+async def chat_with_spirit_guide(message: SpiritGuideMessage, request: Request):
+    """Chat with a spirit guide - returns text and TTS audio.
+
+    Category gating (server-side enforcement; the frontend already gates UI):
+      • elemental → free for everyone
+      • lgbtq → free during June (Pride Month); subscription-only otherwise
+      • custom → free until launch-promo cutoff; subscription-only otherwise
+      • divine → subscription-only (no promo)
+    """
+    # ----- Access gating -----
+    voice_info = SPIRIT_GUIDE_VOICES.get(message.guide)
+    category = (voice_info or {}).get("category")
+    if not category and (message.element or "").strip() == "Custom":
+        category = "custom"
+
+    if category in ("custom", "lgbtq", "divine"):
+        is_premium = False
+        try:
+            user = await get_current_user(request)
+            user_doc = await db.users.find_one({"user_id": user["user_id"]}) or {}
+            is_premium = bool(user_doc.get("is_premium"))
+        except HTTPException:
+            pass
+
+        if not is_premium:
+            now = datetime.now(timezone.utc)
+            if category == "lgbtq" and not _is_pride_month_now():
+                raise HTTPException(
+                    status_code=403,
+                    detail="LGBTQ+ Guides require a subscription outside June (Pride Month).",
+                )
+            if category == "custom" and now >= CUSTOM_GUIDE_FREE_UNTIL:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Custom Guides require a subscription.",
+                )
+            if category == "divine":
+                raise HTTPException(
+                    status_code=403,
+                    detail="Divine Guides require a subscription.",
+                )
+
     language_name = LANGUAGE_NAMES.get(message.language, "English")
 
     # Resolve guide by name. Custom-renamed guides should still map to Male/Female Guide personality.
@@ -283,10 +329,10 @@ async def set_custom_guide_names(names: CustomGuideNames, request: Request):
 @router.get("/access")
 async def get_guide_access(request: Request):
     """Return access flags for the guide categories.
-    - elemental: always free
-    - lgbtq: always free
-    - custom: free for premium; free for everyone until July 1, 2026; then premium-only
-    - divine: premium-only (no promo)
+    - elemental: always free (zodiac/birthdate-matched)
+    - lgbtq: subscription-only EXCEPT during June (Pride Month), when it's free for everyone
+    - custom: subscription-only; free for everyone until July 1, 2026 (one-time launch promo)
+    - divine: subscription-only (no promo)
     """
     is_premium = False
     try:
@@ -297,15 +343,20 @@ async def get_guide_access(request: Request):
         pass
 
     now = datetime.now(timezone.utc)
-    in_free_window = now < CUSTOM_GUIDE_FREE_UNTIL
+    custom_in_launch_promo = now < CUSTOM_GUIDE_FREE_UNTIL
+    pride_month = _is_pride_month_now()
 
     return {
         "elemental_unlocked": True,
-        "lgbtq_unlocked": True,
-        "custom_unlocked": bool(is_premium or in_free_window),
+        "lgbtq_unlocked": bool(is_premium or pride_month),
+        "custom_unlocked": bool(is_premium or custom_in_launch_promo),
         "divine_unlocked": bool(is_premium),
         "custom_free_until": CUSTOM_GUIDE_FREE_UNTIL.isoformat(),
-        "in_free_promo": in_free_window,
+        # `in_free_promo` historically meant "Custom Guides are in launch promo".
+        # The frontend still uses it for the Custom Guides banner. We keep its
+        # meaning unchanged and add `pride_month` for LGBTQ+ gating.
+        "in_free_promo": custom_in_launch_promo,
+        "pride_month": pride_month,
         "is_premium": is_premium,
     }
 
