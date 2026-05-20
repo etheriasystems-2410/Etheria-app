@@ -17,8 +17,9 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 const SPLASH_VIDEO = require('../assets/video/splash-video.mp4');
 const SPLASH_FRAME = require('../assets/images/splash-frame.png');
 
-const MAX_DURATION_MS = 5000; // video is 4s — give it 1s buffer
-const FADE_OUT_MS = 500;
+const MAX_DURATION_MS = 9000; // safety: never block app longer than 9s
+const HOLD_AFTER_END_MS = 2500; // keep final frame visible after video ends
+const FADE_OUT_MS = 700;
 
 interface Props {
   onDone: () => void;
@@ -48,9 +49,12 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
     });
   }, [hidden, onDone, opacity]);
 
-  // Listen for end of playback
+  // Listen for end of playback — hold the final frame for an extra beat
+  // before dismissing so the splash feels intentional, not cut off.
   useEffect(() => {
-    const sub = player.addListener('playToEnd', () => dismiss());
+    const sub = player.addListener('playToEnd', () => {
+      setTimeout(dismiss, HOLD_AFTER_END_MS);
+    });
     return () => {
       try { sub.remove(); } catch {}
     };
@@ -63,10 +67,11 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
   }, [dismiss]);
 
   // Skip the video entirely on web — VideoView/MP4 autoplay is flaky there.
-  // Show the static frame for a beat instead so web users still see the brand moment.
+  // Show the static frame for a longer beat instead so web users get a
+  // matching brand moment.
   useEffect(() => {
     if (Platform.OS === 'web') {
-      const t = setTimeout(dismiss, 1200);
+      const t = setTimeout(dismiss, 3000);
       return () => clearTimeout(t);
     }
   }, [dismiss]);
