@@ -230,15 +230,15 @@ export default function Home() {
   // Welcome text translations
   const getWelcomeText = (): string => {
     const texts: Record<string, string> = {
-      en: 'Discover tools to help you progress on your spiritual path. Practice and develop latent psychic abilities, enjoy guided meditations in this realm and beyond, consult a fully-intuitive oracle deck to receive guidance from your spirit guides, or communicate directly with a spirit guide attuned to your zodiac sign.',
-      es: 'Descubre herramientas para ayudarte a progresar en tu camino espiritual. Practica y desarrolla habilidades psíquicas latentes, disfruta de meditaciones guiadas, consulta un oráculo intuitivo para recibir orientación de tus guías espirituales, o comunícate directamente con un guía espiritual alineado con tu signo zodiacal.',
-      fr: 'Découvrez des outils pour vous aider à progresser sur votre chemin spirituel. Pratiquez et développez vos capacités psychiques latentes, profitez de méditations guidées, consultez un oracle intuitif pour recevoir des conseils de vos guides spirituels, ou communiquez directement avec un guide spirituel aligné sur votre signe du zodiaque.',
-      de: 'Entdecken Sie Werkzeuge, die Ihnen helfen, auf Ihrem spirituellen Weg voranzukommen. Üben und entwickeln Sie latente psychische Fähigkeiten, genießen Sie geführte Meditationen, konsultieren Sie ein intuitives Orakel, um Führung von Ihren Geistführern zu erhalten, oder kommunizieren Sie direkt mit einem Geistführer, der auf Ihr Sternzeichen abgestimmt ist.',
-      it: 'Scopri strumenti per aiutarti a progredire nel tuo cammino spirituale. Pratica e sviluppa abilità psichiche latenti, goditi meditazioni guidate, consulta un oracolo intuitivo per ricevere guida dai tuoi spiriti guida, o comunica direttamente con una guida spirituale allineata al tuo segno zodiacale.',
-      pt: 'Descubra ferramentas para ajudá-lo a progredir em seu caminho espiritual. Pratique e desenvolva habilidades psíquicas latentes, desfrute de meditações guiadas, consulte um oráculo intuitivo para receber orientação de seus guias espirituais, ou comunique-se diretamente com um guia espiritual alinhado ao seu signo do zodíaco.',
-      ja: 'スピリチュアルな道を進むためのツールを発見しましょう。潜在的な超能力を練習し発達させ、ガイド付き瞑想を楽しみ、直感的なオラクルでスピリットガイドからの導きを受け取り、あなたの星座に調和したスピリットガイドと直接コミュニケーションしましょう。',
-      ko: '영적 여정에서 발전할 수 있도록 도와주는 도구를 발견하세요. 잠재적인 초능력을 연습하고 개발하고, 가이드 명상을 즐기고, 직관적인 오라클로 영적 가이드의 안내를 받거나, 당신의 별자리에 맞춰진 영적 가이드와 직접 소통하세요.',
-      zh: '发现帮助您在灵性道路上进步的工具。练习和开发潜在的超能力，享受指导冥想，咨询直觉神谕牌以获得灵性向导的指引，或与与您星座相配的灵性向导直接交流。',
+      en: 'Toolkit designed to aid you on your quest to enlightenment and to help form and develop psychic awareness.',
+      es: 'Conjunto de herramientas diseñado para ayudarte en tu búsqueda de la iluminación y a formar y desarrollar tu conciencia psíquica.',
+      fr: 'Trousse conçue pour vous accompagner dans votre quête de l\'illumination et vous aider à former et développer votre conscience psychique.',
+      de: 'Werkzeugset, das Sie auf Ihrer Reise zur Erleuchtung begleitet und Ihnen hilft, psychisches Bewusstsein zu formen und zu entwickeln.',
+      it: 'Toolkit progettato per assisterti nella tua ricerca dell\'illuminazione e per aiutarti a formare e sviluppare la consapevolezza psichica.',
+      pt: 'Kit de ferramentas concebido para apoiá-lo em sua busca pela iluminação e para ajudar a formar e desenvolver a consciência psíquica.',
+      ja: '悟りへの探求を支え、サイキックな意識を形成し発達させるためのツールキットです。',
+      ko: '깨달음을 향한 여정을 돕고 영적 의식을 형성하고 발전시키도록 설계된 도구 모음입니다.',
+      zh: '一套助您追寻觉悟之旅、塑造并发展心灵觉知的工具集。',
     };
     return texts[languageCode] || texts.en;
   };

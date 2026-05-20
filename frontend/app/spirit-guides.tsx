@@ -1217,6 +1217,9 @@ export default function SpiritGuides() {
                   ...divineGuides[0],
                   name: 'Helios & Selene',
                   description: 'Divine Pair — Sacred Union',
+                  // Alternating gold (Helios — sun) + silver (Selene — moon) rings
+                  // pulse around the avatar while the pair speaks together.
+                  ringColors: ['#fbbf24', '#e5e7eb', '#fbbf24', '#e5e7eb', '#fbbf24'],
                 }, { divinePair: true });
               }}
               activeOpacity={0.85}
