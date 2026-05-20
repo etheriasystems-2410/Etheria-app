@@ -39,6 +39,8 @@ import {
   SPIRIT_GUIDES_HERO_IMAGE,
 } from '../constants/guides';
 import { styles } from '../components/guides/styles';
+import RenameModal from '../components/guides/RenameModal';
+import BirthdayPicker from '../components/guides/BirthdayPicker';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -771,57 +773,14 @@ export default function SpiritGuides() {
 
   if (showBirthdayInput) {
     return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView contentContainerStyle={styles.birthdayContainer}>
-          <Ionicons name="star" size={80} color="#b794f6" />
-          <Text style={styles.birthdayTitle}>Discover Your Spirit Guide</Text>
-          <Text style={styles.birthdaySubtitle}>
-            Enter your birthday to be paired with the spirit guide of your zodiac element
-          </Text>
-
-          <View style={styles.birthdayInputs}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Month</Text>
-              <TextInput
-                style={styles.birthdayInput}
-                value={birthMonth}
-                onChangeText={setBirthMonth}
-                keyboardType="number-pad"
-                placeholder="MM"
-                placeholderTextColor="#9f7aea"
-                maxLength={2}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Day</Text>
-              <TextInput
-                style={styles.birthdayInput}
-                value={birthDay}
-                onChangeText={setBirthDay}
-                keyboardType="number-pad"
-                placeholder="DD"
-                placeholderTextColor="#9f7aea"
-                maxLength={2}
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.submitButton} onPress={submitBirthday}>
-            <Ionicons name="checkmark-circle" size={24} color="#fff" />
-            <Text style={styles.submitButtonText}>Find My Guide</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={() => setShowBirthdayInput(false)}
-          >
-            <Text style={styles.skipButtonText}>Skip</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <BirthdayPicker
+        birthMonth={birthMonth}
+        birthDay={birthDay}
+        onChangeMonth={setBirthMonth}
+        onChangeDay={setBirthDay}
+        onSubmit={submitBirthday}
+        onSkip={() => setShowBirthdayInput(false)}
+      />
     );
   }
 
@@ -1092,55 +1051,15 @@ export default function SpiritGuides() {
         </ScrollView>
 
         {/* Rename modal for Custom Guides */}
-        <Modal
+        <RenameModal
           visible={renameModal !== null}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setRenameModal(null)}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.renameBackdrop}
-          >
-            <View style={styles.renameCard}>
-              <Text style={styles.renameTitle}>
-                Name your {renameModal === 'male' ? 'masculine' : 'feminine'} guide
-              </Text>
-              <Text style={styles.renameSub}>
-                Give your personal spirit companion the name that resonates with you. Up to 32 characters.
-              </Text>
-              <TextInput
-                value={renameInput}
-                onChangeText={setRenameInput}
-                placeholder={renameModal === 'male' ? 'Male Guide' : 'Female Guide'}
-                placeholderTextColor="#7c6aa3"
-                style={styles.renameInput}
-                maxLength={32}
-                autoFocus
-              />
-              <View style={styles.renameButtons}>
-                <TouchableOpacity
-                  style={[styles.renameBtn, styles.renameBtnGhost]}
-                  onPress={() => setRenameModal(null)}
-                  disabled={renameSaving}
-                >
-                  <Text style={styles.renameBtnGhostText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.renameBtn, styles.renameBtnPrimary]}
-                  onPress={saveCustomName}
-                  disabled={renameSaving}
-                >
-                  {renameSaving ? (
-                    <ActivityIndicator color="#1a0033" />
-                  ) : (
-                    <Text style={styles.renameBtnPrimaryText}>Save Name</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </KeyboardAvoidingView>
-        </Modal>
+          slot={renameModal}
+          input={renameInput}
+          onChangeInput={setRenameInput}
+          saving={renameSaving}
+          onSave={saveCustomName}
+          onClose={() => setRenameModal(null)}
+        />
 
         <Paywall
           visible={showPaywall}

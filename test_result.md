@@ -695,6 +695,10 @@ agent_communication:
 
 
 
+
+  - agent: "main"
+    message: "♻️ FRONTEND REFACTOR — PHASE B-2 Step 1 complete: extracted leaf modals. Created /app/frontend/components/guides/RenameModal.tsx (86 lines, props: visible/slot/input/onChangeInput/saving/onSave/onClose) and /app/frontend/components/guides/BirthdayPicker.tsx (81 lines, props: birthMonth/birthDay/onChangeMonth/onChangeDay/onSubmit/onSkip). Both are leaf components with zero coupling to audio/animation state. spirit-guides.tsx reduced from 1,354 → 1,273 lines. `npx tsc --noEmit` reports zero errors; Expo bundle stays clean. Deferred Steps 2 (SpiritGuidesContext) and 3 (GuideCard/ChatHeader/useSpiritGuideAudio hook) per user choice — recommended for a future session with dedicated device-QA time."
+
   - agent: "main"
     message: "♻️ FRONTEND REFACTOR — PHASE B complete (conservative scope): spirit-guides.tsx data + styles extracted. Created /app/frontend/constants/guides.ts (Guide + Message interfaces, all 4 guide arrays — elementalGuides, lgbtqGuides, customGuidesBase, divineGuides — plus the combined `guides` export and SPIRIT_GUIDES_HERO_IMAGE constant) and /app/frontend/components/guides/styles.ts (full StyleSheet). Fixed a latent TS bug in the Guide interface where category was typed 'elemental | lgbtq | custom' even though divineGuides used 'divine' — now correctly includes 'divine'. spirit-guides.tsx reduced from 2,238 → 1,354 lines (~40% reduction). `npx tsc --noEmit` reports zero errors; Expo Metro bundles successfully (1903 modules). DELIBERATELY SKIPPED the JSX component extraction (<GuideCard>, <ChatHeader>, <RenameModal>, <BirthdayPicker>) and useSpiritGuideAudio hook because they are heavily coupled to 30+ pieces of component state, animation refs, and the audio player ref — extracting them safely would require either massive prop-drilling or a context provider, both of which are high risk for a 'be careful' refactor. No behavior changes."
 
