@@ -8,9 +8,9 @@
     "scheme": "etheria",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0a0014"
+      "image": "./assets/images/splash-frame.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
@@ -56,9 +56,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "resizeMode": "contain",
-          "backgroundColor": "#0a0014"
+          "image": "./assets/images/splash-frame.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#000000"
         }
       ],
       "expo-font",

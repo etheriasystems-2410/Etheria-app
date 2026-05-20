@@ -3,19 +3,22 @@
  * splash hides. Once the video finishes (or hits a max duration) it fades out
  * and reveals the app.
  *
- * The native (static image) splash from app.json is still shown during cold
- * boot before React Native is ready. This component bridges from that moment
- * to the first app screen.
+ * The native (static image) splash from app.json (splash-frame.png — the first
+ * frame of this same video) is shown during cold boot before React Native is
+ * ready. This component bridges from that moment to the first app screen
+ * seamlessly.
  */
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Animated, Easing, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, View, Animated, Easing, ActivityIndicator, Platform, Image } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
-const SPLASH_VIDEO_URL =
-  'https://customer-assets.emergentagent.com/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/vq0efewy_storage_emulated_0_DCIM_Google_Photos_20260506_084935-VIDEO_GEN.mp4';
+// Local bundled video (watermark cropped, ~900 KB). Falls back to a static
+// image if the video player fails to load.
+const SPLASH_VIDEO = require('../assets/video/splash-video.mp4');
+const SPLASH_FRAME = require('../assets/images/splash-frame.png');
 
-const MAX_DURATION_MS = 6000; // safety: never block app longer than 6s
-const FADE_OUT_MS = 600;
+const MAX_DURATION_MS = 5000; // video is 4s — give it 1s buffer
+const FADE_OUT_MS = 500;
 
 interface Props {
   onDone: () => void;
@@ -25,9 +28,9 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
   const opacity = useState(new Animated.Value(1))[0];
   const [hidden, setHidden] = useState(false);
 
-  const player = useVideoPlayer(SPLASH_VIDEO_URL, (p) => {
+  const player = useVideoPlayer(SPLASH_VIDEO, (p) => {
     p.loop = false;
-    p.muted = false;
+    p.muted = true; // splash plays muted — respects silent mode and avoids surprises
     p.play();
   });
 
@@ -59,15 +62,22 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
     return () => clearTimeout(t);
   }, [dismiss]);
 
-  // Skip the video entirely on web — VideoView/MP4 autoplay is flaky there
+  // Skip the video entirely on web — VideoView/MP4 autoplay is flaky there.
+  // Show the static frame for a beat instead so web users still see the brand moment.
   useEffect(() => {
     if (Platform.OS === 'web') {
-      const t = setTimeout(dismiss, 100);
+      const t = setTimeout(dismiss, 1200);
       return () => clearTimeout(t);
     }
   }, [dismiss]);
 
-  if (Platform.OS === 'web') return null;
+  if (Platform.OS === 'web') {
+    return (
+      <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity }]} pointerEvents="none">
+        <Image source={SPLASH_FRAME} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity }]} pointerEvents="none">
@@ -77,24 +87,14 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
         contentFit="cover"
         nativeControls={false}
       />
-      <ActivityIndicator
-        size="small"
-        color="rgba(255,255,255,0.4)"
-        style={styles.spinner}
-      />
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0a0014',
-    zIndex: 999,
-  },
-  spinner: {
-    position: 'absolute',
-    bottom: 40,
-    alignSelf: 'center',
+    backgroundColor: '#000000',
+    zIndex: 9999,
   },
 });
 
