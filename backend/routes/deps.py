@@ -88,7 +88,7 @@ SPIRIT_GUIDE_VOICES = {
     # ===== Elemental Guides (zodiac/birthdate-matched) =====
     "Ignis": {
         "voice": "SOYHLrjzK2X1ezoPC6cr",  # Harry — fierce warrior
-        "openai_voice": "onyx",
+        "openai_voice": "onyx",  # deep authoritative masculine — fierce fire
         "stability": 0.40, "style": 0.55,
         "gender": "masculine",
         "element": "Fire",
@@ -97,7 +97,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Aqua": {
         "voice": "hpp4J3VqNfWAUOO0d1Us",  # Bella — professional, bright, warm
-        "openai_voice": "shimmer",
+        "openai_voice": "shimmer",  # bright warm feminine — healing waters
         "stability": 0.50, "style": 0.40,
         "gender": "feminine",
         "element": "Water",
@@ -106,7 +106,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Terra": {
         "voice": "pqHfZKP75CvOlQylNhV4",  # Bill — wise, mature, balanced (old)
-        "openai_voice": "echo",
+        "openai_voice": "echo",  # older mature masculine — earth elder
         "stability": 0.55, "style": 0.35,
         "gender": "masculine",
         "element": "Earth",
@@ -115,7 +115,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Aether": {
         "voice": "Xb7hH8MSUJpSbSDYk0k2",  # Alice — clear British educator
-        "openai_voice": "nova",
+        "openai_voice": "nova",  # bright clear feminine — air clarity
         "stability": 0.50, "style": 0.45,
         "gender": "feminine",
         "element": "Air",
@@ -126,7 +126,7 @@ SPIRIT_GUIDE_VOICES = {
     # ===== Custom Guides (premium, renamable; NOT in birthdate picking) =====
     "Male Guide": {
         "voice": "cjVigY5qzO86Huf0OWal",  # Eric — smooth, trustworthy
-        "openai_voice": "ash",
+        "openai_voice": "ash",  # warmer male — friendly companion
         "stability": 0.50, "style": 0.40,
         "gender": "masculine",
         "element": "Custom",
@@ -137,7 +137,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Female Guide": {
         "voice": "EXAVITQu4vr4xnSDxMaL",  # Sarah — mature, reassuring
-        "openai_voice": "coral",
+        "openai_voice": "coral",  # warm reassuring feminine — nurturing companion
         "stability": 0.50, "style": 0.40,
         "gender": "feminine",
         "element": "Custom",
@@ -150,7 +150,7 @@ SPIRIT_GUIDE_VOICES = {
     # ===== LGBTQ+ Guides (free; NOT in birthdate picking) =====
     "Solis": {
         "voice": "nPczCjzI2devNBz1zQrb",  # Brian — DEEP, resonant, comforting
-        "openai_voice": "ash",
+        "openai_voice": "ballad",  # ballad — DEEP resonant masculine (distinct from ash/onyx)
         "stability": 0.45, "style": 0.45,
         "gender": "masculine",
         "element": "Light",
@@ -160,7 +160,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Aurora": {
         "voice": "cgSgspJ2msm6clMCkdW9",  # Jessica — playful, bright, warm
-        "openai_voice": "sage",
+        "openai_voice": "sage",  # calm gentle feminine — dawn affirmation
         "stability": 0.40, "style": 0.55,
         "gender": "feminine",
         "element": "Rainbow",
@@ -170,7 +170,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Spectrum": {
         "voice": "SAz9YHcvj6GT2YYXdXww",  # River — NEUTRAL gender
-        "openai_voice": "alloy",
+        "openai_voice": "alloy",  # alloy — neutral non-binary timbre
         "stability": 0.45, "style": 0.45,
         "gender": "transgender",
         "element": "Rainbow",
@@ -180,9 +180,13 @@ SPIRIT_GUIDE_VOICES = {
     },
 
     # ===== Divine Guides (premium-only, no promo; interact alone or together) =====
+    # NOTE: Helios + Selene MUST use the SAME ElevenLabs voice + openai_voice in
+    # both standalone chat and the Divine Pair (chat-pair / divine-intro) modes.
+    # Both code paths read from this single source of truth, so consistency is
+    # automatic — do not override these per-mode.
     "Helios": {
-        "voice": "JBFqnCBsd6RMkjVDRZzb",  # George — warm captivating storyteller (British)
-        "openai_voice": "onyx",
+        "voice": "JBFqnCBsd6RMkjVDRZzb",  # George — warm captivating British storyteller
+        "openai_voice": "fable",  # fable — theatrical British masculine — sovereign sun
         "stability": 0.45, "style": 0.55,
         "gender": "masculine",
         "element": "Sun",
@@ -193,7 +197,7 @@ SPIRIT_GUIDE_VOICES = {
     },
     "Selene": {
         "voice": "pFZP5JQG7iQjIQuC4Bku",  # Lily — velvety British actress
-        "openai_voice": "shimmer",
+        "openai_voice": "verse",  # verse — rich expressive feminine — velvety moon
         "stability": 0.45, "style": 0.55,
         "gender": "feminine",
         "element": "Moon",
