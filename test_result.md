@@ -699,6 +699,10 @@ agent_communication:
 
 
 
+
+  - agent: "main"
+    message: "💰 TIGHTENED ALL SPIRIT GUIDE SCRIPTS to conserve ElevenLabs credits. Four changes: (1) routes/spirit_guides.py line 164 — standalone chat response cap 100→60 words with stronger directive 'Every word must earn its place. Be warm, wise, and impactful — never wordy.' (2) services/divine_pair_service.py — Helios dialogue cap 22→18 words. (3) Same file — Selene dialogue cap 22→18 words. (4) Same file — Unified Divine Pair blessing cap 65→45 words. (5) frontend app/spirit-guides.tsx getGreeting() — trimmed all 9 language greetings (standard + custom variants) to drop 'illuminate your path?'/'walk beside you today?'/etc. → just 'help?'/'walk beside you?'. Approx. character savings per response: standalone -40%, Divine Pair dialogue -18%, Divine Pair unified -30%, greetings -25%. Both backend and frontend reloaded cleanly, preview HTTP 200, npx tsc reports zero new errors."
+
   - agent: "main"
     message: "🎙️ TTS VOICE UNIQUENESS FIX — Root cause: ElevenLabs is at 0 credits, so every TTS call falls back to OpenAI. The OpenAI fallback voices in SPIRIT_GUIDE_VOICES had DUPLICATES — Ignis & Helios both used 'onyx', Aqua & Selene both used 'shimmer', Solis & Male Guide both used 'ash'. That made multiple guides sound identical to the user. Now mapped all 11 guides to 11 unique OpenAI voices: Ignis=onyx (deep masculine), Aqua=shimmer (bright feminine), Terra=echo (older masculine), Aether=nova (clear feminine), Male Guide=ash (warm masculine), Female Guide=coral (warm feminine), Solis=ballad (deep masculine), Aurora=sage (gentle feminine), Spectrum=alloy (neutral), Helios=fable (theatrical British masculine), Selene=verse (rich expressive feminine). Verified end-to-end: each guide generates distinct audio (different sha256 hashes). Helios and Selene continue to use SPIRIT_GUIDE_VOICES['Helios'] and ['Selene'] respectively in both standalone (/chat) and Divine Pair (/divine-intro + /chat-pair) — same source of truth, so voice consistency across modes is guaranteed by design."
 

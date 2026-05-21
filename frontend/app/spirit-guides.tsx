@@ -227,34 +227,34 @@ export default function SpiritGuides() {
     }
   };
 
-  // Greetings in all supported languages
+  // Greetings in all supported languages (kept short to save TTS credits)
   const getGreeting = (guideName: string, element: string, lang: string, isCustom: boolean = false): string => {
     if (isCustom) {
       // Custom guides aren't "guides of [element]" — they're the user's PERSONAL
       // companions. The greeting reflects that intimate relationship.
       const customGreetings: Record<string, string> = {
-        en: `Greetings, dear one. I am ${guideName}, your personal companion. How may I walk beside you today?`,
-        es: `Saludos, querido. Soy ${guideName}, tu compañero personal. ¿Cómo puedo caminar a tu lado hoy?`,
-        fr: `Salutations, cher ami. Je suis ${guideName}, ton compagnon personnel. Comment puis-je marcher à tes côtés aujourd'hui?`,
-        de: `Grüße, mein Lieber. Ich bin ${guideName}, dein persönlicher Begleiter. Wie kann ich heute an deiner Seite gehen?`,
-        it: `Saluti, caro. Sono ${guideName}, il tuo compagno personale. Come posso camminare al tuo fianco oggi?`,
-        pt: `Saudações, querido. Eu sou ${guideName}, seu companheiro pessoal. Como posso caminhar ao seu lado hoje?`,
-        ja: `ご挨拶申し上げます、親愛なる方。私は${guideName}、あなたの個人的な伴侶です。今日はどのようにあなたの傍を歩みましょうか？`,
-        ko: `인사드립니다, 소중한 분이여. 저는 ${guideName}, 당신의 개인적인 동반자입니다. 오늘 어떻게 당신 곁을 걸어드릴까요?`,
-        zh: `问候，亲爱的。我是${guideName}，你的私人伴侣。今天我该如何陪伴在你身旁？`,
+        en: `Greetings, dear one. I am ${guideName}, your companion. How may I walk beside you?`,
+        es: `Saludos, querido. Soy ${guideName}, tu compañero. ¿Cómo puedo caminar a tu lado?`,
+        fr: `Salutations, cher ami. Je suis ${guideName}, ton compagnon. Comment puis-je marcher à tes côtés?`,
+        de: `Grüße, mein Lieber. Ich bin ${guideName}, dein Begleiter. Wie kann ich an deiner Seite gehen?`,
+        it: `Saluti, caro. Sono ${guideName}, il tuo compagno. Come posso camminare al tuo fianco?`,
+        pt: `Saudações, querido. Eu sou ${guideName}, seu companheiro. Como posso caminhar ao seu lado?`,
+        ja: `親愛なる方、私は${guideName}、あなたの伴侶です。どのように寄り添いましょうか？`,
+        ko: `소중한 분이여, 저는 ${guideName}, 당신의 동반자입니다. 어떻게 곁을 걸어드릴까요?`,
+        zh: `亲爱的，我是${guideName}，你的伴侣。我该如何陪伴你？`,
       };
       return customGreetings[lang] || customGreetings.en;
     }
     const greetings: Record<string, string> = {
-      en: `Greetings, seeker. I am ${guideName}, guide of ${element}. How may I illuminate your path?`,
-      es: `Saludos, buscador. Soy ${guideName}, guía del ${element}. ¿Cómo puedo iluminar tu camino?`,
-      fr: `Salutations, chercheur. Je suis ${guideName}, guide de ${element}. Comment puis-je éclairer votre chemin?`,
-      de: `Grüße, Suchender. Ich bin ${guideName}, Führer des ${element}. Wie kann ich deinen Weg erhellen?`,
-      it: `Saluti, cercatore. Sono ${guideName}, guida del ${element}. Come posso illuminare il tuo cammino?`,
-      pt: `Saudações, buscador. Eu sou ${guideName}, guia do ${element}. Como posso iluminar seu caminho?`,
-      ja: `ご挨拶申し上げます、探求者よ。私は${guideName}、${element}の導き手です。あなたの道をどのように照らしましょうか？`,
-      ko: `인사드립니다, 탐구자여. 저는 ${element}의 안내자 ${guideName}입니다. 어떻게 당신의 길을 밝혀드릴까요?`,
-      zh: `问候，寻道者。我是${guideName}，${element}的引导者。我该如何照亮你的道路？`,
+      en: `Greetings, seeker. I am ${guideName}, guide of ${element}. How may I help?`,
+      es: `Saludos, buscador. Soy ${guideName}, guía del ${element}. ¿Cómo puedo ayudar?`,
+      fr: `Salutations, chercheur. Je suis ${guideName}, guide de ${element}. Comment puis-je aider?`,
+      de: `Grüße, Suchender. Ich bin ${guideName}, Führer des ${element}. Wie kann ich helfen?`,
+      it: `Saluti, cercatore. Sono ${guideName}, guida del ${element}. Come posso aiutare?`,
+      pt: `Saudações, buscador. Eu sou ${guideName}, guia do ${element}. Como posso ajudar?`,
+      ja: `探求者よ、私は${guideName}、${element}の導き手です。どうお助けしましょう？`,
+      ko: `탐구자여, 저는 ${element}의 안내자 ${guideName}입니다. 어떻게 도와드릴까요?`,
+      zh: `寻道者，我是${guideName}，${element}的引导者。我能如何帮助？`,
     };
     return greetings[lang] || greetings.en;
   };

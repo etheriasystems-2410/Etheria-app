@@ -161,7 +161,7 @@ async def chat_with_spirit_guide(message: SpiritGuideMessage, request: Request):
         "You are a personal spirit guide", f"You are {display_name}, a personal spirit guide"
     )
 
-    system_message += f""" Keep responses under 100 words. Be warm, wise, and helpful.
+    system_message += f""" Keep responses SHORT — under 60 words, one or two sentences maximum. Every word must earn its place. Be warm, wise, and impactful — never wordy.
 
 IMPORTANT: You MUST respond in {language_name}. The user has selected {language_name} as their preferred language.
 
