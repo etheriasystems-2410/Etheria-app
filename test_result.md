@@ -700,6 +700,10 @@ agent_communication:
 
 
 
+
+  - agent: "main"
+    message: "💰 SCRIPTS TIGHTENED FURTHER (round 2) — keeping natural conversation feel. Standalone chat 60→40 words (added 'Be lyrical and warm, never curt; let rhythm and a single vivid image carry the wisdom'). Divine Pair Helios dialogue 18→14 words. Divine Pair Selene dialogue 18→14 words. Divine Pair unified blessing 45→32 words (added 'One image, one truth, one short blessing. No filler — lyrical, not curt'). Combined cumulative reduction from original 100→40 words = ~60% per standalone reply; Divine Pair full exchange ~45% smaller. Naturalness preserved via explicit anti-curtness directives in both prompts."
+
   - agent: "main"
     message: "💰 TIGHTENED ALL SPIRIT GUIDE SCRIPTS to conserve ElevenLabs credits. Four changes: (1) routes/spirit_guides.py line 164 — standalone chat response cap 100→60 words with stronger directive 'Every word must earn its place. Be warm, wise, and impactful — never wordy.' (2) services/divine_pair_service.py — Helios dialogue cap 22→18 words. (3) Same file — Selene dialogue cap 22→18 words. (4) Same file — Unified Divine Pair blessing cap 65→45 words. (5) frontend app/spirit-guides.tsx getGreeting() — trimmed all 9 language greetings (standard + custom variants) to drop 'illuminate your path?'/'walk beside you today?'/etc. → just 'help?'/'walk beside you?'. Approx. character savings per response: standalone -40%, Divine Pair dialogue -18%, Divine Pair unified -30%, greetings -25%. Both backend and frontend reloaded cleanly, preview HTTP 200, npx tsc reports zero new errors."
 
