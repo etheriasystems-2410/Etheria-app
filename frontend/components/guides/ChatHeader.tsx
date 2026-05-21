@@ -92,6 +92,8 @@ export default function ChatHeader({
         <Text style={styles.chatHeaderElement}>
           {divinePairMode
             ? 'Guides of the Sun and Moon'
+            : selectedGuide.category === 'custom'
+            ? `Your personal companion • ${selectedGuide.gender}`
             : `Guide of ${selectedGuide.element} • ${selectedGuide.gender}`}
         </Text>
       </View>

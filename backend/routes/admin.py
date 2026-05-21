@@ -49,6 +49,13 @@ async def generate_tts(request: TTSRequest):
         elif request.voice_id:
             voice = request.voice_id
             guide_name = None
+            # If the client passed a known voice_id (e.g. custom guides whose name
+            # was renamed to "Mr. Testing"), look up the canonical entry so the
+            # OpenAI fallback voice + per-guide TTS settings stay gender-correct.
+            for cfg in SPIRIT_GUIDE_VOICES.values():
+                if cfg.get("voice") == request.voice_id:
+                    voice_info = cfg
+                    break
         else:
             voice_info = SPIRIT_GUIDE_VOICES["Aether"]
             voice = voice_info["voice"]

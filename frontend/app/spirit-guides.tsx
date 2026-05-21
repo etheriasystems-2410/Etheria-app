@@ -228,7 +228,23 @@ export default function SpiritGuides() {
   };
 
   // Greetings in all supported languages
-  const getGreeting = (guideName: string, element: string, lang: string): string => {
+  const getGreeting = (guideName: string, element: string, lang: string, isCustom: boolean = false): string => {
+    if (isCustom) {
+      // Custom guides aren't "guides of [element]" — they're the user's PERSONAL
+      // companions. The greeting reflects that intimate relationship.
+      const customGreetings: Record<string, string> = {
+        en: `Greetings, dear one. I am ${guideName}, your personal companion. How may I walk beside you today?`,
+        es: `Saludos, querido. Soy ${guideName}, tu compañero personal. ¿Cómo puedo caminar a tu lado hoy?`,
+        fr: `Salutations, cher ami. Je suis ${guideName}, ton compagnon personnel. Comment puis-je marcher à tes côtés aujourd'hui?`,
+        de: `Grüße, mein Lieber. Ich bin ${guideName}, dein persönlicher Begleiter. Wie kann ich heute an deiner Seite gehen?`,
+        it: `Saluti, caro. Sono ${guideName}, il tuo compagno personale. Come posso camminare al tuo fianco oggi?`,
+        pt: `Saudações, querido. Eu sou ${guideName}, seu companheiro pessoal. Como posso caminhar ao seu lado hoje?`,
+        ja: `ご挨拶申し上げます、親愛なる方。私は${guideName}、あなたの個人的な伴侶です。今日はどのようにあなたの傍を歩みましょうか？`,
+        ko: `인사드립니다, 소중한 분이여. 저는 ${guideName}, 당신의 개인적인 동반자입니다. 오늘 어떻게 당신 곁을 걸어드릴까요?`,
+        zh: `问候，亲爱的。我是${guideName}，你的私人伴侣。今天我该如何陪伴在你身旁？`,
+      };
+      return customGreetings[lang] || customGreetings.en;
+    }
     const greetings: Record<string, string> = {
       en: `Greetings, seeker. I am ${guideName}, guide of ${element}. How may I illuminate your path?`,
       es: `Saludos, buscador. Soy ${guideName}, guía del ${element}. ¿Cómo puedo iluminar tu camino?`,
@@ -305,18 +321,28 @@ export default function SpiritGuides() {
     }
 
     const elementName = getElementName(guide.element, languageCode);
-    const greeting = getGreeting(guide.name, elementName, languageCode);
+    const isCustom = guide.category === 'custom';
+    const greeting = getGreeting(guide.name, elementName, languageCode, isCustom);
     setMessages([{ role: 'assistant', content: greeting }]);
 
-    // Auto-play greeting if not muted; attach audio to message 0 when received.
+    // Auto-play greeting if not muted. Pass voice_id so the backend can route
+    // renamed custom guides to the correct (gender-appropriate) voice instead
+    // of falling back to the default Aether (feminine) voice.
     if (!audio.isMuted) {
-      audio.generateAndPlayAudio(greeting, guide.name, languageCode, 0, (audioBase64) => {
-        setMessages((prev) =>
-          prev.map((msg, idx) =>
-            idx === 0 ? { ...msg, hasAudio: true, audioBase64 } : msg
-          )
-        );
-      });
+      audio.generateAndPlayAudio(
+        greeting,
+        guide.name,
+        languageCode,
+        0,
+        (audioBase64) => {
+          setMessages((prev) =>
+            prev.map((msg, idx) =>
+              idx === 0 ? { ...msg, hasAudio: true, audioBase64 } : msg
+            )
+          );
+        },
+        guide.voice_id,
+      );
     }
   };
 

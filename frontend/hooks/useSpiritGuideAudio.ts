@@ -57,6 +57,7 @@ export interface SpiritGuideAudio {
     language: string,
     messageIndex: number,
     onAudio?: (audioBase64: string) => void,
+    voiceId?: string,
   ) => Promise<void>;
 }
 
@@ -189,15 +190,21 @@ export function useSpiritGuideAudio({ chatLoading, selectedGuide }: Params): Spi
     language: string,
     messageIndex: number,
     onAudio?: (audioBase64: string) => void,
+    voiceId?: string,
   ) => {
     if (isMuted) return;
     setGeneratingAudio(true);
     setAudioError(null);
     try {
+      const body: any = { text, guide_name: guideName, language };
+      // For custom (renamed) guides we MUST pass the voice_id explicitly,
+      // otherwise the backend can't resolve "Mr. Testing" → masculine voice
+      // and falls back to the default Aether (feminine) voice.
+      if (voiceId) body.voice_id = voiceId;
       const response = await fetch(`${BACKEND_URL}/api/tts/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, guide_name: guideName, language }),
+        body: JSON.stringify(body),
       });
       const data = await response.json();
       if (!data.success || !data.audio_base64) {
