@@ -94,37 +94,10 @@ CHAKRA_DATA = {
 }
 
 # ==================== BINAURAL FREQUENCIES ====================
+# NOTE: Items 1-3 (Schumann, Delta, Theta) are FREE — they intentionally come
+#       first so unsubscribed users see usable options at the top of the list.
+#       Premium items follow.
 BINAURAL_FREQUENCIES = [
-    {
-        "id": "god-tone",
-        "name": "God Tone (963 Hz)",
-        "frequency_range": "963 Hz Solfeggio",
-        "base_frequency": 963,
-        "beat_frequency": 7.83,
-        "benefits": ["Spiritual awakening", "Divine connection", "Crown chakra activation", "Higher consciousness"],
-        "color": "#ffd700",
-        "description": "The frequency of divine connection and spiritual awakening"
-    },
-    {
-        "id": "love",
-        "name": "Love Frequency (528 Hz)",
-        "frequency_range": "528 Hz Solfeggio",
-        "base_frequency": 528,
-        "beat_frequency": 6,
-        "benefits": ["Heart healing", "DNA repair", "Transformation", "Miracles"],
-        "color": "#ec4899",
-        "description": "The miracle tone - promotes love, healing, and positive transformation"
-    },
-    {
-        "id": "liberation",
-        "name": "Liberation (396 Hz)",
-        "frequency_range": "396 Hz Solfeggio",
-        "base_frequency": 396,
-        "beat_frequency": 6,
-        "benefits": ["Release fear", "Guilt liberation", "Root chakra", "Grounding"],
-        "color": "#ef4444",
-        "description": "Liberates from fear and guilt - grounds and balances the root chakra"
-    },
     {
         "id": "schumann",
         "name": "Schumann Resonance",
@@ -154,6 +127,36 @@ BINAURAL_FREQUENCIES = [
         "benefits": ["Deep meditation", "Creativity", "Intuition", "Memory"],
         "color": "#7c3aed",
         "description": "Ideal for deep meditation, creativity, and accessing intuition"
+    },
+    {
+        "id": "god-tone",
+        "name": "God Tone (963 Hz)",
+        "frequency_range": "963 Hz Solfeggio",
+        "base_frequency": 963,
+        "beat_frequency": 7.83,
+        "benefits": ["Spiritual awakening", "Divine connection", "Crown chakra activation", "Higher consciousness"],
+        "color": "#ffd700",
+        "description": "The frequency of divine connection and spiritual awakening"
+    },
+    {
+        "id": "love",
+        "name": "Love Frequency (528 Hz)",
+        "frequency_range": "528 Hz Solfeggio",
+        "base_frequency": 528,
+        "beat_frequency": 6,
+        "benefits": ["Heart healing", "DNA repair", "Transformation", "Miracles"],
+        "color": "#ec4899",
+        "description": "The miracle tone - promotes love, healing, and positive transformation"
+    },
+    {
+        "id": "liberation",
+        "name": "Liberation (396 Hz)",
+        "frequency_range": "396 Hz Solfeggio",
+        "base_frequency": 396,
+        "beat_frequency": 6,
+        "benefits": ["Release fear", "Guilt liberation", "Root chakra", "Grounding"],
+        "color": "#ef4444",
+        "description": "Liberates from fear and guilt - grounds and balances the root chakra"
     },
     {
         "id": "alpha",

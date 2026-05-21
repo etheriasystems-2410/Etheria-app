@@ -14,7 +14,7 @@ import {
 /** Routes that should sit ABOVE the silver divider (spiritual content). The
  *  rest fall below it (social / settings). Change the `dividerBeforeRoute` to
  *  move the line. */
-const DIVIDER_BEFORE_ROUTE = 'messages';
+const DIVIDER_BEFORE_ROUTE = 'community';
 
 export default function CustomDrawerContent(props: any) {
   const { state, descriptors, navigation } = props;

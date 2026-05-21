@@ -149,6 +149,16 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
         }}
       />
       <Drawer.Screen
+        name="community"
+        options={{
+          drawerLabel: 'Community',
+          title: 'Community',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="messages"
         options={{
           drawerLabel: ({ color }) => <MessagesDrawerLabel color={color} />,
@@ -165,16 +175,6 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
           title: 'Users',
           drawerIcon: ({ color, size }) => (
             <Ionicons name="people-circle" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="community"
-        options={{
-          drawerLabel: 'Community',
-          title: 'Community',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
           ),
         }}
       />

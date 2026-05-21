@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -63,6 +63,23 @@ export default function Journal() {
   const [transcripts, setTranscripts] = useState<JournalEntry[]>([]);
   const [dreams, setDreams] = useState<JournalEntry[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: 'entry' | 'reading' | 'transcript' | 'dream' } | null>(null);
+
+  // Ref + one-time swipe hint animation for the horizontal tabs bar.
+  // On mount we nudge the tabs ~70px to the right then back, signalling to
+  // users that the bar is scrollable. Runs once per Journal screen mount.
+  const tabsScrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    const out = setTimeout(() => {
+      tabsScrollRef.current?.scrollTo({ x: 70, animated: true });
+    }, 700);
+    const back = setTimeout(() => {
+      tabsScrollRef.current?.scrollTo({ x: 0, animated: true });
+    }, 1500);
+    return () => {
+      clearTimeout(out);
+      clearTimeout(back);
+    };
+  }, []);
 
   const categories = [
     { id: 'meditation', label: 'Meditation', icon: 'fitness', color: '#8b5cf6' },
@@ -507,7 +524,7 @@ export default function Journal() {
 
       {/* Tab Selector */}
       <View style={styles.tabContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContent}>
+        <ScrollView ref={tabsScrollRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContent}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'entries' && styles.activeTab]}
             onPress={() => setActiveTab('entries')}

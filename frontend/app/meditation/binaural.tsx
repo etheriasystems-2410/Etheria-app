@@ -103,9 +103,13 @@ export default function BinauralMeditation() {
     }
   };
 
+  // Free binaural programs (no subscription required). Order in the list is
+  // controlled by the backend (free items first), but the gating is done here.
+  const FREE_BINAURAL_IDS = ['schumann', 'delta', 'theta'];
+
   const handleProgramSelect = (program: BinauralProgram) => {
-    // Schumann is free, others require premium
-    if (program.id === 'schumann' || isPremium) {
+    // Free programs are accessible without a subscription
+    if (FREE_BINAURAL_IDS.includes(program.id) || isPremium) {
       setSelectedProgram(program);
     } else {
       setShowPaywall(true);
@@ -384,7 +388,8 @@ export default function BinauralMeditation() {
         <Text style={styles.sectionTitle}>Choose Your Frequency</Text>
 
         {programs.map((program) => {
-          const isLocked = program.id !== 'schumann' && !isPremium;
+          const isFree = FREE_BINAURAL_IDS.includes(program.id);
+          const isLocked = !isFree && !isPremium;
           const isSchumann = program.id === 'schumann';
           
           return (
@@ -393,7 +398,7 @@ export default function BinauralMeditation() {
               style={[
                 styles.programCard,
                 selectedProgram?.id === program.id && styles.programCardActive,
-                isSchumann && styles.schumannCard,
+                isFree && styles.schumannCard,
               ]}
               onPress={() => handleProgramSelect(program)}
               activeOpacity={0.7}
@@ -408,7 +413,7 @@ export default function BinauralMeditation() {
               <View style={styles.programInfo}>
                 <View style={styles.programNameRow}>
                   <Text style={styles.programName}>{program.name}</Text>
-                  {isSchumann && (
+                  {isFree && (
                     <View style={styles.freeBadge}>
                       <Text style={styles.freeBadgeText}>FREE</Text>
                     </View>
