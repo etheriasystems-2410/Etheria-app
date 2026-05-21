@@ -69,6 +69,55 @@ def create_session_token() -> str:
     return f"session_{uuid.uuid4().hex}"
 
 
+def _enforce_account_status(user_doc: dict) -> None:
+    """
+    Reject login for users whose account has been cancelled by moderation
+    or who are currently under an active suspension window.
+
+    - account_status == 'cancelled'  → 403, permanent block
+    - account_status == 'suspended' AND suspension_end is in the future → 403,
+      with the suspension end timestamp in the error detail.
+    - account_status == 'suspended' BUT suspension_end has passed → allowed
+      (auto-reactivation will catch up via the hourly background job, but in the
+      meantime we don't want a paying user locked out).
+    """
+    status = (user_doc or {}).get("account_status") or "active"
+
+    if status == "cancelled":
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Your Etheria account has been cancelled due to repeated "
+                "violations of our Community Guidelines. If you believe this "
+                "was made in error, please contact etheriasystems@gmail.com."
+            ),
+        )
+
+    if status == "suspended":
+        suspension_end = user_doc.get("suspension_end")
+        # Normalize to aware UTC datetime if possible
+        if isinstance(suspension_end, str):
+            try:
+                suspension_end = datetime.fromisoformat(suspension_end.replace("Z", "+00:00"))
+            except ValueError:
+                suspension_end = None
+        if isinstance(suspension_end, datetime):
+            if suspension_end.tzinfo is None:
+                suspension_end = suspension_end.replace(tzinfo=timezone.utc)
+            if suspension_end > datetime.now(timezone.utc):
+                # Still inside the suspension window — block.
+                ends_iso = suspension_end.isoformat()
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        f"Your Etheria account is suspended until {ends_iso}. "
+                        "If you believe this was made in error, please contact "
+                        "etheriasystems@gmail.com."
+                    ),
+                )
+        # Else: suspension_end missing or already passed → allow login.
+
+
 async def get_current_user(request: Request) -> dict:
     """Get current authenticated user from session (cookie or Bearer token)."""
     if _db is None:
@@ -163,6 +212,9 @@ async def login(request: LoginRequest):
     if not user_doc or not verify_password(request.password, user_doc.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    # Block cancelled / suspended accounts from logging in
+    _enforce_account_status(user_doc)
+
     session_token = create_session_token()
     session_doc = {
         "session_token": session_token,
@@ -223,6 +275,9 @@ async def google_auth_callback(session_id: str):
                     {"user_id": user_doc["user_id"]},
                     {"$set": {"name": data["name"], "picture": data.get("picture")}},
                 )
+
+            # Block cancelled / suspended accounts from logging in
+            _enforce_account_status(user_doc)
 
             session_token = data["session_token"]
             session_doc = {
