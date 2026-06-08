@@ -701,6 +701,10 @@ agent_communication:
 
 
 
+
+  - agent: "main"
+    message: "✨ FEATURE #1 SHIPPED — Daily Card + Streak System. Backend: /app/backend/routes/daily_card.py with 3 endpoints — GET /api/daily/card (deterministic per user+date, idempotent same-day; bumps streak on first call of new day), GET /api/daily/streak (status only), GET /api/daily/history (last 30 days). Streak logic: consecutive days bump count, single-day gap forgiven by grace day (1 per 7-day window), 2+ day gap resets. Lunar emoji progression: 🌑🌒🌓🌔🌕🌖🌗🌘 cycling weekly, ✨ at 30 days, 💫 at 100 days. Frontend: /app/frontend/components/DailyCardWidget.tsx inserted into home screen between greeting and Features section. Compact pill on home; tap opens full card detail modal with streak block + 'Pull a Full Reading' CTA. Verified live: 2 calls return same card same day, streak counter increments, MongoDB daily_cards collection persists. Bundle 1,910 modules, preview HTTP 200."
+
   - agent: "main"
     message: "💰 SCRIPTS TIGHTENED FURTHER (round 2) — keeping natural conversation feel. Standalone chat 60→40 words (added 'Be lyrical and warm, never curt; let rhythm and a single vivid image carry the wisdom'). Divine Pair Helios dialogue 18→14 words. Divine Pair Selene dialogue 18→14 words. Divine Pair unified blessing 45→32 words (added 'One image, one truth, one short blessing. No filler — lyrical, not curt'). Combined cumulative reduction from original 100→40 words = ~60% per standalone reply; Divine Pair full exchange ~45% smaller. Naturalness preserved via explicit anti-curtness directives in both prompts."
 

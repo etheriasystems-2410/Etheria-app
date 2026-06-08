@@ -9,6 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlassCard, GlowButton, Mist, SectionTitle } from '../components/ui';
+import DailyCardWidget from '../components/DailyCardWidget';
 import { palette, spacing, radii, typography, shadows, gradients } from '../theme/tokens';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/88c8k78q_8227.jpg';
@@ -443,6 +444,9 @@ export default function Home() {
             </View>
           </View>
         )}
+
+        {/* Daily Oracle Card + Streak (auth only) */}
+        {isAuthenticated && <DailyCardWidget />}
 
         {/* Features */}
         <View style={styles.sectionHeader}>

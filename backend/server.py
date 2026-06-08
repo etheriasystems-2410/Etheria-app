@@ -821,6 +821,10 @@ app.include_router(spirit_guides_router, prefix="/api")
 from routes.oracle import router as oracle_router
 app.include_router(oracle_router, prefix="/api")
 
+# Daily Card + Streak system (uses ORACLE_CARDS from oracle.py)
+from routes.daily_card import router as daily_card_router
+app.include_router(daily_card_router, prefix="/api")
+
 # Import and register subscription / webhook / user feature-access routes
 from routes.subscription import router as subscription_router, webhook_router as stripe_webhook_router, user_router as user_feature_router
 app.include_router(subscription_router, prefix="/api")
