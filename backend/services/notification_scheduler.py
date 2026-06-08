@@ -219,6 +219,18 @@ def start(db) -> None:
     _db = db
     if _task and not _task.done():
         return
+    # Ensure unique index so the (user, kind, day) dedupe is race-safe even
+    # under multi-worker uvicorn. Best-effort — collection may not exist yet.
+    async def _ensure_indexes():
+        try:
+            await db.notification_sends.create_index(
+                [("user_id", 1), ("kind", 1), ("day", 1)],
+                unique=True,
+                name="user_kind_day_unique",
+            )
+        except Exception as e:
+            logger.warning(f"[Scheduler] index ensure failed (non-fatal): {e}")
+    asyncio.create_task(_ensure_indexes())
     _task = asyncio.create_task(_run_loop())
 
 
