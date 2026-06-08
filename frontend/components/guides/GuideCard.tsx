@@ -21,6 +21,10 @@ interface GuideCardProps {
   borderColor?: string;
   elementOverride?: string;
   extraOverlay?: ReactNode;
+  /** Familiarity tier symbol (✦/✧/★) — shown as a corner badge */
+  familiaritySymbol?: string;
+  /** Familiarity tier label (Acquaintance/Confidant/Soul-bonded) */
+  familiarityLabel?: string;
   onPress: () => void;
 }
 
@@ -31,6 +35,8 @@ export default function GuideCard({
   borderColor,
   elementOverride,
   extraOverlay,
+  familiaritySymbol,
+  familiarityLabel,
   onPress,
 }: GuideCardProps) {
   const symbol =
@@ -75,6 +81,34 @@ export default function GuideCard({
           <Text style={styles.lockText}>Premium</Text>
         </View>
       )}
+      {familiaritySymbol ? (
+        <View style={guideCardExtraStyles.familiarityBadge}>
+          <Text style={guideCardExtraStyles.familiaritySymbol}>{familiaritySymbol}</Text>
+          {familiarityLabel ? (
+            <Text style={guideCardExtraStyles.familiarityLabel}>{familiarityLabel}</Text>
+          ) : null}
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 }
+
+import { StyleSheet } from 'react-native';
+const guideCardExtraStyles = StyleSheet.create({
+  familiarityBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(251, 191, 36, 0.18)',
+    borderColor: 'rgba(251, 191, 36, 0.55)',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  familiaritySymbol: { color: '#fbbf24', fontSize: 14, fontWeight: '700' },
+  familiarityLabel: { color: '#fbbf24', fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
+});

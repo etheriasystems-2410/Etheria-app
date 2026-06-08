@@ -74,6 +74,10 @@ export default function SpiritGuides() {
   const [renameSaving, setRenameSaving] = useState<boolean>(false);
   const [divinePairMode, setDivinePairMode] = useState<boolean>(false);
 
+  // Per-guide familiarity (message_count + tier_label + tier_symbol). Loaded
+  // once when the user opens the picker. Drives the small badge on each card.
+  const [familiarity, setFamiliarity] = useState<Record<string, { message_count: number; tier_label: string; tier_symbol: string }>>({});
+
   // Check if user has access to Spirit Guides feature
   const hasAccess = isPremium || checkFeatureAccess('spirit_guides');
 
@@ -85,8 +89,25 @@ export default function SpiritGuides() {
       checkBirthdayStored();
       setupAudioMode();
       loadCustomGuideInfo();
+      loadFamiliarity();
     }
   }, [hasAccess, previewAsFree]);
+
+  const loadFamiliarity = async () => {
+    try {
+      const token = await AsyncStorage.getItem('session_token');
+      if (!token) return;
+      const res = await fetch(`${BACKEND_URL}/api/spirit-guides/familiarity`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFamiliarity(data || {});
+      }
+    } catch (e) {
+      // silent fail — badges just won't show
+    }
+  };
 
   const loadCustomGuideInfo = async () => {
     try {
@@ -192,6 +213,13 @@ export default function SpiritGuides() {
       ? { ...g, name: customNames.male }
       : { ...g, name: customNames.female }
   );
+
+  /** Look up familiarity data by the guide's name (matches the backend key). */
+  const famFor = (name: string) => {
+    const f = familiarity[name];
+    if (!f || !f.tier_symbol) return { symbol: undefined, label: undefined };
+    return { symbol: f.tier_symbol, label: f.tier_label };
+  };
 
   const checkBirthdayStored = async () => {
     // Don't auto-popup the birthday picker when entering Spirit Guides.
@@ -613,6 +641,8 @@ export default function SpiritGuides() {
                 key={guide.name}
                 guide={guide}
                 isSuggested={suggestedGuide?.name === guide.name}
+                familiaritySymbol={famFor(guide.name).symbol}
+                familiarityLabel={famFor(guide.name).label}
                 onPress={() => selectGuide(guide)}
               />
             ))}
@@ -640,6 +670,8 @@ export default function SpiritGuides() {
                 key={guide.name}
                 guide={guide}
                 borderColor={guide.color}
+                familiaritySymbol={famFor(guide.name).symbol}
+                familiarityLabel={famFor(guide.name).label}
                 onPress={() => {
                   // Free for everyone during June Pride Month; otherwise requires subscription.
                   if (!prideMonth && !isPremium) {
@@ -671,6 +703,8 @@ export default function SpiritGuides() {
                 borderColor="#fbbf24"
                 elementOverride="Custom"
                 isLocked={!customUnlocked}
+                familiaritySymbol={famFor(guide.name).symbol}
+                familiarityLabel={famFor(guide.name).label}
                 onPress={() => selectGuide(guide)}
                 extraOverlay={
                   <TouchableOpacity
@@ -707,6 +741,8 @@ export default function SpiritGuides() {
                 guide={guide}
                 borderColor={guide.color}
                 isLocked={!divineUnlocked}
+                familiaritySymbol={famFor(guide.name).symbol}
+                familiarityLabel={famFor(guide.name).label}
                 onPress={() => {
                   if (!divineUnlocked) {
                     setShowPaywall(true);

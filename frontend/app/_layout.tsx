@@ -1,12 +1,14 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Drawer } from 'expo-router/drawer';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { Platform, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 import { useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
+import * as Notifications from 'expo-notifications';
+import * as Linking from 'expo-linking';
 
 // Drawer-related components (extracted)
 import MenuButton from '../components/drawer/MenuButton';
@@ -14,6 +16,33 @@ import MessagesDrawerLabel from '../components/drawer/MessagesDrawerLabel';
 import CustomDrawerContent from '../components/drawer/CustomDrawerContent';
 import usePushNotifications from '../hooks/usePushNotifications';
 import SplashVideo from '../components/SplashVideo';
+
+// ---------- Push notifications (Emergent playbook contract) -----------------
+// 1) Foreground handler — MUST be at module scope so it's registered before
+//    any push arrives. Guarded for web.
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
+
+// 2) Android channel — MUST be at module scope so it exists before any push
+//    arrives.
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'Default',
+    importance: Notifications.AndroidImportance.MAX,
+    sound: 'default',
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#7c3aed',
+  });
+}
 
 
 function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
@@ -24,6 +53,38 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
 
   // Register for push notifications once authenticated (no-op on web/simulator)
   usePushNotifications(isAuthenticated);
+
+  // Tap handlers (warm + cold-start) — route via deeplink/action_url
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const handleTap = (data: any) => {
+      const url = data?.deeplink || data?.action_url;
+      if (!url) return;
+      if (typeof url === 'string') {
+        if (url.startsWith('http')) {
+          Linking.openURL(url);
+        } else {
+          router.push(url as any);
+        }
+      }
+    };
+
+    // Warm tap — user taps notification while app is open/backgrounded
+    const tapSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      handleTap(response.notification.request.content.data || {});
+    });
+
+    // Cold-start tap — app was killed when the push arrived
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (!response) return;
+      handleTap(response.notification.request.content.data || {});
+    });
+
+    return () => {
+      tapSub.remove();
+    };
+  }, [router]);
 
   useEffect(() => {
     if (loading) return;
@@ -274,6 +335,13 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
         options={{
           drawerItemStyle: { display: 'none' },
           title: 'AI Guided Meditation',
+        }}
+      />
+      <Drawer.Screen
+        name="notification-preferences"
+        options={{
+          drawerItemStyle: { display: 'none' },
+          title: 'Notifications',
         }}
       />
       <Drawer.Screen

@@ -1,0 +1,52 @@
+{
+  "summary": "Backend-only verification of the new Emergent-managed push relay + daily reminder scheduler. 19/19 pytest cases passed against the live preview backend. Validated: /api/register-push (422 on missing fields, graceful 500 with placeholder EMERGENT_PUSH_KEY, server stays alive); /api/notifications/preferences GET defaults + PUT round-trip + range validation (hour 0-23, tz offset -720..840); /api/notifications/test returns 200 JSON {success:false} on relay failure (no 5xx); /api/notifications/register legacy alias requires auth and returns JSON {success:false, registered:null}; notification_scheduler imports cleanly, start(db) is idempotent (second call reuses the same task), _tick_once() runs against the live DB without exceptions; send_push_to_user signature (db, user_id, title, body, data) preserved so routes/messages.py DM push keeps working; regression smoke on /api/spirit-guides/familiarity, /api/daily/card, /api/daily/collective all 200. No deprecated-package or React Native issues to report (backend-only scope).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/notifications/test",
+        "issue": "Endpoint relies on _require_user but POSTs only carry an Authorization header; current behavior is correct, however the response doesn't surface upstream failure reason (always 200 success:false). Consider including a 'reason' field so the frontend can distinguish 'no device registered' from 'relay down'."
+      },
+      {
+        "endpoint": "POST /api/register-push",
+        "issue": "Stamping push_registered_at on the user doc happens AFTER the upstream call succeeds, but the upsert keys on user_id only. If a user_id in the body doesn't match an existing user, the update is a no-op silently (no 404). Low risk but worth a log line."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_push_notifications.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Add an explicit 'reason' field to /api/notifications/test response so frontend can show why a test push failed (relay 401 vs no device token).",
+    "(Optional) Log a warning in /api/register-push when the user_id in the body doesn't match any existing user document — the stamp update silently no-ops today.",
+    "When EMERGENT_PUSH_KEY is replaced with a real value, re-run TestRegisterPush.test_valid_body_returns_500_with_placeholder_key (it should then return 201 + {status:'registered'}) and TestNotificationsTest.test_returns_json_does_not_500 (should return success:true)."
+  ],
+  "critical_code_review_comments": [
+    "push_service.py creates a module-level httpx.AsyncClient at import time using PUSH_KEY captured at import. If EMERGENT_PUSH_KEY is rotated at runtime via .env reload, the X-Push-Key header will NOT update until the process restarts. With supervisor that's fine, but worth a comment.",
+    "notification_scheduler.py uses module-level globals (_db, _task, _running) — fine for a single-process FastAPI worker, but if the app ever runs with multiple uvicorn workers each worker will start its own scheduler loop and reminders may double-fire. Recommend a `notification_sends` unique index on (user_id, kind, day) to make the existing _mark_sent / _already_sent guard race-safe. The `upsert=True` on _mark_sent helps but without a unique index two workers can both pass _already_sent simultaneously.",
+    "routes/notifications.py:DEFAULT_PREFS is captured once at import; the duplicated DEFAULTS dict in notification_scheduler.py is kept in sync manually (comment says so). Consider importing DEFAULT_PREFS from routes.notifications to avoid drift.",
+    "All four files are well under the 700-line limit and follow async/await + Pydantic validation correctly. MongoDB _id is not leaked in any of the new responses."
+  ],
+  "updated_files": [
+    "/app/backend/tests/__init__.py (created, empty)",
+    "/app/backend/tests/conftest.py (created — admin login fixture)",
+    "/app/backend/tests/test_push_notifications.py (created — 19 tests covering all 7 review items)"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19 pytest)",
+    "frontend": "N/A — backend-only scope per request"
+  },
+  "seed_data_creation": "TestSchedulerSmoke.test_start_is_idempotent_and_tick_runs writes push_registered_at, push_platform='ios', last_card_date='1970-01-01', notification_prefs (defaults), and streak_count=5 onto the admin user (etheriasystems@gmail.com) so _tick_once exercises the oracle/dream branches. The last_card_date will be overwritten by the next real /api/daily/card draw, so no manual cleanup needed. Reminder fires only inside the user's local hour:00–hour:14 window so re-runs won't spam.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All push-relay endpoints currently 'fail-soft' because EMERGENT_PUSH_KEY=placeholder. Once a real key is wired in, flip the assertions in test_valid_body_returns_500_with_placeholder_key (-> expect 201, status='registered'), test_returns_json_does_not_500 (-> expect success:true), and test_returns_json_does_not_crash for /notifications/register (-> success:true, registered=<token>). The send_push_to_user wrapper used by routes/messages.py for DM pushes was confirmed signature-compatible (db, user_id, title, body, data).",
+  "rca_of_issue": "N/A — no bugs surfaced. All 7 items in the review request behaved exactly as the playbook specifies: register-push returns 500 on placeholder upstream without crashing, preferences round-trip works with proper Pydantic field range validation, test/legacy-register fail soft with JSON responses, scheduler import/start/idempotency/tick all clean, and the three regression endpoints still respond 200."
+}

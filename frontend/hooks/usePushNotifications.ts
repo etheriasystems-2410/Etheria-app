@@ -1,32 +1,30 @@
 /**
- * usePushNotifications - Registers an Expo push token with the backend and
- * routes notification taps to the right screen (e.g., a DM thread).
+ * usePushNotifications — registers the device's NATIVE push token with the
+ * Emergent push relay. Follows the Emergent push playbook contract:
  *
- * Skips silently on web/simulator where push notifications aren't supported.
+ *   1. Request permissions BEFORE getting the token
+ *   2. Use `getDevicePushTokenAsync()` (NOT Expo's token API)
+ *   3. POST {user_id, platform, device_token} to /api/register-push on every
+ *      app open (tokens can rotate)
+ *
+ * Tap routing (warm + cold-start) is handled in `app/_layout.tsx`, not here.
+ * This hook is purely about registration.
+ *
+ * Skips silently on web/simulator where native push isn't supported.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
 
-// Show notifications while the app is foregrounded
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+import { useAuth } from '../contexts/AuthContext';
 
-async function registerForPushTokenAsync(): Promise<string | null> {
-  // Skip on web — Expo push is mobile-only
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+async function getNativeToken(): Promise<string | null> {
   if (Platform.OS === 'web') return null;
-  if (!Device.isDevice) return null; // simulators can't get tokens
+  if (!Device.isDevice) return null; // simulators have no APNs/FCM token
 
   const { status: existing } = await Notifications.getPermissionsAsync();
   let finalStatus = existing;
@@ -38,68 +36,51 @@ async function registerForPushTokenAsync(): Promise<string | null> {
     return null;
   }
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#7c3aed',
-    });
-  }
-
   try {
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-    const tokenResp = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
-    );
-    return tokenResp.data;
+    const tokenResp = await Notifications.getDevicePushTokenAsync();
+    return tokenResp.data || null;
   } catch (e) {
-    console.warn('[Push] getExpoPushTokenAsync failed:', e);
+    console.warn('[Push] getDevicePushTokenAsync failed:', e);
     return null;
   }
 }
 
 export function usePushNotifications(isAuthenticated: boolean) {
-  const router = useRouter();
-  const responseListener = useRef<any>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!isAuthenticated) return;
+    if (!user?.id && !(user as any)?.user_id) return;
+
+    const userId: string = (user as any).user_id || user.id;
 
     (async () => {
-      const token = await registerForPushTokenAsync();
+      const token = await getNativeToken();
       if (!token) return;
 
       try {
+        // Per playbook: POST to /api/register-push (Emergent relay route).
+        // The backend stamps the user doc so the scheduler can target this
+        // user. We also keep a quick local note for the settings screen.
         const auth = await AsyncStorage.getItem('session_token');
-        if (!auth) return;
-        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/notifications/register`, {
+        await fetch(`${BACKEND_URL}/api/register-push`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth}` },
-          body: JSON.stringify({ token, device_info: { os: Platform.OS } }),
+          headers: {
+            'Content-Type': 'application/json',
+            ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            platform: Platform.OS,
+            device_token: token,
+          }),
         });
+        await AsyncStorage.setItem('push_registered_at', String(Date.now()));
       } catch (e) {
-        console.warn('[Push] register failed:', e);
+        console.warn('[Push] register-push failed:', e);
       }
     })();
-
-    // Handle notification taps — route to the right screen
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((resp) => {
-      const data = resp.notification.request.content.data as any;
-      if (data?.type === 'dm' && data?.thread_id) {
-        router.push(`/messages/${data.thread_id}` as any);
-      } else if (data?.type === 'dm') {
-        router.push('/messages' as any);
-      }
-    });
-
-    return () => {
-      if (responseListener.current) {
-        responseListener.current.remove();
-      }
-    };
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, user]);
 }
 
 export default usePushNotifications;
