@@ -4,14 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { JournalEntry } from './types';
 import EmptyState from './EmptyState';
+import DreamInterpreterModal from './DreamInterpreterModal';
 
 interface DreamsTabProps {
   dreams: JournalEntry[];
   onDelete: (id: string, type: 'dream') => void;
+  onRefresh?: () => void;
 }
 
-export const DreamsTab: React.FC<DreamsTabProps> = ({ dreams, onDelete }) => {
+export const DreamsTab: React.FC<DreamsTabProps> = ({ dreams, onDelete, onRefresh }) => {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [showInterpreter, setShowInterpreter] = useState(false);
 
   const toggleExpanded = (id: string) => {
     setExpandedIds(prev => {
@@ -25,19 +28,40 @@ export const DreamsTab: React.FC<DreamsTabProps> = ({ dreams, onDelete }) => {
     });
   };
 
+  const InterpretCTA = (
+    <TouchableOpacity
+      style={styles.interpretCTA}
+      onPress={() => setShowInterpreter(true)}
+      activeOpacity={0.85}
+    >
+      <Ionicons name="sparkles" size={16} color="#1a0033" />
+      <Text style={styles.interpretCTAText}>Interpret a Dream</Text>
+    </TouchableOpacity>
+  );
+
   if (dreams.length === 0) {
     return (
-      <EmptyState
-        icon="moon-outline"
-        title="No dreams saved"
-        subtitle="Interpret your dreams and save them here"
-        iconColor="#6366f1"
-      />
+      <View style={{ flex: 1 }}>
+        <View style={styles.ctaWrapper}>{InterpretCTA}</View>
+        <EmptyState
+          icon="moon-outline"
+          title="No dreams saved"
+          subtitle="Interpret your dreams and save them here"
+          iconColor="#6366f1"
+        />
+        <DreamInterpreterModal
+          visible={showInterpreter}
+          onClose={() => setShowInterpreter(false)}
+          onSaved={() => onRefresh?.()}
+        />
+      </View>
     );
   }
 
   return (
+    <>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {InterpretCTA}
       {dreams.map((dream) => {
         const dreamDate = new Date(dream.date);
         const isExpanded = expandedIds.has(dream.id);
@@ -137,10 +161,28 @@ export const DreamsTab: React.FC<DreamsTabProps> = ({ dreams, onDelete }) => {
         );
       })}
     </ScrollView>
+    <DreamInterpreterModal
+      visible={showInterpreter}
+      onClose={() => setShowInterpreter(false)}
+      onSaved={() => onRefresh?.()}
+    />
+    </>
   );
 };
 
 const styles = StyleSheet.create({
+  ctaWrapper: { padding: 16 },
+  interpretCTA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#fbbf24',
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  interpretCTAText: { color: '#1a0033', fontSize: 14, fontWeight: '700' },
   container: {
     flex: 1,
   },

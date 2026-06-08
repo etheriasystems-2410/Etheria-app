@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Paywall } from '../components/Paywall';
 import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
+import CollectiveCardBanner from '../components/CollectiveCardBanner';
 import HeaderBanner from '../components/HeaderBanner';
 import { Image } from 'expo-image';
 import { CosmicBackdrop } from '../components/ui';
@@ -506,6 +507,8 @@ export default function Community() {
         )}
       </View>
       
+      <CollectiveCardBanner />
+
       <Text style={styles.sectionTitle}>Discussion Boards</Text>
       {categories.map((category) => (
         <TouchableOpacity

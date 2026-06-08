@@ -42,6 +42,14 @@ def _pick_card_for(user_id: str, day_iso: str) -> dict:
     return ORACLE_CARDS[idx]
 
 
+def _pick_collective_card_for(day_iso: str) -> dict:
+    """Same card for EVERY user on a given day — used for the Community
+    Daily Collective Reading thread."""
+    seed = hashlib.sha256(f"COLLECTIVE|{day_iso}".encode()).digest()
+    idx = int.from_bytes(seed[:4], "big") % len(ORACLE_CARDS)
+    return ORACLE_CARDS[idx]
+
+
 def _moon_emoji_for_streak(streak: int) -> str:
     """Mystical streak indicator. Cycles through 8 lunar phases every 8 days."""
     if streak <= 0:
@@ -186,3 +194,23 @@ async def get_history(limit: int = 30, user: dict = Depends(get_current_user)):
         d.pop("drawn_at", None)
         items.append(d)
     return {"items": items, "count": len(items)}
+
+
+# ==================== COLLECTIVE DAILY READING (Community) ====================
+
+@router.get("/collective")
+async def get_collective_reading():
+    """The same Oracle card for every user on a given day. Designed to power
+    a pinned 'Daily Collective Reading' thread on the Community page so
+    everyone can react to the same card together."""
+    today_iso = _today_iso()
+    card = _pick_collective_card_for(today_iso)
+    return {
+        "card": card,
+        "date": today_iso,
+        "title": f"Today's Collective Card — {card['name']}",
+        "prompt": (
+            f"The veil shifts today and {card['name']} steps forward for all of us. "
+            f"How is this card showing up in your day? Share what stirs."
+        ),
+    }

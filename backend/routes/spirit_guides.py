@@ -1,7 +1,7 @@
 """
 Spirit Guides chat and TTS endpoints
 """
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -21,7 +21,13 @@ from services.divine_pair_service import (
     DEFAULT_SELENE_LINE,
     DEFAULT_UNIFIED_LINE,
 )
-from .auth_utils import get_current_user
+from .auth_utils import get_current_user, get_current_user_optional
+from services.guide_memory_service import (
+    record_chat_exchange,
+    load_recent_memories,
+    build_memory_preamble,
+    get_user_familiarity_map,
+)
 
 router = APIRouter(prefix="/spirit-guides", tags=["spirit-guides"])
 
@@ -167,6 +173,23 @@ IMPORTANT: You MUST respond in {language_name}. The user has selected {language_
 
 IMPORTANT: DO NOT use any markdown formatting in your response - no asterisks (*), no hash symbols (#), no bullet points, no bold or italic markers. Write in plain flowing prose that sounds natural when spoken aloud, as your response will be read by text-to-speech."""
 
+    # ---- Inject memory of prior conversations (if the user is signed in) ----
+    current_user_id: Optional[str] = None
+    try:
+        cu = await get_current_user_optional(request)
+        if cu:
+            current_user_id = cu.get("user_id")
+    except Exception:
+        current_user_id = None
+    if current_user_id:
+        try:
+            prior_memories = await load_recent_memories(db, current_user_id, message.guide)
+            preamble = build_memory_preamble(prior_memories)
+            if preamble:
+                system_message += preamble
+        except Exception as mem_err:
+            logging.warning(f"Memory load failed (non-fatal): {mem_err}")
+
     try:
         chat = LlmChat(
             api_key=EMERGENT_LLM_KEY,
@@ -218,6 +241,15 @@ IMPORTANT: DO NOT use any markdown formatting in your response - no asterisks (*
                     audio_base64 = _b64.b64encode(audio_bytes).decode()
         except Exception as tts_error:
             logging.error(f"Error generating TTS for spirit guide: {tts_error}")
+
+        # ---- Record this exchange to memory (fire-and-forget) ----
+        if current_user_id and cleaned_response.strip():
+            try:
+                await record_chat_exchange(
+                    db, current_user_id, message.guide, message.message, cleaned_response
+                )
+            except Exception as mem_err:
+                logging.warning(f"Memory write failed (non-fatal): {mem_err}")
 
         return SpiritGuideResponse(
             response=cleaned_response,
@@ -555,3 +587,13 @@ async def chat_with_divine_pair(payload: DivinePairMessage, request: Request):
     except Exception as e:
         logging.error(f"Divine pair chat error: {e}")
         raise HTTPException(status_code=500, detail="The veil between worlds shimmered. Please try again.")
+
+
+# ==================== FAMILIARITY (Guide Memory) ====================
+
+@router.get("/familiarity")
+async def get_familiarity(user: dict = Depends(get_current_user)):
+    """Return per-guide message-count + tier badge for the current user.
+    Used by the frontend to show ✦/✧/★ on the guide cards."""
+    user_id = user["user_id"]
+    return await get_user_familiarity_map(db, user_id)
