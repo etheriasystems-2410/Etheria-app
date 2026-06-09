@@ -483,7 +483,7 @@ export default function Settings() {
               </View>
               <View style={styles.upgradeInfo}>
                 <Text style={styles.upgradeTitle}>Upgrade to Premium</Text>
-                <Text style={styles.upgradePrice}>$3.99/month</Text>
+                <Text style={styles.upgradePrice}>From $3.08/mo</Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color="#b794f6" />
             </View>

@@ -273,11 +273,11 @@ async def create_checkout_session(data: CreateCheckoutRequest, request: Request)
         else:
             session_kwargs["customer_email"] = user.get("email")
 
-        # Idempotency key — prevents duplicate sessions on retries
-        idem_key = f"etheria_checkout_{user['user_id']}_{data.plan_id}_{uuid.uuid4().hex[:8]}"
-        session = stripe.checkout.Session.create(
-            **session_kwargs, idempotency_key=idem_key
-        )
+        # NOTE: We intentionally don't pass an idempotency_key here. The frontend
+        # is "one click = one session" and Stripe Checkout sessions are cheap +
+        # auto-expire. A real idempotency key would need a stable client-side
+        # request ID to be useful; a random one would defeat the purpose.
+        session = stripe.checkout.Session.create(**session_kwargs)
     except stripe.error.StripeError as e:
         logger.error(f"[Stripe] create_checkout_session failed: {e}")
         raise HTTPException(status_code=502, detail="Failed to create checkout session")

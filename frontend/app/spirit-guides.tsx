@@ -580,7 +580,7 @@ export default function SpiritGuides() {
             <Ionicons name="diamond" size={20} color="#1a0033" />
             <Text style={styles.unlockButtonText}>Unlock Spirit Guides</Text>
           </TouchableOpacity>
-          <Text style={styles.priceText}>$3.99/month</Text>
+          <Text style={styles.priceText}>From $3.99/month or $36.99/year</Text>
         </View>
         <Paywall
           visible={showPaywall}

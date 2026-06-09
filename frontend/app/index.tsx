@@ -369,7 +369,7 @@ export default function Home() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.subPillTitle}>Unlock Premium</Text>
-                <Text style={styles.subPillSub}>Everything Etheria offers · $3.99/mo</Text>
+                <Text style={styles.subPillSub}>Everything Etheria offers · from $3.08/mo</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={palette.gold} />
             </LinearGradient>
