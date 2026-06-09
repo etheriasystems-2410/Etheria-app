@@ -796,6 +796,10 @@ from routes.notifications import router as notifications_router, set_db as set_n
 set_notifications_db(db)
 app.include_router(notifications_router)
 
+# Import and register Companion Guide routes (premium feature)
+from routes.companion import router as companion_router
+app.include_router(companion_router, prefix="/api")
+
 # Import and register community routes
 from routes.community import router as community_router, set_db as set_community_db, set_llm_key as set_community_llm_key
 set_community_db(db)

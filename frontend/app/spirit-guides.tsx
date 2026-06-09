@@ -41,6 +41,8 @@ import BirthdayPicker from '../components/guides/BirthdayPicker';
 import GuideCard from '../components/guides/GuideCard';
 import ChatHeader from '../components/guides/ChatHeader';
 import { useSpiritGuideAudio } from '../hooks/useSpiritGuideAudio';
+import { useLocalSearchParams } from 'expo-router';
+import CompanionGuideSection from '../components/CompanionGuideSection';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -49,6 +51,7 @@ export default function SpiritGuides() {
   const { isPremium, previewAsFree, checkFeatureAccess } = useAuth();
   const { languageCode, t } = useLanguage();
   const router = useRouter();
+  const params = useLocalSearchParams<{ guide?: string }>();
   const [showPaywall, setShowPaywall] = useState(false);
   const [showBirthdayInput, setShowBirthdayInput] = useState(false);
   const [birthMonth, setBirthMonth] = useState('');
@@ -92,6 +95,25 @@ export default function SpiritGuides() {
       loadFamiliarity();
     }
   }, [hasAccess, previewAsFree]);
+
+  // Deep-link support: if launched via `?guide=NAME` (e.g. tapping the
+  // Companion bubble from anywhere in the app), auto-open that guide's chat.
+  useEffect(() => {
+    if (!hasAccess) return;
+    const target = (params?.guide || '').toString().trim();
+    if (!target) return;
+    // Wait for custom guide names to load so renamed customs match too.
+    const match = guides.find((g) => g.name === target)
+      || (customNames.male === target ? guides.find(g => g.custom_slot === 'male') : null)
+      || (customNames.female === target ? guides.find(g => g.custom_slot === 'female') : null);
+    if (match) {
+      const enrichedMatch = { ...match };
+      if (match.custom_slot === 'male') enrichedMatch.name = customNames.male;
+      if (match.custom_slot === 'female') enrichedMatch.name = customNames.female;
+      selectGuide(enrichedMatch);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params?.guide, hasAccess, customNames.male, customNames.female]);
 
   const loadFamiliarity = async () => {
     try {
@@ -633,6 +655,16 @@ export default function SpiritGuides() {
           )}
 
           <View style={styles.guidesGrid}>
+            {/* Companion Guide selector (premium feature) */}
+            <CompanionGuideSection
+              customNames={customNames}
+              customUnlocked={customUnlocked}
+              divineUnlocked={divineUnlocked}
+              prideMonth={prideMonth}
+              inFreePromo={inFreePromo}
+              onUpgradePress={() => setShowPaywall(true)}
+            />
+
             {/* Elemental */}
             <Text style={styles.sectionHeading}>Elemental Guides</Text>
             <Text style={styles.sectionSub}>Matched to your zodiac element</Text>

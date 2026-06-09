@@ -1,0 +1,60 @@
+{
+  "summary": "Backend-only verification of the new Companion Guide premium feature. 25/25 pytest cases passing after fixing one production bug. Coverage: auth guards on all 5 endpoints (GET/PUT/DELETE /api/companion-guide + /whisper + /whispers/today all 401 unauthenticated); premium gating verified via a fresh signup (free user) — GET returns {companion:null,whisper:null,whisper_at:null}, PUT returns 403 with detail containing 'Companion Guide is a premium feature', whisper/whispers-today return 404; admin (premium) happy path covers DELETE-to-clean-slate → PUT empty/missing guide_name (400/422) → PUT Aqua succeeds with whisper ≤130 chars → GET reflects cached whisper + ISO timestamp → /whisper returns cached:true twice → /whispers/today returns exactly 3 non-empty whispers + generated_at → PUT Helios (divine premium-only) succeeds → PUT 'RandomNonsense' treated as renamed custom and succeeds → DELETE clears → subsequent /whisper and /whispers/today return 404. Regression smoke on /api/spirit-guides/familiarity, /api/daily/card, /api/daily/collective, /api/notifications/test, /api/notifications/register all 200. NO deprecated-package or React Native issues (backend-only scope).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/companion-guide",
+        "issue": "whisper_at is rendered via datetime.isoformat() on a value loaded from MongoDB. Motor returns BSON Date as a naive datetime (tzinfo stripped), so the ISO string has no timezone suffix even though the value was stored as UTC. Frontend must assume UTC. Cosmetic — recommend normalizing to UTC-aware before .isoformat() for clarity."
+      },
+      {
+        "endpoint": "PUT /api/companion-guide (missing body field)",
+        "issue": "Missing guide_name returns 422 (FastAPI default Pydantic validation), while empty string returns the explicit 400 from the handler. Both are fine, but if the frontend expects a uniform 400 the handler could declare guide_name Optional and let the explicit check below produce 400 in both cases."
+      },
+      {
+        "endpoint": "GET /api/admin/preview-as-free",
+        "issue": "Review request mentioned an admin /api/admin/preview-as-free toggle but no such endpoint exists in the codebase. Used a fresh signup instead to exercise the non-premium 403 path. If the toggle is planned, it still needs to be implemented."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_companion_guide.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "REVIEW the fix I applied to /app/backend/routes/companion.py (lines ~238-252): /whisper crashed with 'TypeError: can't subtract offset-naive and offset-aware datetimes' on every call after PUT because MongoDB returns datetimes naive and the cache-freshness comparison subtracted it from a tz-aware now. I added: `if isinstance(cached_at, datetime) and cached_at.tzinfo is None: cached_at = cached_at.replace(tzinfo=timezone.utc)` before the (now - cached_at) arithmetic. Verified with pytest — all 25 cases now pass.",
+    "(Optional) Apply the same UTC normalization in get_companion() before whisper_at.isoformat() so the returned ISO string carries '+00:00' and the frontend doesn't have to assume UTC.",
+    "(Optional) Implement the /api/admin/preview-as-free toggle if the playbook expects it — it was referenced in the review request but does not exist in the repo today.",
+    "(Optional) Consider returning a uniform 400 (not 422) for both missing and empty guide_name by declaring the field Optional[str] = None in SelectCompanionBody and relying on the explicit check inside the handler — only matters if the frontend wants one error format."
+  ],
+  "critical_code_review_comments": [
+    "BUG (fixed in this run): routes/companion.py /whisper compared `datetime.now(timezone.utc)` to `user_doc.get('companion_whisper_at')` which Motor returns naive — every single /whisper request after a PUT would 500. The same naive-vs-aware pattern shows up in many places across the codebase (good defensive pattern: always normalize datetimes coming out of MongoDB).",
+    "_generate_whisper truncates LLM output at 110 chars (107 + '…') even though the system prompt says MAX 90. Decision is fine for safety, but the function docstring/header comment says ≤90 — drift between docs and implementation. Observed whispers in production stayed under 110 chars.",
+    "_user_can_use is async but has no awaitable inside it — fine, but could be sync. Minor.",
+    "/whispers/today fires 3 sequential LLM calls (await _generate_whisper x3). Could parallelize with asyncio.gather to cut latency ~3x, but the endpoint currently completes within 5-7s on warm path so not urgent.",
+    "GUIDE_PERSONALITIES is imported from routes.spirit_guides but routes/companion.py doesn't validate that imported names match the categorization in _category_for — adding a Solis/Aurora/Spectrum/Selene guide later won't break anything, but a new Divine guide would need _category_for updated. Add a comment or move the category map next to GUIDE_PERSONALITIES.",
+    "companion.py is 284 lines — well under the 700-line limit. No MongoDB _id leakage. All endpoints use Depends(get_current_user) consistently.",
+    "DELETE uses $unset which is idempotent and safe even when no companion is set — good."
+  ],
+  "updated_files": [
+    "/app/backend/routes/companion.py (FIX: normalize naive datetime from MongoDB to UTC-aware before the cache-freshness arithmetic in /whisper)",
+    "/app/backend/tests/conftest.py (created — admin_token, fresh_user, headers fixtures using EXPO_PUBLIC_BACKEND_URL)",
+    "/app/backend/tests/test_companion_guide.py (created — 25 tests covering all 5 endpoints + premium gating + 5-endpoint regression smoke)"
+  ],
+  "success_rate": {
+    "backend": "100% (25/25 pytest)",
+    "frontend": "N/A — backend-only scope per request"
+  },
+  "seed_data_creation": "Created one fresh free-tier test user per pytest session: TEST_companion_<uuid>@example.com / TestPass123! (used to exercise the 403 premium-gate). Admin's companion_guide field is set and then cleared by the test sequence (final state: cleared). No persistent mutation that affects future runs.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "EXPO_BACKEND_URL is not set; frontend uses EXPO_PUBLIC_BACKEND_URL=https://etheria-divination.preview.emergentagent.com — conftest.py reads either. The /whisper endpoint was returning HTTP 500 due to a naive-vs-aware datetime bug; fix applied in routes/companion.py around the cache-freshness check. If the bug regresses, search for `cached_at.tzinfo is None` in companion.py. Tests are idempotent and the admin's companion is cleared at the end of TestAdminCompanionFlow.",
+  "rca_of_issue": "BUG: GET /api/companion-guide/whisper returned 500 on every call immediately after PUT. ROOT CAUSE: routes/companion.py reads companion_whisper_at from MongoDB via Motor; BSON Date is deserialized as a naive datetime (no tzinfo). The cache-freshness check did `(now - cached_at).total_seconds()` where now is `datetime.now(timezone.utc)` (tz-aware). Python raises TypeError when subtracting naive from aware datetimes. REPRO: 1) PUT /api/companion-guide {guide_name:'Aqua'} 200, 2) GET /api/companion-guide/whisper → 500. FIX: Normalize cached_at to UTC-aware before arithmetic: `if isinstance(cached_at, datetime) and cached_at.tzinfo is None: cached_at = cached_at.replace(tzinfo=timezone.utc)`. Verified — all 25 backend tests now pass."
+}
