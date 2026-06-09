@@ -278,12 +278,16 @@ async def get_todays_whispers(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="No Companion selected")
 
     name_hint = user_doc.get("display_name") or user_doc.get("name")
-    whispers: List[str] = []
-    for _ in range(DAILY_WHISPER_COUNT):
-        whispers.append(await _generate_whisper(companion, name_hint))
+    # Generate the 3 whispers in parallel — cuts latency ~3x.
+    import asyncio
+    whispers: List[str] = await asyncio.gather(
+        *[_generate_whisper(companion, name_hint) for _ in range(DAILY_WHISPER_COUNT)]
+    )
 
     return {
         "guide": companion,
         "whispers": whispers,
         "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+": datetime.now(timezone.utc).isoformat(),
     }
