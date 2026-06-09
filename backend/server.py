@@ -19,7 +19,6 @@ import io
 import bcrypt
 import jwt
 import httpx
-from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 from typing import Dict
 import smtplib
 from email.mime.text import MIMEText
@@ -54,28 +53,7 @@ JWT_EXPIRATION_DAYS = 7
 # Emergent Auth Configuration
 EMERGENT_AUTH_SESSION_ENDPOINT = os.environ.get('EMERGENT_AUTH_SESSION_ENDPOINT')
 
-# Stripe Configuration
-STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
-MONTHLY_SUBSCRIPTION_PRICE = 3.99  # $3.99 USD
-
-# Subscription Plans - Server-side defined (NEVER accept from frontend)
-SUBSCRIPTION_PLANS = {
-    "premium_monthly": {
-        "name": "Etheria Premium Monthly",
-        "price": 3.99,
-        "currency": "usd",
-        "features": [
-            "Unlimited Oracle readings with AI",
-            "Access to all Spirit Guides",
-            "AI Guided Meditation",
-            "Binaural & Astral Meditation",
-            "Unlimited Journal entries",
-            "All Training modules"
-        ]
-    }
-}
-
-# Free tier limits
+# Free tier limits (premium plan catalog lives in routes/subscription.py)
 FREE_TIER_LIMITS = {
     "oracle_readings_per_day": 1,
     "journal_entries_max": 5,

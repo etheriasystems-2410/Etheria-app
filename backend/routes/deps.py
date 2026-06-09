@@ -10,7 +10,7 @@ from pathlib import Path
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.llm.openai import OpenAITextToSpeech
 from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
+JWT_EXPIRATION_DAYS = 7
 
 # ElevenLabs TTS (now the default for Spirit Guides — far richer emotional inflection)
 import sys as _sys
@@ -42,9 +42,8 @@ JWT_EXPIRATION_DAYS = 7
 # Emergent Auth Configuration
 EMERGENT_AUTH_SESSION_ENDPOINT = os.environ.get('EMERGENT_AUTH_SESSION_ENDPOINT')
 
-# Stripe Configuration
-STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
-MONTHLY_SUBSCRIPTION_PRICE = 3.99
+# Stripe configuration is loaded inside routes/subscription.py
+# (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY/ANNUAL).
 
 # Gmail SMTP Configuration for prize drawing
 GMAIL_EMAIL = os.environ.get('GMAIL_EMAIL')

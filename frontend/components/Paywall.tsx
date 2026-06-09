@@ -43,6 +43,10 @@ export function Paywall({ visible, onClose, feature }: PaywallProps) {
   const [giftCode, setGiftCode] = React.useState('');
   const [redeemingCode, setRedeemingCode] = React.useState(false);
   const [codeSuccess, setCodeSuccess] = React.useState(false);
+  // Annual is preselected — saves users more money so we lean into it
+  const [selectedPlan, setSelectedPlan] = React.useState<'premium_monthly' | 'premium_annual'>(
+    'premium_annual',
+  );
 
   const handleSubscribe = async () => {
     if (!isAuthenticated) {
@@ -68,7 +72,7 @@ export function Paywall({ visible, onClose, feature }: PaywallProps) {
           'Authorization': `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
-          plan_id: 'premium_monthly',
+          plan_id: selectedPlan,
           origin_url: originUrl
         })
       });
@@ -203,7 +207,9 @@ export function Paywall({ visible, onClose, feature }: PaywallProps) {
               ) : (
                 <>
                   <Ionicons name="diamond" size={20} color="#1a0033" />
-                  <Text style={styles.subscribeButtonText}>Subscribe Now</Text>
+                  <Text style={styles.subscribeButtonText}>
+                    {selectedPlan === 'premium_annual' ? 'Subscribe — $36.99/yr' : 'Subscribe — $3.99/mo'}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -248,7 +254,7 @@ export function Paywall({ visible, onClose, feature }: PaywallProps) {
             )}
 
             <Text style={styles.terms}>
-              Cancel anytime. Subscription renews monthly.
+              Cancel anytime. Subscription renews {selectedPlan === 'premium_annual' ? 'annually' : 'monthly'}.
             </Text>
           </ScrollView>
         </View>
@@ -360,7 +366,71 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9f7aea',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 18,
+  },
+  planSelector: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 22,
+  },
+  planCard: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(159, 122, 234, 0.4)',
+    backgroundColor: 'rgba(124, 58, 237, 0.10)',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  planCardSelected: {
+    borderColor: '#fbbf24',
+    backgroundColor: 'rgba(251, 191, 36, 0.10)',
+  },
+  planCheck: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  planLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#e9d5ff',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  planPrice: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#ffd700',
+  },
+  planPeriod: {
+    fontSize: 11,
+    color: '#cbb6ff',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  planSavings: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#10b981',
+  },
+  bestValueRibbon: {
+    position: 'absolute',
+    top: -8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: '#fbbf24',
+  },
+  bestValueText: {
+    color: '#1a0033',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   featuresList: {
     marginBottom: 24,

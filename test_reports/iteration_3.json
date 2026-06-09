@@ -1,0 +1,63 @@
+{
+  "summary": "Backend-only verification of the NEW direct-Stripe subscription integration (migrated off emergentintegrations.payments.stripe → standard `stripe` Python SDK on user's OWN Stripe account). 19/19 pytest cases passed against the public preview URL with ZERO code changes required. Coverage: (1) GET /api/subscription/plans — both plans present, monthly $3.99/usd/month, annual $36.99/usd/year with savings_label, stripe_price_id correctly stripped from public payload, free_tier_limits dict included; (2) GET /api/subscription/status — no-auth → is_premium=false + all features false + subscription_status='free'; admin auth → is_premium=true + all features true + expires_at + plan_id; (3) POST /api/subscription/create-checkout — 401 unauthenticated, 400 on invalid plan_id, both plans return REAL Stripe URLs (https://checkout.stripe.com/...) and cs_test_... session IDs, payment_transactions row inserted with payment_status='pending' (verified directly in MongoDB); (4) GET /api/subscription/checkout-status/{id} — 404 on unknown id, known just-created session returns 200 with full shape {status, payment_status, amount_total, currency}, payment_status='unpaid' for unpaid session, NO 500s; (5) POST /api/webhook/stripe dev-fallback path (STRIPE_WEBHOOK_SECRET blank) — accepts events without signature verification, checkout.session.completed correctly sets is_premium=true + plan_id=premium_annual + expires_at on admin user, customer.subscription.updated with status='active' + current_period_end syncs subscription_status='active' + new expires_at, customer.subscription.deleted flips is_premium=false; all webhook calls return 200 {received: true}; (6) /api/user/feature-access/oracle_readings_unlimited returns has_access=true for admin (after restoring premium); (7) Regression smoke: /api/spirit-guides/familiarity, /api/daily/card, /api/companion-guide all 200 with admin auth. Backend-only scope — no React Native or design checks performed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/webhook/stripe",
+        "issue": "Dev-mode fallback (STRIPE_WEBHOOK_SECRET blank) is working as intended and emits a loud WARNING log. This is acceptable for the current pre-production state, but MUST be hardened before going live — once the user creates the webhook endpoint in their Stripe dashboard and provides a whsec_, populate STRIPE_WEBHOOK_SECRET and the code will automatically switch to signature-verified mode (no code change needed)."
+      },
+      {
+        "endpoint": "POST /api/subscription/create-checkout",
+        "issue": "Idempotency key includes a random uuid4() suffix (etheria_checkout_{user_id}_{plan_id}_{rand}) which makes every call a new key — so Stripe will NOT dedupe back-to-back retries. If the goal of the idempotency key is true dedupe, drop the uuid suffix (or use a stable hash of the request). Currently each test run creates a fresh cs_test_... session, which is the actual observed behavior."
+      },
+      {
+        "endpoint": "GET /api/subscription/checkout-status/{id}",
+        "issue": "When the underlying transaction has payment_status='paid' (cached), the endpoint returns {status:'complete', payment_status:'paid', already_processed:true} — but does NOT include amount_total/currency in that branch. Clients that always expect amount_total/currency in the response will break on the cached path. Minor — only matters if frontend re-polls after success."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_subscription_stripe.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Production hardening) Once the user creates the Stripe webhook endpoint in their dashboard and obtains a whsec_..., populate STRIPE_WEBHOOK_SECRET in /app/backend/.env — the code already auto-switches to signature-verified mode when the var is non-empty, no code change required.",
+    "(Optional) In routes/subscription.py create_checkout_session, drop the uuid4().hex[:8] suffix from idem_key (or replace with a deterministic hash of plan_id + user_id + minute-bucket) so Stripe can actually dedupe retried calls. Today every call gets a unique key.",
+    "(Optional) In routes/subscription.py get_checkout_status, when returning the cached-paid branch (line ~314), also include amount_total/currency from the stored transaction so the response shape is consistent across cached and live paths.",
+    "(Optional) Consider exposing the plan's `stripe_price_id` is correctly stripped — verified server-side. No frontend change needed."
+  ],
+  "critical_code_review_comments": [
+    "routes/subscription.py is 582 lines — under the 700-line limit, single-responsibility (one router file for /subscription, /webhook, /user/feature-access). Good separation.",
+    "Webhook dev-fallback path (lines 387-393) is explicit and well-logged with a loud WARNING. Acceptable for the pre-production phase. Production will auto-harden once STRIPE_WEBHOOK_SECRET is populated.",
+    "Excellent defensive handling around timezone-aware/naive datetime comparison in /subscription/status (lines 201-209) and check_feature_access (lines 556-564) — mirror of the bug we fixed in iteration_2 for companion.py. Good consistency.",
+    "Webhook handler catches all exceptions and returns 200 (lines 411-414) — correct pattern. Prevents Stripe from infinitely retrying on a transient handler bug.",
+    "_handle_subscription_change correctly falls back to looking up user by stripe_customer_id when metadata.user_id is missing (lines 460-465). This is critical for the customer.subscription.updated/deleted events that Stripe sometimes sends without preserving metadata.",
+    "MongoDB _id is correctly excluded by always projecting individual fields or using $set on existing docs. No leakage observed.",
+    "All HTTP status codes are appropriate (400 invalid plan, 401 unauth, 404 unknown session, 502 upstream Stripe failure, 500 only when Stripe isn't configured at boot).",
+    "Pydantic models (CreateCheckoutRequest, SubscriptionStatusResponse) properly typed. plan_id defaults to premium_monthly which is sensible.",
+    "Stripe SDK is correctly initialized at module load (stripe.api_key = os.environ.get(...)) — happens after dotenv has loaded because server.py loads env before importing routes.",
+    "MINOR: success_url uses double-braces `{{CHECKOUT_SESSION_ID}}` which Stripe will substitute — correct Stripe convention. Verified in actual response URL.",
+    "MINOR: SUBSCRIPTION_PLANS is a module-level dict — fine as a single source of truth. If you ever add a third plan, also update INTERVAL_TO_DAYS if it has a new interval (e.g., 'week').",
+    "Idempotency key drift noted in minor issues above — not security-critical but defeats Stripe's dedupe."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_subscription_stripe.py (created — 19 pytest cases covering all 6 subscription/webhook/feature-access endpoints + 3 regression smoke tests)"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19 pytest)",
+    "frontend": "N/A — backend-only scope per request"
+  },
+  "seed_data_creation": "Created several real Stripe Checkout sessions in the user's own Stripe Test mode dashboard (cs_test_b1...) — this is the desired behavior (sessions WILL show up in user's dashboard as the migration intends). Also created payment_transactions rows in MongoDB (one per checkout test, payment_status='pending' then 'unpaid' after status-poll). Admin user (etheriasystems@gmail.com) was toggled is_premium=true (premium_annual) → updated (active, future expiry) → deleted (is_premium=false) → restored to premium_annual at the end of the feature-access test. Final admin DB state: is_premium=true, subscription_plan=premium_annual, subscription_status=active, stripe_customer_id=cus_test_restore_admin, stripe_subscription_id=sub_test_restore_admin. These are FAKE Stripe IDs from the synthetic webhook events — if main agent wants a clean slate, run a $set unsetting stripe_customer_id and stripe_subscription_id on the admin doc.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All Stripe subscription endpoints (plans, status, create-checkout, checkout-status, webhook, feature-access) are GREEN against the public preview URL https://etheria-divination.preview.emergentagent.com. STRIPE_WEBHOOK_SECRET is intentionally blank for now; the dev-fallback path is exercised and works. The admin's MongoDB doc has been left with fake stripe_customer_id='cus_test_restore_admin' and stripe_subscription_id='sub_test_restore_admin' from the webhook fixture restore — these are harmless but if a future test asserts on those values being valid live Stripe IDs, $unset them first. payment_transactions collection has accumulated test rows (~6 from this run). Test file is /app/backend/tests/test_subscription_stripe.py — uses tests.conftest fixtures (admin_token, admin_auth_headers, api). Real Stripe Checkout sessions are created against the user's own Stripe Test account on every create-checkout test — those will appear in user's Stripe dashboard, which is the desired behavior.",
+  "rca_of_issue": "No bugs found. The migration from `emergentintegrations.payments.stripe.*` to the standard `stripe` Python SDK against the user's OWN Stripe account is functioning correctly. Real Stripe Checkout sessions are being created (verified via cs_test_... id prefix and checkout.stripe.com URL), the dev-fallback webhook path correctly handles all three lifecycle events (checkout.session.completed → premium activation, customer.subscription.updated → status+expiry sync, customer.subscription.deleted → premium revocation), and the existing premium feature gates (oracle_readings_unlimited, etc.) keep working unchanged."
+}

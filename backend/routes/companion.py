@@ -289,5 +289,3 @@ async def get_todays_whispers(user: dict = Depends(get_current_user)):
         "whispers": whispers,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
-": datetime.now(timezone.utc).isoformat(),
-    }
