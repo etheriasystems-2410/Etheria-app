@@ -2,9 +2,10 @@
  * CompanionGuideSection — premium-gated control surface on the Spirit Guides
  * picker for choosing/changing the user's Companion Guide.
  *
- * Shows a beautiful card describing what the Companion does (floating bubble
- * + 3 daily whispers), plus the current selection. Tapping "Choose" or
- * "Change" opens a modal listing every guide the user has access to.
+ * Shows a card describing what the Companion does (in-app floating bubble +
+ * fresh whispers refreshed throughout the day), plus the current selection.
+ * Tapping "Choose" or "Change" opens a modal listing every guide the user
+ * has access to.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -12,7 +13,6 @@ import {
   Alert,
   Image,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,7 +20,6 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Notifications from 'expo-notifications';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useCompanionGuide } from '../hooks/useCompanionGuide';
@@ -80,16 +79,6 @@ export default function CompanionGuideSection({
     [decoratedChoosable, state.companion],
   );
 
-  const requestNotifPermissionIfNeeded = async () => {
-    if (Platform.OS === 'web') return;
-    try {
-      const existing = await Notifications.getPermissionsAsync();
-      if (existing.status === 'granted') return;
-      if (!existing.canAskAgain) return;
-      await Notifications.requestPermissionsAsync();
-    } catch {}
-  };
-
   const handlePick = async (guide: Guide) => {
     if (!isPremium) {
       onUpgradePress();
@@ -102,8 +91,6 @@ export default function CompanionGuideSection({
       Alert.alert('Could not save Companion', res.error || 'Please try again.');
       return;
     }
-    // Ask for notif permission so daily whispers can fire
-    await requestNotifPermissionIfNeeded();
     setModalOpen(false);
   };
 
@@ -134,7 +121,7 @@ export default function CompanionGuideSection({
           <View style={{ flex: 1 }}>
             <Text style={styles.cardTitle}>Companion Guide</Text>
             <Text style={styles.cardSubtitle}>
-              Always-on bond — a floating presence and 3 whispers a day
+              Always-on bond — a floating presence with fresh whispers
             </Text>
           </View>
           {!isPremium && (

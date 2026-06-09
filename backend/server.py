@@ -769,10 +769,7 @@ from routes.messages import router as messages_router, set_db as set_messages_db
 set_messages_db(db)
 app.include_router(messages_router)
 
-# Import and register notifications (push token) routes
-from routes.notifications import router as notifications_router, set_db as set_notifications_db
-set_notifications_db(db)
-app.include_router(notifications_router)
+# Push/notification routes removed — Etheria uses in-app delivery only.
 
 # Import and register Companion Guide routes (premium feature)
 from routes.companion import router as companion_router

@@ -12,8 +12,6 @@ import React, { useEffect } from 'react';
 import MenuButton from '../components/drawer/MenuButton';
 import MessagesDrawerLabel from '../components/drawer/MessagesDrawerLabel';
 import CustomDrawerContent from '../components/drawer/CustomDrawerContent';
-import usePushNotifications from '../hooks/usePushNotifications';
-import useCompanionDailyWhispers from '../hooks/useCompanionDailyWhispers';
 import CompanionBubble from '../components/CompanionBubble';
 import SplashVideo from '../components/SplashVideo';
 
@@ -23,11 +21,6 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
   const { t } = useLanguage();
   const segments = useSegments();
   const router = useRouter();
-
-  // Register for push notifications once authenticated (no-op on web/simulator)
-  usePushNotifications(isAuthenticated);
-  // Schedule daily Companion Guide whispers (local notifications)
-  useCompanionDailyWhispers();
 
   useEffect(() => {
     if (loading) return;

@@ -397,30 +397,10 @@ async def send_message(thread_id: str, req: SendMessageRequest, request: Request
         await _push_to_user(other_id, {"type": "message", "thread_id": thread_id, "message": msg_out})
     await _push_to_user(me["user_id"], {"type": "message_sent", "thread_id": thread_id, "message": msg_out})
 
-    # Throttled email notification + immediate push notification
+    # Throttled email notification only (push notifications removed — in-app only)
     asyncio.create_task(_maybe_email_recipient(other_id, me, thread_id, content))
-    asyncio.create_task(_push_notify_recipient(other_id, me, thread_id, content))
 
     return {"success": True, "message": msg_out}
-
-
-async def _push_notify_recipient(recipient_id: Optional[str], sender: dict, thread_id: str, content: str):
-    """Send an Expo push notification to the recipient for a new DM."""
-    if not recipient_id:
-        return
-    try:
-        from services.push_service import send_push_to_user
-        sender_name = sender.get("display_name") or sender.get("name") or "A seeker"
-        preview = content[:120] + ("…" if len(content) > 120 else "")
-        await send_push_to_user(
-            _db,
-            recipient_id,
-            f"✨ {sender_name}",
-            preview,
-            {"type": "dm", "thread_id": thread_id, "sender_id": sender.get("user_id")},
-        )
-    except Exception as e:
-        logging.error(f"[DM Push] Failed for {recipient_id}: {e}")
 
 
 async def _maybe_email_recipient(recipient_id: Optional[str], sender: dict, thread_id: str, content: str):

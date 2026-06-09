@@ -263,29 +263,3 @@ async def get_whisper(user: dict = Depends(get_current_user)):
         },
     )
     return {"whisper": whisper, "cached": False, "guide": companion}
-
-
-@router.get("/whispers/today")
-async def get_todays_whispers(user: dict = Depends(get_current_user)):
-    """Return 3 whispers for today's scheduled local notifications.
-
-    The frontend schedules these via expo-notifications' local notification
-    API (no FCM/APNs needed) at three user-customizable times: morning,
-    afternoon, evening."""
-    user_doc = await db.users.find_one({"user_id": user["user_id"]}) or {}
-    companion = user_doc.get("companion_guide")
-    if not companion:
-        raise HTTPException(status_code=404, detail="No Companion selected")
-
-    name_hint = user_doc.get("display_name") or user_doc.get("name")
-    # Generate the 3 whispers in parallel — cuts latency ~3x.
-    import asyncio
-    whispers: List[str] = await asyncio.gather(
-        *[_generate_whisper(companion, name_hint) for _ in range(DAILY_WHISPER_COUNT)]
-    )
-
-    return {
-        "guide": companion,
-        "whispers": whispers,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-    }
