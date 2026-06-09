@@ -792,14 +792,9 @@ set_messages_db(db)
 app.include_router(messages_router)
 
 # Import and register notifications (push token) routes
-from routes.notifications import (
-    router as notifications_router,
-    register_router as push_register_router,
-    set_db as set_notifications_db,
-)
+from routes.notifications import router as notifications_router, set_db as set_notifications_db
 set_notifications_db(db)
 app.include_router(notifications_router)
-app.include_router(push_register_router)
 
 # Import and register community routes
 from routes.community import router as community_router, set_db as set_community_db, set_llm_key as set_community_llm_key
@@ -887,21 +882,8 @@ async def startup_event():
     await start_email_polling_task(db, interval_seconds=300)
     logger.info("Application startup complete - email polling task started")
 
-    # Start daily push reminder scheduler (Oracle card + Dream journal)
-    try:
-        from services.notification_scheduler import start as start_push_scheduler
-        start_push_scheduler(db)
-        logger.info("Application startup complete - push reminder scheduler started")
-    except Exception as e:
-        logger.error(f"Failed to start push reminder scheduler: {e}")
-
 @app.on_event("shutdown")
 async def shutdown_db_client():
     # Stop email polling task
     stop_email_polling_task()
-    try:
-        from services.notification_scheduler import stop as stop_push_scheduler
-        stop_push_scheduler()
-    except Exception:
-        pass
     client.close()

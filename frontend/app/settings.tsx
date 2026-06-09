@@ -624,17 +624,6 @@ export default function Settings() {
           </View>
           <Ionicons name="chevron-forward" size={20} color={theme.accent} />
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.settingItem}
-          onPress={() => router.push('/notification-preferences' as any)}
-        >
-          <Ionicons name="notifications" size={24} color="#fbbf24" />
-          <View style={styles.settingTextContainer}>
-            <Text style={styles.settingText}>Notifications</Text>
-            <Text style={styles.settingSubtext}>Daily Oracle & Dream reminders</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.accent} />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
