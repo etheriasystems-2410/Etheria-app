@@ -30,20 +30,23 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [emailExists, setEmailExists] = useState(false);
 
   const handleSignup = async () => {
+    setErrorMessage(null);
+    setEmailExists(false);
+
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorMessage('Please fill in all fields.');
       return;
     }
-
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setErrorMessage('Passwords do not match.');
       return;
     }
-
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      setErrorMessage('Password must be at least 6 characters.');
       return;
     }
 
@@ -52,7 +55,13 @@ export default function Signup() {
       await signup(email.trim(), password, name.trim());
       router.replace('/');
     } catch (error: any) {
-      Alert.alert('Signup Failed', error.message || 'Could not create account');
+      const msg = (error?.message || '').toString();
+      if (/already registered|already exists/i.test(msg)) {
+        setEmailExists(true);
+        setErrorMessage('An account with this email already exists.');
+      } else {
+        setErrorMessage(msg || 'Could not create account. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -219,6 +228,21 @@ export default function Signup() {
             />
           </View>
 
+          {/* Inline error banner — visible everywhere; Alert.alert proved unreliable across devices */}
+          {errorMessage && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={18} color="#fca5a5" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.errorBannerText}>{errorMessage}</Text>
+                {emailExists && (
+                  <TouchableOpacity onPress={() => router.replace('/auth/login')}>
+                    <Text style={styles.errorBannerLink}>Sign in instead →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
+
           <TouchableOpacity
             style={[styles.signupButton, loading && styles.signupButtonDisabled]}
             onPress={handleSignup}
@@ -348,6 +372,29 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 4,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: 'rgba(239, 68, 68, 0.45)',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  errorBannerText: {
+    color: '#fca5a5',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  errorBannerLink: {
+    color: '#fbbf24',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
   },
   signupButton: {
     backgroundColor: '#7c3aed',
