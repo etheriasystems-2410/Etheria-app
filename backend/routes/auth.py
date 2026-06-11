@@ -193,6 +193,7 @@ async def signup(request: SignupRequest):
         "email": request.email,
         "name": request.name,
         "picture": None,
+        "session_token": session_token,
     })
     response.set_cookie(
         key="session_token",

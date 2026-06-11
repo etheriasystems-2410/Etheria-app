@@ -249,14 +249,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      
-      const sessionToken = response.headers.get('set-cookie')?.split('session_token=')[1]?.split(';')[0];
+
+      // Mobile RN fetch can't read Set-Cookie headers — prefer the JSON body
+      const sessionToken = data.session_token ||
+        response.headers.get('set-cookie')?.split('session_token=')[1]?.split(';')[0];
       if (sessionToken) {
         await AsyncStorage.setItem('session_token', sessionToken);
         setAuthToken(sessionToken);
         await fetchSubscriptionStatus(sessionToken);
       }
-      
+
       setUser(data);
     } catch (error) {
       console.error('Signup error:', error);
