@@ -513,7 +513,7 @@ export default function Home() {
             <Ionicons name="sparkles" size={9} color={palette.gold} style={{ marginHorizontal: 6 }} />
             <View style={styles.footerLine} />
           </View>
-          <Text style={styles.footerText}>We hope you enjoy our first application from Etheria Systems.</Text>
+          <Text style={styles.footerText}>Expand your mind and your senses by exploring all Etheria has to offer....</Text>
           <Text style={styles.signature}>— Etheria Developer</Text>
         </View>
       </ScrollView>

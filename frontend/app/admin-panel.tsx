@@ -94,11 +94,14 @@ export default function AdminPanel() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.is_admin) {
+    // Need BOTH the admin user object AND the auth token before we can
+    // hit the admin endpoints. Without authToken the fetch sends
+    // `?token=null` → backend returns 403 → user list appears empty.
+    if (user?.is_admin && authToken) {
       loadData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, activeTab, userSubTab]);
+  }, [user, authToken, activeTab, userSubTab]);
 
   const loadData = async () => {
     setLoading(true);
