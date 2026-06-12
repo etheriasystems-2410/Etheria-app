@@ -166,6 +166,16 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
         }}
       />
       <Drawer.Screen
+        name="my-profile"
+        options={{
+          drawerLabel: 'My Profile',
+          title: 'My Profile',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="person-circle" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="users"
         options={{
           drawerLabel: 'Users',
