@@ -153,9 +153,8 @@ export default function UsersScreen() {
   const renderRow = ({ item }: { item: UserBrief }) => (
     <TouchableOpacity
       style={styles.row}
-      onPress={() => openThread(item)}
+      onPress={() => router.push(`/profile/${item.user_id}` as any)}
       activeOpacity={0.75}
-      disabled={!!starting}
     >
       {item.picture ? (
         <Image source={{ uri: item.picture }} style={styles.avatar} />
@@ -174,18 +173,15 @@ export default function UsersScreen() {
               <Text style={styles.adminTagText}>ADMIN</Text>
             </View>
           )}
+          {item.is_premium && (
+            <Ionicons name="diamond" size={12} color="#fbbf24" style={{ marginLeft: 4 }} />
+          )}
         </View>
-        {!!item.email && (
-          <Text style={styles.rowEmail} numberOfLines={1}>
-            {item.email}
-          </Text>
-        )}
+        <Text style={styles.rowEmail} numberOfLines={1}>
+          Tap to view profile
+        </Text>
       </View>
-      {starting === item.user_id ? (
-        <ActivityIndicator size="small" color="#fbbf24" />
-      ) : (
-        <Ionicons name="chatbubble-ellipses" size={20} color="#fbbf24" />
-      )}
+      <Ionicons name="chevron-forward" size={20} color="rgba(159,122,234,0.8)" />
     </TouchableOpacity>
   );
 

@@ -176,6 +176,23 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
         }}
       />
       <Drawer.Screen
+        name="my-circle"
+        options={{
+          drawerLabel: 'My Circle',
+          title: 'My Circle',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="star" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="profile/[id]"
+        options={{
+          drawerItemStyle: { display: 'none' },
+          title: 'Profile',
+        }}
+      />
+      <Drawer.Screen
         name="settings"
         options={{
           drawerLabel: t('settingsTitle'),

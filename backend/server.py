@@ -775,6 +775,12 @@ app.include_router(messages_router)
 from routes.companion import router as companion_router
 app.include_router(companion_router, prefix="/api")
 
+# Profiles, Direct Mail, Email-forward, Circles — user-to-user features
+from routes.profiles import profile_router, direct_mail_router, circle_router
+app.include_router(profile_router, prefix="/api")
+app.include_router(direct_mail_router, prefix="/api")
+app.include_router(circle_router, prefix="/api")
+
 # Import and register community routes
 from routes.community import router as community_router, set_db as set_community_db, set_llm_key as set_community_llm_key
 set_community_db(db)

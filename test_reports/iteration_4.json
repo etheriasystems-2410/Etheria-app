@@ -1,0 +1,44 @@
+{
+  "summary": "Backend-only verification of the NEW Profile / Circle / Direct Mail / Email-forward stack in Etheria. 30/30 pytest cases PASSED in 6.51s against the public preview URL (https://etheria-divination.preview.emergentagent.com). Coverage: (1) Profiles — GET /api/profile/me returns admin's full doc including email/is_admin/is_premium/created_at; PUT /api/profile/me writes all six writable fields and round-trips exactly; partial PUT (bio only) preserves the other five fields; psychic_interests capping (16 raw → 12 stored) and case-insensitive de-duplication (Tarot/tarot/TAROT → 1) both verified; GET /api/profile/{other_id} CORRECTLY OMITS email and subscription_plan, and includes circle_relationship='none' initially; unknown user_id → 404. (2) Email-forward — POST /api/profile/{user_id}/email returned 200 {success:true} (Resend actually delivered in test mode), self-email → 400, empty subject → 422, empty body → 422. (3) Direct Mail — POST /api/direct-mail returned 200 with letter_id, self-send → 400, recipient inbox listed the letter (read=false), GET /api/direct-mail/{id} flipped read→true (persisted on re-fetch from inbox), sender /sent included the letter, soft-delete by sender removed it from /sent but recipient's /inbox still saw it. (4) Circles — invite self → 400, invite second user → status='sent', duplicate invite → 'already_pending' (same invite_id), profile relationship transitions ('none' → 'invite_pending_out'/'invite_pending_in' → 'in_circle' after accept → 'none' after delete), accept created mutual db.circle_members rows on BOTH sides, /api/circle/invites returned the pending invite annotated with sender info, DELETE /api/circle/members/{id} removed both rows, decline flow set status='declined' with no circle_members rows created and relationship back to 'none'. (5) Regression smoke — /api/messages/users, /api/companion-guide, /api/subscription/plans, /api/spirit-guides/familiarity all 200, no router-registration regressions.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_profile_circle_directmail.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_profile.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/profiles.py is 483 lines — single-responsibility, three sub-routers in one file is fine.",
+    "_public_profile() correctly hides email/subscription_plan for non-self viewers and computes circle_relationship with three DB lookups (in_circle / pending_out / pending_in) — O(3) reads per profile GET, acceptable for now but could be batched if profile pages start fetching many users.",
+    "Mongo _id never leaks — direct_mail/letters and circle_invites are addressed by their own UUID stored as _id (string) and the JSON response renames it to 'id' via _annotate_letters/my_pending_invites mappers. Good pattern.",
+    "psychic_interests sanitiser (lines 145-156) correctly trims each tag to 40 chars, dedupes case-insensitively via a 'seen' set keyed on .lower(), and caps the final list at 12. Verified end-to-end.",
+    "PUT /profile/me keeps display_name AND legacy name in sync (lines 133-136). Good — prevents drift across the codebase.",
+    "Direct-mail soft-delete uses sender/recipient-scoped boolean flags (deleted_by_sender / deleted_by_recipient) — clean, no row leakage between sides. Verified.",
+    "Circle invite send is correctly idempotent: checks both directions for an existing pending invite AND checks circle_members for already-mutual state. Returns deterministic status strings 'sent' / 'already_pending' / 'already_in_circle' — good API contract.",
+    "Accept-invite uses $setOnInsert for both circle_members rows so duplicate accepts are safe (idempotent). Good defensive pattern.",
+    "Email-forward audit row written to db.email_forwards with from_id/to_id/subject/sent_at after successful send. Audit trail is in place.",
+    "MINOR (no action needed): /api/circle/members projection omits 'created_at' from circle_members docs in the response — the 'added_at' field is included instead, which is more accurate. Just noting the field name for future client developers.",
+    "MINOR (no action needed): When email_service.send_email returns False, the endpoint raises 502 but does NOT roll back / skip the email_forwards audit insert (it never reaches it because of the raise). Behaviour is correct — audit only logged on success."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_profile_circle_directmail.py (created — 30 pytest cases covering profile/email-forward/direct-mail/circles + 4 regression smoke tests)"
+  ],
+  "success_rate": {
+    "backend": "100% (30/30 pytest)",
+    "frontend": "N/A — backend-only scope per request"
+  },
+  "seed_data_creation": "Created one fresh test user via signup (TEST_buddy_<uuid>@example.com / TestPass123!) used as the 'other side' for email/direct-mail/circle flows. The admin's profile fields were updated during testing (name='Etheria Dev', bio='Just the bio update', birthday='1990-05-21', location='Asheville', favorite_guide='Selene', psychic_interests=['Tarot','Astrology','Mediumship']) — these are values the admin would set anyway, but if main agent wants to reset them, just PUT /api/profile/me with the originals. One real email was actually sent through Resend to the test user's hidden address (subject 'Hello'). One direct-mail letter created and soft-deleted by sender (still visible to recipient). Several rows added to db.email_forwards (audit), db.direct_mail, db.circle_invites (one accepted, one declined). All circle_members rows were cleaned up — final state of both users has zero circle members.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All Profile/Circle/DirectMail/Email-forward endpoints are GREEN. Authoritative test file: /app/backend/tests/test_profile_circle_directmail.py — uses shared conftest fixtures (admin_token, admin_auth_headers, fresh_user). The circle_relationship enum is confirmed: 'none' | 'in_circle' | 'invite_pending_out' | 'invite_pending_in'. Recipient sees 'invite_pending_in' on sender's profile; sender sees 'invite_pending_out' on recipient's profile — symmetry is correct. The /api/circle/invites endpoint returns the invite shaped as {id, from:{user_id,name,display_name,picture}, created_at}. Direct-mail letters expose {id, from_id, to_id, subject, body, read, sent_at, from_user, to_user} (no Mongo _id). Resend is actively delivering in test mode — the email-forward 200 path is real, not mocked. No issues found; main agent can self-test by hitting /api/profile/me with admin Bearer token via the frontend.",
+  "rca_of_issue": "No bugs found. The entire user-to-user stack is functioning correctly on first pass."
+}
