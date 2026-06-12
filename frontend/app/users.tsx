@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { CosmicBackdrop } from '../components/ui';
 
@@ -39,29 +39,55 @@ export default function UsersScreen() {
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [starting, setStarting] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
+    if (!authToken) {
+      // Don't flash a misleading empty state if auth hasn't hydrated yet
+      return;
+    }
+    setFetchError(null);
     try {
       const r = await fetch(`${API}/api/messages/users`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
-      if (r.ok) {
-        const data = await r.json();
-        setUsers(Array.isArray(data.users) ? data.users : []);
+      if (!r.ok) {
+        setFetchError(
+          r.status === 401
+            ? 'Your session expired. Please sign in again.'
+            : `Couldn't load members (error ${r.status}).`,
+        );
+        return;
       }
+      const data = await r.json();
+      const list = Array.isArray(data.users) ? data.users : [];
+      console.log(`[UsersScreen] Loaded ${list.length} members`);
+      setUsers(list);
     } catch (err) {
       console.warn('Users fetch failed', err);
+      setFetchError("Couldn't reach the server. Check your connection and pull down to retry.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [authToken]);
 
+  // Initial / token-change fetch
   useEffect(() => {
     if (authToken) fetchUsers();
   }, [authToken, fetchUsers]);
+
+  // Refetch every time the screen gains focus (e.g. user navigates here via
+  // drawer after a prior visit). This prevents the "stale empty list" bug
+  // where the screen was opened before authToken was hydrated and never
+  // recovered until full app reload.
+  useFocusEffect(
+    useCallback(() => {
+      if (authToken) fetchUsers();
+    }, [authToken, fetchUsers]),
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -189,6 +215,21 @@ export default function UsersScreen() {
           <View style={styles.center}>
             <ActivityIndicator size="large" color="#fbbf24" />
           </View>
+        ) : fetchError ? (
+          <View style={styles.center}>
+            <Ionicons name="cloud-offline" size={48} color="rgba(255,255,255,0.45)" />
+            <Text style={styles.emptyText}>{fetchError}</Text>
+            <TouchableOpacity
+              style={styles.retryBtn}
+              onPress={() => {
+                setLoading(true);
+                fetchUsers();
+              }}
+            >
+              <Ionicons name="refresh" size={16} color="#1a0033" />
+              <Text style={styles.retryBtnText}>Try again</Text>
+            </TouchableOpacity>
+          </View>
         ) : filtered.length === 0 ? (
           <View style={styles.center}>
             <Ionicons name="people-outline" size={48} color="rgba(255,255,255,0.35)" />
@@ -203,6 +244,12 @@ export default function UsersScreen() {
             renderItem={renderRow}
             ItemSeparatorComponent={() => <View style={styles.sep} />}
             contentContainerStyle={styles.list}
+            ListHeaderComponent={
+              <Text style={styles.countLabel}>
+                {filtered.length} {filtered.length === 1 ? 'member' : 'members'}
+                {query ? ` matching "${query}"` : ''}
+              </Text>
+            }
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -220,6 +267,26 @@ export default function UsersScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+  countLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  retryBtn: {
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#fbbf24',
+  },
+  retryBtnText: { color: '#1a0033', fontWeight: '700', fontSize: 13 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
