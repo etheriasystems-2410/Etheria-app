@@ -66,6 +66,23 @@ async def _public_profile(user_doc: dict, viewer_id: Optional[str] = None) -> di
         "location": user_doc.get("location") or "",
         "favorite_guide": user_doc.get("favorite_guide") or "",
         "psychic_interests": user_doc.get("psychic_interests") or [],
+        # Lifestyle / personality
+        "hobbies": user_doc.get("hobbies") or "",
+        "favorite_things": user_doc.get("favorite_things") or "",
+        "dislikes": user_doc.get("dislikes") or "",
+        "other_details": user_doc.get("other_details") or "",
+        # "The Path I Walk" — faith group
+        "path_walked": user_doc.get("path_walked") or "",
+        "in_coven": bool(user_doc.get("in_coven")),
+        "coven_name": user_doc.get("coven_name") or "",
+        "deities_followed": user_doc.get("deities_followed") or "",
+        # Psychic talent disclosures
+        "family_has_psychic_talent": bool(user_doc.get("family_has_psychic_talent")),
+        "family_psychic_details": user_doc.get("family_psychic_details") or "",
+        "self_has_psychic_talent": bool(user_doc.get("self_has_psychic_talent")),
+        "self_psychic_details": user_doc.get("self_psychic_details") or "",
+        # Story
+        "why_etheria": user_doc.get("why_etheria") or "",
         "created_at": user_doc.get("created_at"),
         "is_admin": bool(user_doc.get("is_admin")),
         "is_premium": bool(user_doc.get("is_premium")),
@@ -105,11 +122,30 @@ profile_router = APIRouter(prefix="/profile", tags=["profile"])
 
 class ProfileUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=60)
-    bio: Optional[str] = Field(None, max_length=400)
-    birthday: Optional[str] = Field(None, max_length=10)    # "YYYY-MM-DD" or ""
+    bio: Optional[str] = Field(None, max_length=400)            # "About Me"
+    birthday: Optional[str] = Field(None, max_length=10)
     location: Optional[str] = Field(None, max_length=80)
     favorite_guide: Optional[str] = Field(None, max_length=60)
-    psychic_interests: Optional[List[str]] = None           # array of tags
+    psychic_interests: Optional[List[str]] = None
+    # Lifestyle / spirit details
+    hobbies: Optional[str] = Field(None, max_length=400)
+    favorite_things: Optional[str] = Field(None, max_length=400)
+    dislikes: Optional[str] = Field(None, max_length=400)
+    other_details: Optional[str] = Field(None, max_length=600)
+    # "The Path I Walk" — religion / faith group
+    path_walked: Optional[str] = Field(None, max_length=400)
+    in_coven: Optional[bool] = None
+    coven_name: Optional[str] = Field(None, max_length=120)
+    deities_followed: Optional[str] = Field(None, max_length=400)
+    # Psychic family / self disclosures
+    family_has_psychic_talent: Optional[bool] = None
+    family_psychic_details: Optional[str] = Field(None, max_length=600)
+    self_has_psychic_talent: Optional[bool] = None
+    self_psychic_details: Optional[str] = Field(None, max_length=600)
+    # Story
+    why_etheria: Optional[str] = Field(None, max_length=600)
+    # Avatar (base64 data-URI or HTTPS URL — frontend image-picker compresses)
+    picture: Optional[str] = Field(None, max_length=2_000_000)
 
 
 @profile_router.get("/me")
@@ -154,6 +190,37 @@ async def update_my_profile(body: ProfileUpdate, user: dict = Depends(get_curren
             if len(cleaned) >= 12:
                 break
         update["psychic_interests"] = cleaned
+    if body.hobbies is not None:
+        update["hobbies"] = body.hobbies.strip()
+    if body.favorite_things is not None:
+        update["favorite_things"] = body.favorite_things.strip()
+    if body.dislikes is not None:
+        update["dislikes"] = body.dislikes.strip()
+    if body.other_details is not None:
+        update["other_details"] = body.other_details.strip()
+    if body.path_walked is not None:
+        update["path_walked"] = body.path_walked.strip()
+    if body.in_coven is not None:
+        update["in_coven"] = bool(body.in_coven)
+    if body.coven_name is not None:
+        update["coven_name"] = body.coven_name.strip()
+    if body.deities_followed is not None:
+        update["deities_followed"] = body.deities_followed.strip()
+    if body.family_has_psychic_talent is not None:
+        update["family_has_psychic_talent"] = bool(body.family_has_psychic_talent)
+    if body.family_psychic_details is not None:
+        update["family_psychic_details"] = body.family_psychic_details.strip()
+    if body.self_has_psychic_talent is not None:
+        update["self_has_psychic_talent"] = bool(body.self_has_psychic_talent)
+    if body.self_psychic_details is not None:
+        update["self_psychic_details"] = body.self_psychic_details.strip()
+    if body.why_etheria is not None:
+        update["why_etheria"] = body.why_etheria.strip()
+    if body.picture is not None:
+        pic = body.picture.strip()
+        if pic and not pic.startswith(("data:image/", "http")):
+            raise HTTPException(status_code=400, detail="Picture must be a data URI or HTTPS URL")
+        update["picture"] = pic
 
     if not update:
         return {"success": True, "updated": False}

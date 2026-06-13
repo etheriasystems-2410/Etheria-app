@@ -24,6 +24,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -33,6 +34,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { CosmicBackdrop } from '../../components/ui';
@@ -43,15 +45,32 @@ interface Profile {
   user_id: string;
   name: string;
   picture?: string;
-  bio?: string;
+  bio?: string;                                      // "About Me"
   birthday?: string;
   location?: string;
   favorite_guide?: string;
   psychic_interests?: string[];
+  // Lifestyle
+  hobbies?: string;
+  favorite_things?: string;
+  dislikes?: string;
+  other_details?: string;
+  // The Path I Walk
+  path_walked?: string;
+  in_coven?: boolean;
+  coven_name?: string;
+  deities_followed?: string;
+  // Psychic disclosures
+  family_has_psychic_talent?: boolean;
+  family_psychic_details?: string;
+  self_has_psychic_talent?: boolean;
+  self_psychic_details?: string;
+  // Story
+  why_etheria?: string;
   created_at?: string;
   is_admin?: boolean;
   is_premium?: boolean;
-  email?: string;                  // only for self
+  email?: string;
   circle_relationship?: 'none' | 'in_circle' | 'invite_pending_out' | 'invite_pending_in';
 }
 
@@ -333,12 +352,27 @@ export default function ProfileScreen() {
 
             {/* Avatar + name + badges */}
             <View style={styles.headerCard}>
-              {view.picture ? (
-                <Image source={{ uri: view.picture }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Text style={styles.avatarInitial}>{(view.name || '?')[0]?.toUpperCase()}</Text>
-                </View>
+              <Pressable
+                onPress={isSelf && editing ? pickAvatar : undefined}
+                disabled={!(isSelf && editing)}
+              >
+                {view.picture ? (
+                  <Image source={{ uri: view.picture }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarFallback]}>
+                    <Text style={styles.avatarInitial}>{(view.name || '?')[0]?.toUpperCase()}</Text>
+                  </View>
+                )}
+                {isSelf && editing && (
+                  <View style={styles.avatarEditBadge}>
+                    <Ionicons name="camera" size={14} color="#1a0033" />
+                  </View>
+                )}
+              </Pressable>
+              {isSelf && editing && (
+                <TouchableOpacity onPress={pickAvatar} style={styles.changePhotoBtn}>
+                  <Text style={styles.changePhotoBtnText}>Change Photo</Text>
+                </TouchableOpacity>
               )}
               {editing ? (
                 <TextInput
@@ -379,15 +413,15 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            {/* Bio */}
+            {/* About Me (was "Bio") */}
             <Field
-              label="Bio"
+              label="About Me"
               icon="book"
               editing={editing}
               value={view.bio || ''}
-              placeholder={isSelf ? 'Tell others about your spiritual path…' : 'No bio yet.'}
+              placeholder={isSelf ? 'Tell others about your spiritual path…' : 'No description yet.'}
               multiline
-              onChange={(v) => setForm({ ...form!, bio: v })}
+              onChange={(v: string) => setForm({ ...form!, bio: v })}
               maxLength={400}
             />
 
@@ -400,7 +434,7 @@ export default function ProfileScreen() {
                   editing={editing}
                   value={view.birthday || ''}
                   placeholder={isSelf ? 'YYYY-MM-DD' : '—'}
-                  onChange={(v) => setForm({ ...form!, birthday: v })}
+                  onChange={(v: string) => setForm({ ...form!, birthday: v })}
                   maxLength={10}
                 />
               </View>
@@ -411,11 +445,184 @@ export default function ProfileScreen() {
                   editing={editing}
                   value={view.location || ''}
                   placeholder={isSelf ? 'City, country' : '—'}
-                  onChange={(v) => setForm({ ...form!, location: v })}
+                  onChange={(v: string) => setForm({ ...form!, location: v })}
                   maxLength={80}
                 />
               </View>
             </View>
+
+            {/* Hobbies */}
+            <Field
+              label="Hobbies"
+              icon="color-palette"
+              editing={editing}
+              value={view.hobbies || ''}
+              placeholder={isSelf ? 'What you love doing…' : '—'}
+              multiline
+              onChange={(v: string) => setForm({ ...form!, hobbies: v })}
+              maxLength={400}
+            />
+
+            {/* Favorite Things */}
+            <Field
+              label="Favorite Things"
+              icon="heart"
+              editing={editing}
+              value={view.favorite_things || ''}
+              placeholder={isSelf ? 'Things that make your soul sing' : '—'}
+              multiline
+              onChange={(v: string) => setForm({ ...form!, favorite_things: v })}
+              maxLength={400}
+            />
+
+            {/* Dislikes */}
+            <Field
+              label="Stuff I Dislike"
+              icon="close-circle"
+              editing={editing}
+              value={view.dislikes || ''}
+              placeholder={isSelf ? 'Things that drain you' : '—'}
+              multiline
+              onChange={(v: string) => setForm({ ...form!, dislikes: v })}
+              maxLength={400}
+            />
+
+            {/* ───── The Path I Walk (religion grouping) ───── */}
+            <View style={styles.groupCard}>
+              <View style={styles.groupHeader}>
+                <Ionicons name="leaf" size={16} color="#fbbf24" />
+                <Text style={styles.groupTitle}>The Path I Walk</Text>
+              </View>
+
+              <Field
+                label="My Path"
+                icon="compass"
+                editing={editing}
+                value={view.path_walked || ''}
+                placeholder={isSelf ? 'Briefly describe your faith, walk, or religion' : '—'}
+                multiline
+                onChange={(v: string) => setForm({ ...form!, path_walked: v })}
+                maxLength={400}
+              />
+
+              {/* In a coven / religious group? */}
+              <View style={styles.boolRow}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="people" size={14} color="#9f7aea" />
+                  <Text style={styles.fieldLabel}>Am I in a coven or religious group?</Text>
+                </View>
+                {editing ? (
+                  <Switch
+                    value={!!view.in_coven}
+                    onValueChange={(v) => setForm({ ...form!, in_coven: v })}
+                    trackColor={{ false: '#3b1f5e', true: '#fbbf24' }}
+                    thumbColor="#fff"
+                  />
+                ) : (
+                  <Text style={styles.boolValue}>{view.in_coven ? 'Yes' : 'No'}</Text>
+                )}
+              </View>
+              {(editing || view.in_coven) && (
+                <Field
+                  label="Group / Coven Name"
+                  icon="bookmark"
+                  editing={editing}
+                  value={view.coven_name || ''}
+                  placeholder={isSelf ? "Optional — the name of your group" : '—'}
+                  onChange={(v: string) => setForm({ ...form!, coven_name: v })}
+                  maxLength={120}
+                />
+              )}
+
+              <Field
+                label="Deities I Follow"
+                icon="moon"
+                editing={editing}
+                value={view.deities_followed || ''}
+                placeholder={isSelf ? 'Names of deities, spirits, or guides you honor' : '—'}
+                multiline
+                onChange={(v: string) => setForm({ ...form!, deities_followed: v })}
+                maxLength={400}
+              />
+            </View>
+
+            {/* ───── Psychic talent disclosures ───── */}
+            <View style={styles.groupCard}>
+              <View style={styles.groupHeader}>
+                <Ionicons name="flash" size={16} color="#fbbf24" />
+                <Text style={styles.groupTitle}>Psychic Gifts</Text>
+              </View>
+
+              <View style={styles.boolRow}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="people-circle" size={14} color="#9f7aea" />
+                  <Text style={styles.fieldLabel}>Do I have psychic talent in my family?</Text>
+                </View>
+                {editing ? (
+                  <Switch
+                    value={!!view.family_has_psychic_talent}
+                    onValueChange={(v) => setForm({ ...form!, family_has_psychic_talent: v })}
+                    trackColor={{ false: '#3b1f5e', true: '#fbbf24' }}
+                    thumbColor="#fff"
+                  />
+                ) : (
+                  <Text style={styles.boolValue}>{view.family_has_psychic_talent ? 'Yes' : 'No'}</Text>
+                )}
+              </View>
+              {(editing || view.family_has_psychic_talent) && (
+                <Field
+                  label="Who & What (optional)"
+                  icon="document-text"
+                  editing={editing}
+                  value={view.family_psychic_details || ''}
+                  placeholder={isSelf ? 'If you wish to share — who, and what gifts?' : '—'}
+                  multiline
+                  onChange={(v: string) => setForm({ ...form!, family_psychic_details: v })}
+                  maxLength={600}
+                />
+              )}
+
+              <View style={styles.boolRow}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="sparkles" size={14} color="#9f7aea" />
+                  <Text style={styles.fieldLabel}>Do I have psychic talent of my own?</Text>
+                </View>
+                {editing ? (
+                  <Switch
+                    value={!!view.self_has_psychic_talent}
+                    onValueChange={(v) => setForm({ ...form!, self_has_psychic_talent: v })}
+                    trackColor={{ false: '#3b1f5e', true: '#fbbf24' }}
+                    thumbColor="#fff"
+                  />
+                ) : (
+                  <Text style={styles.boolValue}>{view.self_has_psychic_talent ? 'Yes' : 'No'}</Text>
+                )}
+              </View>
+              {(editing || view.self_has_psychic_talent) && (
+                <Field
+                  label="Your Gifts (optional)"
+                  icon="document-text"
+                  editing={editing}
+                  value={view.self_psychic_details || ''}
+                  placeholder={isSelf ? 'If you wish to share — what gifts do you have?' : '—'}
+                  multiline
+                  onChange={(v: string) => setForm({ ...form!, self_psychic_details: v })}
+                  maxLength={600}
+                />
+              )}
+            </View>
+
+            {/* Why Etheria */}
+            <Field
+              label="Why I Chose Etheria"
+              icon="star"
+              editing={editing}
+              value={view.why_etheria || ''}
+              placeholder={isSelf ? 'What drew you to this app?' : '—'}
+              multiline
+              onChange={(v: string) => setForm({ ...form!, why_etheria: v })}
+              maxLength={600}
+            />
 
             {/* Favorite Guide */}
             <Field
@@ -424,7 +631,7 @@ export default function ProfileScreen() {
               editing={editing}
               value={view.favorite_guide || ''}
               placeholder={isSelf ? 'Aqua, Ignis, Selene…' : '—'}
-              onChange={(v) => setForm({ ...form!, favorite_guide: v })}
+              onChange={(v: string) => setForm({ ...form!, favorite_guide: v })}
               maxLength={60}
             />
 
@@ -686,6 +893,19 @@ const styles = StyleSheet.create({
   avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: 'rgba(251,191,36,0.6)' },
   avatarFallback: { backgroundColor: '#1a0033', alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { color: '#fbbf24', fontSize: 32, fontWeight: '800' },
+  avatarEditBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#fbbf24',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#0f0523',
+  },
+  changePhotoBtn: {
+    marginTop: 8, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8,
+    backgroundColor: 'rgba(251,191,36,0.16)',
+    borderWidth: 1, borderColor: 'rgba(251,191,36,0.4)',
+  },
+  changePhotoBtnText: { color: '#fbbf24', fontWeight: '700', fontSize: 11 },
   name: { color: '#e9d5ff', fontSize: 20, fontWeight: '800', marginTop: 10 },
   nameInput: {
     color: '#e9d5ff', fontSize: 20, fontWeight: '800', marginTop: 10, textAlign: 'center',
@@ -713,6 +933,22 @@ const styles = StyleSheet.create({
 
   row: { flexDirection: 'row', gap: 10 },
 
+  groupCard: {
+    marginVertical: 8, padding: 12, borderRadius: 14,
+    backgroundColor: 'rgba(15,5,35,0.55)',
+    borderWidth: 1, borderColor: 'rgba(251,191,36,0.25)',
+  },
+  groupHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8,
+    paddingBottom: 6, borderBottomWidth: 1, borderColor: 'rgba(251,191,36,0.18)',
+  },
+  groupTitle: { color: '#fbbf24', fontSize: 13, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase' },
+  boolRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 6, marginBottom: 4,
+  },
+  boolValue: { color: '#e9d5ff', fontSize: 13, fontWeight: '700' },
+
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -728,6 +964,42 @@ const styles = StyleSheet.create({
     marginTop: 10, padding: 14, borderRadius: 14,
     backgroundColor: 'rgba(15,5,35,0.65)',
     borderWidth: 1, borderColor: 'rgba(251,191,36,0.25)',
+  },
+  actionsTitle: { color: '#fbbf24', fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
+  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  actionTile: {
+    flexGrow: 1, minWidth: '47%',
+    padding: 12, borderRadius: 12, borderWidth: 1,
+    backgroundColor: 'rgba(15,5,35,0.6)',
+  },
+  actionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  actionLabel: { color: '#e9d5ff', fontSize: 13, fontWeight: '700' },
+  actionSub: { color: 'rgba(203,182,255,0.7)', fontSize: 11, marginTop: 1 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: '#0f0523',
+    borderTopLeftRadius: 18, borderTopRightRadius: 18,
+    padding: 16, paddingBottom: 30,
+    borderTopWidth: 1, borderColor: 'rgba(251,191,36,0.3)',
+  },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  modalTitle: { color: '#fbbf24', fontSize: 16, fontWeight: '800' },
+  modalHint: { color: '#cbb6ff', fontSize: 12, marginBottom: 12 },
+  modalInput: {
+    color: '#e9d5ff', backgroundColor: 'rgba(124,58,237,0.10)',
+    paddingHorizontal: 11, paddingVertical: 10, borderRadius: 10, marginBottom: 8,
+    borderWidth: 1, borderColor: 'rgba(159,122,234,0.3)',
+    fontSize: 14,
+  },
+  modalBody: { minHeight: 120, textAlignVertical: 'top' },
+  modalSendBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#fbbf24', paddingVertical: 12, borderRadius: 12, marginTop: 6,
+  },
+  modalSendText: { color: '#1a0033', fontWeight: '800', fontSize: 14 },
+});
+orderWidth: 1, borderColor: 'rgba(251,191,36,0.25)',
   },
   actionsTitle: { color: '#fbbf24', fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
   actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

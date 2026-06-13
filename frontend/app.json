@@ -20,7 +20,7 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Record voice memos for your spiritual journal",
         "NSCameraUsageDescription": "Capture moments for your spiritual journey",
-        "NSPhotoLibraryUsageDescription": "Save and share your oracle readings",
+        "NSPhotoLibraryUsageDescription": "Save oracle readings and choose your profile photo",
         "UIBackgroundModes": [
           "audio"
         ]
