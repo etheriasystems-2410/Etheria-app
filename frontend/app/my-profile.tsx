@@ -1,36 +1,39 @@
 /**
- * My Profile — drawer shortcut that redirects to /profile/{my_user_id}.
+ * My Profile — drawer shortcut that navigates to /profile/{my_user_id}.
  *
- * Using a redirect (not a wrapper component) so the profile screen itself
- * remains the single source of truth — back navigation, deep-links, and
- * edit-mode all keep working without duplication.
+ * Implemented with `router.replace` inside an effect (instead of <Redirect/>)
+ * because <Redirect/> inside a Drawer.Screen can race with the drawer's own
+ * focus events and leave the user staring at a blank screen.
  */
-import React from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { Redirect, useRouter } from 'expo-router';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function MyProfileShortcut() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const userId = (user as any)?.user_id || (user as any)?.id;
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#fbbf24" />
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      router.replace('/auth/login' as any);
+      return;
+    }
+    const userId = (user as any).user_id || (user as any).id;
+    if (userId) {
+      router.replace(`/profile/${userId}` as any);
+    } else {
+      // Edge case — should never happen, but go home if it does
+      router.replace('/' as any);
+    }
+  }, [user, loading, router]);
 
-  // Not signed in → bounce to login
-  if (!user) return <Redirect href="/auth/login" />;
-  if (!userId) {
-    // Edge case — fall back to home
-    setTimeout(() => router.replace('/'), 0);
-    return null;
-  }
-  return <Redirect href={`/profile/${userId}` as any} />;
+  return (
+    <View style={styles.center}>
+      <ActivityIndicator color="#fbbf24" size="large" />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
