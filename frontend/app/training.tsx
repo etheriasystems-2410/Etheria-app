@@ -86,8 +86,59 @@ export default function Training() {
   const loadProgress = async () => {
     try {
       const progress = await AsyncStorage.getItem('completed_lessons');
-      if (progress) {
-        setCompletedLessons(JSON.parse(progress));
+      const local: string[] = progress ? JSON.parse(progress) : [];
+      if (local.length) {
+        setCompletedLessons(local);
+      }
+
+      // One-time backfill: anyone who completed lessons BEFORE the backend
+      // tracking existed only has them in AsyncStorage. Sync the diff up so
+      // the Profile → Progress → "Modules completed" stat reflects the truth.
+      // Guarded by a flag so we only do this once per device.
+      const alreadyBackfilled = await AsyncStorage.getItem('training_backfill_v1');
+      if (alreadyBackfilled === 'done' || local.length === 0) return;
+
+      const auth = await AsyncStorage.getItem('session_token');
+      if (!auth) return;
+
+      try {
+        const r = await fetch(
+          `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/training/progress`,
+          { headers: { Authorization: `Bearer ${auth}` } },
+        );
+        if (!r.ok) return;
+        const data = await r.json();
+        const remote: string[] = Array.isArray(data.completed_lessons)
+          ? data.completed_lessons
+          : [];
+        const remoteSet = new Set(remote);
+        const missing = local.filter((k) => !remoteSet.has(k));
+        // Fire-and-forget — server is idempotent, no need to await each one
+        await Promise.allSettled(
+          missing.map((key) => {
+            const [moduleId, lessonIdStr] = key.split('-');
+            const lessonId = parseInt(lessonIdStr, 10);
+            if (!moduleId || Number.isNaN(lessonId)) return Promise.resolve();
+            return fetch(
+              `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/training/lesson-complete`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${auth}`,
+                },
+                body: JSON.stringify({ module_id: moduleId, lesson_id: lessonId }),
+              },
+            );
+          }),
+        );
+        await AsyncStorage.setItem('training_backfill_v1', 'done');
+        if (missing.length) {
+          console.log(`[Training] Backfilled ${missing.length} lessons to backend`);
+        }
+      } catch (syncErr) {
+        // Soft-fail — try again next time the user opens Training
+        console.warn('[Training] backfill failed:', syncErr);
       }
     } catch (error) {
       console.error('Error loading progress:', error);
