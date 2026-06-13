@@ -99,6 +99,28 @@ export default function Training() {
       const updated = [...completedLessons, lessonKey];
       setCompletedLessons(updated);
       await AsyncStorage.setItem('completed_lessons', JSON.stringify(updated));
+
+      // Sync to backend so the Profile → Progress → "Modules completed" stat
+      // ticks up when the whole module is finished. Best-effort — local cache
+      // remains authoritative for the UI.
+      try {
+        const auth = await AsyncStorage.getItem('session_token');
+        if (!auth) return;
+        const [moduleId, lessonIdStr] = lessonKey.split('-');
+        const lessonId = parseInt(lessonIdStr, 10);
+        if (!moduleId || Number.isNaN(lessonId)) return;
+        await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/training/lesson-complete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${auth}`,
+          },
+          body: JSON.stringify({ module_id: moduleId, lesson_id: lessonId }),
+        });
+      } catch (syncErr) {
+        // Soft-fail; local cache still recorded the completion
+        console.warn('[Training] backend sync failed:', syncErr);
+      }
     } catch (error) {
       console.error('Error saving progress:', error);
     }
