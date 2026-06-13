@@ -1067,39 +1067,3 @@ const styles = StyleSheet.create({
   },
   modalSendText: { color: '#1a0033', fontWeight: '800', fontSize: 14 },
 });
-orderWidth: 1, borderColor: 'rgba(251,191,36,0.25)',
-  },
-  actionsTitle: { color: '#fbbf24', fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
-  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  actionTile: {
-    flexGrow: 1, minWidth: '47%',
-    padding: 12, borderRadius: 12, borderWidth: 1,
-    backgroundColor: 'rgba(15,5,35,0.6)',
-  },
-  actionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  actionLabel: { color: '#e9d5ff', fontSize: 13, fontWeight: '700' },
-  actionSub: { color: 'rgba(203,182,255,0.7)', fontSize: 11, marginTop: 1 },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalSheet: {
-    backgroundColor: '#0f0523',
-    borderTopLeftRadius: 18, borderTopRightRadius: 18,
-    padding: 16, paddingBottom: 30,
-    borderTopWidth: 1, borderColor: 'rgba(251,191,36,0.3)',
-  },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  modalTitle: { color: '#fbbf24', fontSize: 16, fontWeight: '800' },
-  modalHint: { color: '#cbb6ff', fontSize: 12, marginBottom: 12 },
-  modalInput: {
-    color: '#e9d5ff', backgroundColor: 'rgba(124,58,237,0.10)',
-    paddingHorizontal: 11, paddingVertical: 10, borderRadius: 10, marginBottom: 8,
-    borderWidth: 1, borderColor: 'rgba(159,122,234,0.3)',
-    fontSize: 14,
-  },
-  modalBody: { minHeight: 120, textAlignVertical: 'top' },
-  modalSendBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#fbbf24', paddingVertical: 12, borderRadius: 12, marginTop: 6,
-  },
-  modalSendText: { color: '#1a0033', fontWeight: '800', fontSize: 14 },
-});

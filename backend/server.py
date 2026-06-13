@@ -776,7 +776,10 @@ from routes.companion import router as companion_router
 app.include_router(companion_router, prefix="/api")
 
 # Profiles, Direct Mail, Email-forward, Circles — user-to-user features
-from routes.profiles import profile_router, direct_mail_router, circle_router
+# (refactored 2026-06: split from the old monolithic routes/profiles.py)
+from routes.profile import router as profile_router
+from routes.direct_mail import router as direct_mail_router
+from routes.circle import router as circle_router
 app.include_router(profile_router, prefix="/api")
 app.include_router(direct_mail_router, prefix="/api")
 app.include_router(circle_router, prefix="/api")
