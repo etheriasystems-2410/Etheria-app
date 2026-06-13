@@ -67,6 +67,16 @@ interface Profile {
   self_psychic_details?: string;
   // Story
   why_etheria?: string;
+  // Progress visibility + stats
+  show_progress?: boolean;
+  stats?: {
+    modules_completed: number;
+    current_streak: number;
+    longest_streak: number;
+    total_cards_drawn: number;
+    journal_entries: number;
+    days_as_member: number;
+  };
   created_at?: string;
   is_admin?: boolean;
   is_premium?: boolean;
@@ -624,6 +634,44 @@ export default function ProfileScreen() {
               maxLength={600}
             />
 
+            {/* ───── Progress (always shown for self; for others only when show_progress=true) ───── */}
+            {view.stats && (
+              <View style={styles.groupCard}>
+                <View style={styles.groupHeader}>
+                  <Ionicons name="trophy" size={16} color="#fbbf24" />
+                  <Text style={styles.groupTitle}>Progress</Text>
+                </View>
+
+                <View style={styles.statsGrid}>
+                  <StatTile icon="school" label="Modules completed" value={view.stats.modules_completed} />
+                  <StatTile icon="flame" label="Current streak" value={`${view.stats.current_streak}d`} />
+                  <StatTile icon="ribbon" label="Longest streak" value={`${view.stats.longest_streak}d`} />
+                  <StatTile icon="sparkles" label="Cards drawn" value={view.stats.total_cards_drawn} />
+                  <StatTile icon="book" label="Journal entries" value={view.stats.journal_entries} />
+                  <StatTile icon="calendar" label="Days a member" value={view.stats.days_as_member} />
+                </View>
+
+                {isSelf && (
+                  <View style={[styles.boolRow, { marginTop: 6, paddingTop: 8, borderTopWidth: 1, borderColor: 'rgba(251,191,36,0.18)' }]}>
+                    <View style={styles.fieldLabelRow}>
+                      <Ionicons name="eye" size={14} color="#9f7aea" />
+                      <Text style={styles.fieldLabel}>Show progress on my public profile</Text>
+                    </View>
+                    {editing ? (
+                      <Switch
+                        value={view.show_progress !== false}
+                        onValueChange={(v) => setForm({ ...form!, show_progress: v })}
+                        trackColor={{ false: '#3b1f5e', true: '#fbbf24' }}
+                        thumbColor="#fff"
+                      />
+                    ) : (
+                      <Text style={styles.boolValue}>{view.show_progress === false ? 'Hidden' : 'Visible'}</Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Favorite Guide */}
             <Field
               label="Favorite Guide"
@@ -870,6 +918,16 @@ function ActionTile({ icon, label, sub, color, onPress, loading, disabled }: any
   );
 }
 
+function StatTile({ icon, label, value }: { icon: any; label: string; value: number | string }) {
+  return (
+    <View style={styles.statTile}>
+      <Ionicons name={icon} size={18} color="#fbbf24" />
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 // ---------- Styles ----------------------------------------------------------
 const styles = StyleSheet.create({
   flex: { flex: 1 },
@@ -948,6 +1006,16 @@ const styles = StyleSheet.create({
     paddingVertical: 6, marginBottom: 4,
   },
   boolValue: { color: '#e9d5ff', fontSize: 13, fontWeight: '700' },
+
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  statTile: {
+    flexBasis: '31%', flexGrow: 1,
+    padding: 10, borderRadius: 10, alignItems: 'center',
+    backgroundColor: 'rgba(251,191,36,0.08)',
+    borderWidth: 1, borderColor: 'rgba(251,191,36,0.25)',
+  },
+  statValue: { color: '#fbbf24', fontSize: 18, fontWeight: '800', marginTop: 4 },
+  statLabel: { color: '#cbb6ff', fontSize: 10, marginTop: 2, textAlign: 'center', lineHeight: 13 },
 
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {

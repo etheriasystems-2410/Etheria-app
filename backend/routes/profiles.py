@@ -83,6 +83,8 @@ async def _public_profile(user_doc: dict, viewer_id: Optional[str] = None) -> di
         "self_psychic_details": user_doc.get("self_psychic_details") or "",
         # Story
         "why_etheria": user_doc.get("why_etheria") or "",
+        # Progress visibility — default ON
+        "show_progress": user_doc.get("show_progress", True),
         "created_at": user_doc.get("created_at"),
         "is_admin": bool(user_doc.get("is_admin")),
         "is_premium": bool(user_doc.get("is_premium")),
@@ -111,7 +113,42 @@ async def _public_profile(user_doc: dict, viewer_id: Optional[str] = None) -> di
             else "none"
         )
 
+    # Progress stats — always for self, only when toggled ON for others
+    is_self = viewer_id == user_doc.get("user_id")
+    if is_self or user_doc.get("show_progress", True):
+        p["stats"] = await _profile_stats(user_doc)
+
     return p
+
+
+async def _profile_stats(user_doc: dict) -> dict:
+    """Compute the Progress stats. Cheap aggregate queries."""
+    uid = user_doc.get("user_id")
+    if not uid:
+        return {}
+    daily_card_count = await db.daily_cards.count_documents({"user_id": uid})
+    journal_count = await db.journal_entries.count_documents({"user_id": uid})
+    completed = user_doc.get("completed_modules") or []
+    modules_completed = len(completed) if isinstance(completed, list) else 0
+    created = user_doc.get("created_at")
+    days_as_member = 0
+    if isinstance(created, datetime):
+        ref = created if created.tzinfo else created.replace(tzinfo=timezone.utc)
+        days_as_member = max(0, (datetime.now(timezone.utc) - ref).days)
+    elif isinstance(created, str):
+        try:
+            dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            days_as_member = max(0, (datetime.now(timezone.utc) - dt).days)
+        except Exception:
+            pass
+    return {
+        "modules_completed": modules_completed,
+        "current_streak": int(user_doc.get("streak_count") or 0),
+        "longest_streak": int(user_doc.get("longest_streak") or 0),
+        "total_cards_drawn": daily_card_count,
+        "journal_entries": journal_count,
+        "days_as_member": days_as_member,
+    }
 
 
 # ===========================================================================
@@ -146,6 +183,8 @@ class ProfileUpdate(BaseModel):
     why_etheria: Optional[str] = Field(None, max_length=600)
     # Avatar (base64 data-URI or HTTPS URL — frontend image-picker compresses)
     picture: Optional[str] = Field(None, max_length=2_000_000)
+    # Show progress stats on public profile?
+    show_progress: Optional[bool] = None
 
 
 @profile_router.get("/me")
@@ -221,6 +260,8 @@ async def update_my_profile(body: ProfileUpdate, user: dict = Depends(get_curren
         if pic and not pic.startswith(("data:image/", "http")):
             raise HTTPException(status_code=400, detail="Picture must be a data URI or HTTPS URL")
         update["picture"] = pic
+    if body.show_progress is not None:
+        update["show_progress"] = bool(body.show_progress)
 
     if not update:
         return {"success": True, "updated": False}
