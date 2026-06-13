@@ -2,6 +2,10 @@
  * Custom drawer renderer that injects a stylish silver divider above the
  * `messages` (Inbox) route, separating the spiritual-content section of the
  * drawer from the social section (Inbox / Users / Community).
+ *
+ * Special-cases the `my-profile` shortcut so that tapping it navigates
+ * directly to the user's own `/profile/[id]` route (instead of stopping on a
+ * spinner-only redirect screen, which never settled cleanly under the drawer).
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -10,6 +14,7 @@ import {
   DrawerContentScrollView,
   DrawerItem,
 } from '@react-navigation/drawer';
+import { useAuth } from '../../contexts/AuthContext';
 
 /** Routes that should sit ABOVE the silver divider (spiritual content). The
  *  rest fall below it (social / settings). Change the `dividerBeforeRoute` to
@@ -18,11 +23,19 @@ const DIVIDER_BEFORE_ROUTE = 'community';
 
 export default function CustomDrawerContent(props: any) {
   const { state, descriptors, navigation } = props;
+  const { user } = useAuth();
+  const myUserId = (user as any)?.user_id || (user as any)?.id;
+
   return (
     <DrawerContentScrollView {...props}>
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
         if (options.drawerItemStyle && options.drawerItemStyle.display === 'none') {
+          return null;
+        }
+        // Skip the My Profile shortcut if we don't have a user id yet —
+        // tapping it would just spin. It'll appear as soon as auth hydrates.
+        if (route.name === 'my-profile' && !myUserId) {
           return null;
         }
         const focused = state.index === index;
@@ -65,6 +78,13 @@ export default function CustomDrawerContent(props: any) {
               activeTintColor={'#fff'}
               inactiveTintColor={'#c0c0c0'}
               onPress={() => {
+                // Special-case the My Profile shortcut — dispatch straight to
+                // the dynamic /profile/[id] route, then close the drawer.
+                if (route.name === 'my-profile' && myUserId) {
+                  navigation.closeDrawer?.();
+                  navigation.navigate('profile/[id]', { id: myUserId });
+                  return;
+                }
                 const event = navigation.emit({
                   type: 'drawerItemPress',
                   target: route.key,
