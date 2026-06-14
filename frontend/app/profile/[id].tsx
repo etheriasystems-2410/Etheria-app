@@ -17,14 +17,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -38,57 +34,22 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { CosmicBackdrop } from '../../components/ui';
+import {
+  Chip,
+  Field,
+  INTEREST_SUGGESTIONS,
+} from '../../components/profile/ProfileSubcomponents';
+import ComposeModal, {
+  ComposeMode,
+} from '../../components/profile/ComposeModal';
+import ProfileHeader from '../../components/profile/ProfileHeader';
+import PathCard from '../../components/profile/PathCard';
+import PsychicCard from '../../components/profile/PsychicCard';
+import ProgressCard from '../../components/profile/ProgressCard';
+import ActionsCard from '../../components/profile/ActionsCard';
+import type { Profile } from '../../components/profile/types';
 
 const API = process.env.EXPO_PUBLIC_BACKEND_URL;
-
-interface Profile {
-  user_id: string;
-  name: string;
-  picture?: string;
-  bio?: string;                                      // "About Me"
-  birthday?: string;
-  location?: string;
-  favorite_guide?: string;
-  psychic_interests?: string[];
-  // Lifestyle
-  hobbies?: string;
-  favorite_things?: string;
-  dislikes?: string;
-  other_details?: string;
-  // The Path I Walk
-  path_walked?: string;
-  in_coven?: boolean;
-  coven_name?: string;
-  deities_followed?: string;
-  // Psychic disclosures
-  family_has_psychic_talent?: boolean;
-  family_psychic_details?: string;
-  self_has_psychic_talent?: boolean;
-  self_psychic_details?: string;
-  // Story
-  why_etheria?: string;
-  // Progress visibility + stats
-  show_progress?: boolean;
-  stats?: {
-    modules_completed: number;
-    current_streak: number;
-    longest_streak: number;
-    total_cards_drawn: number;
-    journal_entries: number;
-    days_as_member: number;
-  };
-  created_at?: string;
-  is_admin?: boolean;
-  is_premium?: boolean;
-  email?: string;
-  circle_relationship?: 'none' | 'in_circle' | 'invite_pending_out' | 'invite_pending_in';
-}
-
-const INTEREST_SUGGESTIONS = [
-  'Tarot', 'Astrology', 'Mediumship', 'Dreams', 'Aura Reading',
-  'Energy Healing', 'Crystals', 'Numerology', 'Astral Travel',
-  'Past Lives', 'Chakras', 'Clairvoyance',
-];
 
 export default function ProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -104,9 +65,7 @@ export default function ProfileScreen() {
   const [form, setForm] = useState<Profile | null>(null);
 
   // Compose-modal state
-  const [composeMode, setComposeMode] = useState<null | 'email' | 'dm-letter'>(null);
-  const [composeSubject, setComposeSubject] = useState('');
-  const [composeBody, setComposeBody] = useState('');
+  const [composeMode, setComposeMode] = useState<ComposeMode | null>(null);
   const [composeSending, setComposeSending] = useState(false);
 
   const targetId = (id || '').toString();
@@ -171,10 +130,46 @@ export default function ProfileScreen() {
     }
   };
 
+  // -------- Avatar picker (self only) --------------------------------------
+  const pickAvatar = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission needed',
+          'Etheria needs access to your photos to set a profile picture.',
+        );
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+      if (result.canceled || !result.assets?.[0]?.base64) return;
+
+      const base64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      // Optimistically update form & profile
+      setForm((f) => (f ? { ...f, picture: base64 } : f));
+      setProfile((p) => (p ? { ...p, picture: base64 } : p));
+
+      const r = await fetch(`${API}/api/profile/me`, {
+        method: 'PUT',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ picture: base64 }),
+      });
+      if (!r.ok) throw new Error('Upload failed');
+    } catch (e: any) {
+      Alert.alert('Could not update photo', e?.message || 'Please try again.');
+    }
+  };
+
   // -------- Action buttons (other users) -----------------------------------
-  const sendCompose = async () => {
+  const sendCompose = async (subject: string, body: string) => {
     if (!profile || !composeMode) return;
-    if (!composeSubject.trim() || !composeBody.trim()) {
+    if (!subject.trim() || !body.trim()) {
       Alert.alert('Missing fields', 'Subject and body are required.');
       return;
     }
@@ -184,20 +179,18 @@ export default function ProfileScreen() {
         composeMode === 'email'
           ? `${API}/api/profile/${profile.user_id}/email`
           : `${API}/api/direct-mail`;
-      const body =
+      const payload =
         composeMode === 'email'
-          ? { subject: composeSubject, body: composeBody }
-          : { to_user_id: profile.user_id, subject: composeSubject, body: composeBody };
+          ? { subject, body }
+          : { to_user_id: profile.user_id, subject, body };
       const r = await fetch(url, {
         method: 'POST',
         headers: { ...auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data?.detail || 'Send failed');
       setComposeMode(null);
-      setComposeSubject('');
-      setComposeBody('');
       Alert.alert(
         '✨ Sent',
         composeMode === 'email'
@@ -361,67 +354,15 @@ export default function ProfileScreen() {
             </View>
 
             {/* Avatar + name + badges */}
-            <View style={styles.headerCard}>
-              <Pressable
-                onPress={isSelf && editing ? pickAvatar : undefined}
-                disabled={!(isSelf && editing)}
-              >
-                {view.picture ? (
-                  <Image source={{ uri: view.picture }} style={styles.avatar} />
-                ) : (
-                  <View style={[styles.avatar, styles.avatarFallback]}>
-                    <Text style={styles.avatarInitial}>{(view.name || '?')[0]?.toUpperCase()}</Text>
-                  </View>
-                )}
-                {isSelf && editing && (
-                  <View style={styles.avatarEditBadge}>
-                    <Ionicons name="camera" size={14} color="#1a0033" />
-                  </View>
-                )}
-              </Pressable>
-              {isSelf && editing && (
-                <TouchableOpacity onPress={pickAvatar} style={styles.changePhotoBtn}>
-                  <Text style={styles.changePhotoBtnText}>Change Photo</Text>
-                </TouchableOpacity>
-              )}
-              {editing ? (
-                <TextInput
-                  value={view.name}
-                  onChangeText={(t) => setForm({ ...form!, name: t })}
-                  style={styles.nameInput}
-                  placeholder="Display name"
-                  placeholderTextColor="rgba(233,213,255,0.4)"
-                  maxLength={60}
-                />
-              ) : (
-                <Text style={styles.name}>{view.name}</Text>
-              )}
-              <View style={styles.badgesRow}>
-                {view.is_admin && (
-                  <View style={[styles.badge, styles.badgeAdmin]}>
-                    <Ionicons name="shield" size={11} color="#fff" />
-                    <Text style={styles.badgeText}>Admin</Text>
-                  </View>
-                )}
-                {view.is_premium && (
-                  <View style={[styles.badge, styles.badgePremium]}>
-                    <Ionicons name="diamond" size={11} color="#1a0033" />
-                    <Text style={[styles.badgeText, { color: '#1a0033' }]}>Premium</Text>
-                  </View>
-                )}
-                {memberSince && (
-                  <View style={[styles.badge, styles.badgeNeutral]}>
-                    <Ionicons name="calendar" size={11} color="#cbb6ff" />
-                    <Text style={[styles.badgeText, { color: '#cbb6ff' }]}>Member since {memberSince}</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Email (only visible on own profile) */}
-              {isSelf && view.email && (
-                <Text style={styles.emailHint}>{view.email}</Text>
-              )}
-            </View>
+            <ProfileHeader
+              view={view}
+              form={form}
+              setForm={setForm}
+              editing={editing}
+              isSelf={isSelf}
+              memberSince={memberSince}
+              onPickAvatar={pickAvatar}
+            />
 
             {/* About Me (was "Bio") */}
             <Field
@@ -498,129 +439,22 @@ export default function ProfileScreen() {
             />
 
             {/* ───── The Path I Walk (religion grouping) ───── */}
-            <View style={styles.groupCard}>
-              <View style={styles.groupHeader}>
-                <Ionicons name="leaf" size={16} color="#fbbf24" />
-                <Text style={styles.groupTitle}>The Path I Walk</Text>
-              </View>
-
-              <Field
-                label="My Path"
-                icon="compass"
-                editing={editing}
-                value={view.path_walked || ''}
-                placeholder={isSelf ? 'Briefly describe your faith, walk, or religion' : '—'}
-                multiline
-                onChange={(v: string) => setForm({ ...form!, path_walked: v })}
-                maxLength={400}
-              />
-
-              {/* In a coven / religious group? */}
-              <View style={styles.boolRow}>
-                <View style={styles.fieldLabelRow}>
-                  <Ionicons name="people" size={14} color="#9f7aea" />
-                  <Text style={styles.fieldLabel}>Am I in a coven or religious group?</Text>
-                </View>
-                {editing ? (
-                  <Switch
-                    value={!!view.in_coven}
-                    onValueChange={(v) => setForm({ ...form!, in_coven: v })}
-                    trackColor={{ false: '#3b1f5e', true: '#fbbf24' }}
-                    thumbColor="#fff"
-                  />
-                ) : (
-                  <Text style={styles.boolValue}>{view.in_coven ? 'Yes' : 'No'}</Text>
-                )}
-              </View>
-              {(editing || view.in_coven) && (
-                <Field
-                  label="Group / Coven Name"
-                  icon="bookmark"
-                  editing={editing}
-                  value={view.coven_name || ''}
-                  placeholder={isSelf ? "Optional — the name of your group" : '—'}
-                  onChange={(v: string) => setForm({ ...form!, coven_name: v })}
-                  maxLength={120}
-                />
-              )}
-
-              <Field
-                label="Deities I Follow"
-                icon="moon"
-                editing={editing}
-                value={view.deities_followed || ''}
-                placeholder={isSelf ? 'Names of deities, spirits, or guides you honor' : '—'}
-                multiline
-                onChange={(v: string) => setForm({ ...form!, deities_followed: v })}
-                maxLength={400}
-              />
-            </View>
+            <PathCard
+              view={view}
+              form={form}
+              setForm={setForm}
+              editing={editing}
+              isSelf={isSelf}
+            />
 
             {/* ───── Psychic talent disclosures ───── */}
-            <View style={styles.groupCard}>
-              <View style={styles.groupHeader}>
-                <Ionicons name="flash" size={16} color="#fbbf24" />
-                <Text style={styles.groupTitle}>Psychic Gifts</Text>
-              </View>
-
-              <View style={styles.boolRow}>
-                <View style={styles.fieldLabelRow}>
-                  <Ionicons name="people-circle" size={14} color="#9f7aea" />
-                  <Text style={styles.fieldLabel}>Do I have psychic talent in my family?</Text>
-                </View>
-                {editing ? (
-                  <Switch
-                    value={!!view.family_has_psychic_talent}
-                    onValueChange={(v) => setForm({ ...form!, family_has_psychic_talent: v })}
-                    trackColor={{ false: '#3b1f5e', true: '#fbbf24' }}
-                    thumbColor="#fff"
-                  />
-                ) : (
-                  <Text style={styles.boolValue}>{view.family_has_psychic_talent ? 'Yes' : 'No'}</Text>
-                )}
-              </View>
-              {(editing || view.family_has_psychic_talent) && (
-                <Field
-                  label="Who & What (optional)"
-                  icon="document-text"
-                  editing={editing}
-                  value={view.family_psychic_details || ''}
-                  placeholder={isSelf ? 'If you wish to share — who, and what gifts?' : '—'}
-                  multiline
-                  onChange={(v: string) => setForm({ ...form!, family_psychic_details: v })}
-                  maxLength={600}
-                />
-              )}
-
-              <View style={styles.boolRow}>
-                <View style={styles.fieldLabelRow}>
-                  <Ionicons name="sparkles" size={14} color="#9f7aea" />
-                  <Text style={styles.fieldLabel}>Do I have psychic talent of my own?</Text>
-                </View>
-                {editing ? (
-                  <Switch
-                    value={!!view.self_has_psychic_talent}
-                    onValueChange={(v) => setForm({ ...form!, self_has_psychic_talent: v })}
-                    trackColor={{ false: '#3b1f5e', true: '#fbbf24' }}
-                    thumbColor="#fff"
-                  />
-                ) : (
-                  <Text style={styles.boolValue}>{view.self_has_psychic_talent ? 'Yes' : 'No'}</Text>
-                )}
-              </View>
-              {(editing || view.self_has_psychic_talent) && (
-                <Field
-                  label="Your Gifts (optional)"
-                  icon="document-text"
-                  editing={editing}
-                  value={view.self_psychic_details || ''}
-                  placeholder={isSelf ? 'If you wish to share — what gifts do you have?' : '—'}
-                  multiline
-                  onChange={(v: string) => setForm({ ...form!, self_psychic_details: v })}
-                  maxLength={600}
-                />
-              )}
-            </View>
+            <PsychicCard
+              view={view}
+              form={form}
+              setForm={setForm}
+              editing={editing}
+              isSelf={isSelf}
+            />
 
             {/* Why Etheria */}
             <Field
@@ -635,42 +469,13 @@ export default function ProfileScreen() {
             />
 
             {/* ───── Progress (always shown for self; for others only when show_progress=true) ───── */}
-            {view.stats && (
-              <View style={styles.groupCard}>
-                <View style={styles.groupHeader}>
-                  <Ionicons name="trophy" size={16} color="#fbbf24" />
-                  <Text style={styles.groupTitle}>Progress</Text>
-                </View>
-
-                <View style={styles.statsGrid}>
-                  <StatTile icon="school" label="Modules completed" value={view.stats.modules_completed} />
-                  <StatTile icon="flame" label="Current streak" value={`${view.stats.current_streak}d`} />
-                  <StatTile icon="ribbon" label="Longest streak" value={`${view.stats.longest_streak}d`} />
-                  <StatTile icon="sparkles" label="Cards drawn" value={view.stats.total_cards_drawn} />
-                  <StatTile icon="book" label="Journal entries" value={view.stats.journal_entries} />
-                  <StatTile icon="calendar" label="Days a member" value={view.stats.days_as_member} />
-                </View>
-
-                {isSelf && (
-                  <View style={[styles.boolRow, { marginTop: 6, paddingTop: 8, borderTopWidth: 1, borderColor: 'rgba(251,191,36,0.18)' }]}>
-                    <View style={styles.fieldLabelRow}>
-                      <Ionicons name="eye" size={14} color="#9f7aea" />
-                      <Text style={styles.fieldLabel}>Show progress on my public profile</Text>
-                    </View>
-                    {editing ? (
-                      <Switch
-                        value={view.show_progress !== false}
-                        onValueChange={(v) => setForm({ ...form!, show_progress: v })}
-                        trackColor={{ false: '#3b1f5e', true: '#fbbf24' }}
-                        thumbColor="#fff"
-                      />
-                    ) : (
-                      <Text style={styles.boolValue}>{view.show_progress === false ? 'Hidden' : 'Visible'}</Text>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
+            <ProgressCard
+              view={view}
+              form={form}
+              setForm={setForm}
+              editing={editing}
+              isSelf={isSelf}
+            />
 
             {/* Favorite Guide */}
             <Field
@@ -730,201 +535,31 @@ export default function ProfileScreen() {
 
             {/* Action buttons (only for other users) */}
             {!isSelf && (
-              <View style={styles.actionsCard}>
-                <Text style={styles.actionsTitle}>Reach out</Text>
-                <View style={styles.actionGrid}>
-                  <ActionTile
-                    icon="mail"
-                    label="Email"
-                    sub="Server forwards to their inbox"
-                    color="#fbbf24"
-                    onPress={() => setComposeMode('email')}
-                  />
-                  <ActionTile
-                    icon="document-text"
-                    label="Direct Mail"
-                    sub="In-app letter"
-                    color="#9f7aea"
-                    onPress={() => setComposeMode('dm-letter')}
-                  />
-                  <ActionTile
-                    icon="chatbubbles"
-                    label="Instant Message"
-                    sub="Real-time chat"
-                    color="#10b981"
-                    onPress={openDM}
-                    loading={actionBusy === 'dm'}
-                  />
-                  {view.circle_relationship === 'in_circle' ? (
-                    <ActionTile
-                      icon="people-circle"
-                      label="In your Circle ✓"
-                      sub="Tap to remove"
-                      color="#ef4444"
-                      onPress={removeFromCircle}
-                    />
-                  ) : view.circle_relationship === 'invite_pending_out' ? (
-                    <ActionTile
-                      icon="time"
-                      label="Invite Pending"
-                      sub="Awaiting response"
-                      color="#6b7280"
-                      onPress={() => {}}
-                      disabled
-                    />
-                  ) : view.circle_relationship === 'invite_pending_in' ? (
-                    <ActionTile
-                      icon="mail-unread"
-                      label="Invited You"
-                      sub="Check My Circle"
-                      color="#06b6d4"
-                      onPress={() => router.push('/my-circle' as any)}
-                    />
-                  ) : (
-                    <ActionTile
-                      icon="person-add"
-                      label="Add to Circle"
-                      sub="They must accept"
-                      color="#fbbf24"
-                      onPress={sendCircleInvite}
-                      loading={actionBusy === 'circle'}
-                    />
-                  )}
-                </View>
-              </View>
+              <ActionsCard
+                view={view}
+                actionBusy={actionBusy}
+                onEmail={() => setComposeMode('email')}
+                onLetter={() => setComposeMode('dm-letter')}
+                onDM={openDM}
+                onCircleInvite={sendCircleInvite}
+                onCircleRemove={removeFromCircle}
+                onPendingInTap={() => router.push('/my-circle' as any)}
+              />
             )}
           </ScrollView>
         </KeyboardAvoidingView>
 
         {/* Compose Modal */}
-        <Modal
+        <ComposeModal
           visible={composeMode !== null}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setComposeMode(null)}
-        >
-          <View style={styles.modalOverlay}>
-            <KeyboardAvoidingView
-              style={styles.modalSheet}
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            >
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {composeMode === 'email' ? `Email ${profile.name}` : `Write to ${profile.name}`}
-                </Text>
-                <TouchableOpacity onPress={() => setComposeMode(null)}>
-                  <Ionicons name="close" size={22} color="#e9d5ff" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalHint}>
-                {composeMode === 'email'
-                  ? "Their email stays private. They'll be able to reply directly to you."
-                  : 'Your letter will appear in their in-app inbox.'}
-              </Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Subject"
-                placeholderTextColor="rgba(233,213,255,0.4)"
-                value={composeSubject}
-                onChangeText={setComposeSubject}
-                maxLength={140}
-              />
-              <TextInput
-                style={[styles.modalInput, styles.modalBody]}
-                placeholder="Write your message…"
-                placeholderTextColor="rgba(233,213,255,0.4)"
-                value={composeBody}
-                onChangeText={setComposeBody}
-                multiline
-                maxLength={4000}
-              />
-              <TouchableOpacity
-                style={[styles.modalSendBtn, composeSending && { opacity: 0.6 }]}
-                onPress={sendCompose}
-                disabled={composeSending}
-              >
-                {composeSending ? (
-                  <ActivityIndicator color="#1a0033" />
-                ) : (
-                  <>
-                    <Ionicons name="send" size={14} color="#1a0033" />
-                    <Text style={styles.modalSendText}>Send</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </KeyboardAvoidingView>
-          </View>
-        </Modal>
+          mode={composeMode}
+          recipientName={profile.name}
+          sending={composeSending}
+          onClose={() => setComposeMode(null)}
+          onSend={sendCompose}
+        />
       </SafeAreaView>
     </CosmicBackdrop>
-  );
-}
-
-// ---------- Subcomponents ---------------------------------------------------
-function Field({ label, icon, editing, value, placeholder, onChange, multiline, maxLength }: any) {
-  return (
-    <View style={styles.fieldBlock}>
-      <View style={styles.fieldLabelRow}>
-        <Ionicons name={icon} size={14} color="#9f7aea" />
-        <Text style={styles.fieldLabel}>{label}</Text>
-      </View>
-      {editing ? (
-        <TextInput
-          value={value}
-          onChangeText={onChange}
-          style={[styles.fieldInput, multiline && styles.fieldInputMultiline]}
-          placeholder={placeholder}
-          placeholderTextColor="rgba(233,213,255,0.35)"
-          multiline={multiline}
-          maxLength={maxLength}
-        />
-      ) : (
-        <Text style={styles.fieldValue}>
-          {value && value.toString().trim() ? value : <Text style={styles.emptyHint}>{placeholder}</Text>}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-function Chip({ label, active, onPress }: { label: string; active?: boolean; onPress?: () => void }) {
-  const Wrap = onPress ? TouchableOpacity : View;
-  return (
-    <Wrap onPress={onPress as any} style={[styles.chip, active && styles.chipActive]}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-      {active && onPress && <Ionicons name="close" size={11} color="#1a0033" />}
-    </Wrap>
-  );
-}
-
-function ActionTile({ icon, label, sub, color, onPress, loading, disabled }: any) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled || loading}
-      style={({ pressed }) => [
-        styles.actionTile,
-        { borderColor: color + '99' },
-        pressed && { opacity: 0.7 },
-        disabled && { opacity: 0.55 },
-      ]}
-    >
-      <View style={[styles.actionIcon, { backgroundColor: color + '22' }]}>
-        {loading ? <ActivityIndicator color={color} size="small" /> : <Ionicons name={icon} size={20} color={color} />}
-      </View>
-      <Text style={styles.actionLabel}>{label}</Text>
-      <Text style={styles.actionSub}>{sub}</Text>
-    </Pressable>
-  );
-}
-
-function StatTile({ icon, label, value }: { icon: any; label: string; value: number | string }) {
-  return (
-    <View style={styles.statTile}>
-      <Ionicons name={icon} size={18} color="#fbbf24" />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
   );
 }
 
@@ -934,10 +569,16 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   scroll: { padding: 16, paddingBottom: 32 },
   emptyText: { color: 'rgba(255,255,255,0.6)' },
-  retryBtn: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: '#fbbf24' },
+  retryBtn: {
+    marginTop: 10, paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 10, backgroundColor: '#fbbf24',
+  },
   retryBtnText: { color: '#1a0033', fontWeight: '700' },
 
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  topRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 14,
+  },
   editBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10,
@@ -947,123 +588,14 @@ const styles = StyleSheet.create({
   editBtnText: { color: '#fbbf24', fontWeight: '700', fontSize: 12 },
   saveBtn: { backgroundColor: '#fbbf24', borderColor: '#fbbf24' },
 
-  headerCard: { alignItems: 'center', marginBottom: 18 },
-  avatar: { width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: 'rgba(251,191,36,0.6)' },
-  avatarFallback: { backgroundColor: '#1a0033', alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { color: '#fbbf24', fontSize: 32, fontWeight: '800' },
-  avatarEditBadge: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#fbbf24',
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#0f0523',
-  },
-  changePhotoBtn: {
-    marginTop: 8, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8,
-    backgroundColor: 'rgba(251,191,36,0.16)',
-    borderWidth: 1, borderColor: 'rgba(251,191,36,0.4)',
-  },
-  changePhotoBtnText: { color: '#fbbf24', fontWeight: '700', fontSize: 11 },
-  name: { color: '#e9d5ff', fontSize: 20, fontWeight: '800', marginTop: 10 },
-  nameInput: {
-    color: '#e9d5ff', fontSize: 20, fontWeight: '800', marginTop: 10, textAlign: 'center',
-    borderBottomWidth: 1, borderColor: 'rgba(251,191,36,0.6)', minWidth: 180, paddingVertical: 2,
-  },
-  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, justifyContent: 'center' },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  badgeAdmin: { backgroundColor: '#7c3aed' },
-  badgePremium: { backgroundColor: '#fbbf24' },
-  badgeNeutral: { backgroundColor: 'rgba(124,58,237,0.16)' },
-  badgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
-  emailHint: { color: 'rgba(233,213,255,0.55)', fontSize: 11, marginTop: 6, fontStyle: 'italic' },
-
+  // Used inline (for the bottom Psychic Interests chip group)
   fieldBlock: { marginBottom: 14 },
   fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 },
-  fieldLabel: { color: '#cbb6ff', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  fieldValue: { color: '#e9d5ff', fontSize: 14, lineHeight: 19 },
+  fieldLabel: {
+    color: '#cbb6ff', fontSize: 11, fontWeight: '700',
+    textTransform: 'uppercase', letterSpacing: 0.5,
+  },
   emptyHint: { color: 'rgba(233,213,255,0.45)', fontStyle: 'italic' },
-  fieldInput: {
-    color: '#e9d5ff', fontSize: 14, borderRadius: 10,
-    backgroundColor: 'rgba(124,58,237,0.10)', paddingHorizontal: 11, paddingVertical: 9,
-    borderWidth: 1, borderColor: 'rgba(159,122,234,0.3)',
-  },
-  fieldInputMultiline: { minHeight: 70, textAlignVertical: 'top' },
-
   row: { flexDirection: 'row', gap: 10 },
-
-  groupCard: {
-    marginVertical: 8, padding: 12, borderRadius: 14,
-    backgroundColor: 'rgba(15,5,35,0.55)',
-    borderWidth: 1, borderColor: 'rgba(251,191,36,0.25)',
-  },
-  groupHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8,
-    paddingBottom: 6, borderBottomWidth: 1, borderColor: 'rgba(251,191,36,0.18)',
-  },
-  groupTitle: { color: '#fbbf24', fontSize: 13, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase' },
-  boolRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 6, marginBottom: 4,
-  },
-  boolValue: { color: '#e9d5ff', fontSize: 13, fontWeight: '700' },
-
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  statTile: {
-    flexBasis: '31%', flexGrow: 1,
-    padding: 10, borderRadius: 10, alignItems: 'center',
-    backgroundColor: 'rgba(251,191,36,0.08)',
-    borderWidth: 1, borderColor: 'rgba(251,191,36,0.25)',
-  },
-  statValue: { color: '#fbbf24', fontSize: 18, fontWeight: '800', marginTop: 4 },
-  statLabel: { color: '#cbb6ff', fontSize: 10, marginTop: 2, textAlign: 'center', lineHeight: 13 },
-
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
-    backgroundColor: 'rgba(124,58,237,0.18)',
-    borderWidth: 1, borderColor: 'rgba(159,122,234,0.35)',
-  },
-  chipActive: { backgroundColor: '#fbbf24', borderColor: '#fbbf24' },
-  chipText: { color: '#cbb6ff', fontSize: 11, fontWeight: '600' },
-  chipTextActive: { color: '#1a0033', fontWeight: '800' },
-
-  actionsCard: {
-    marginTop: 10, padding: 14, borderRadius: 14,
-    backgroundColor: 'rgba(15,5,35,0.65)',
-    borderWidth: 1, borderColor: 'rgba(251,191,36,0.25)',
-  },
-  actionsTitle: { color: '#fbbf24', fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
-  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  actionTile: {
-    flexGrow: 1, minWidth: '47%',
-    padding: 12, borderRadius: 12, borderWidth: 1,
-    backgroundColor: 'rgba(15,5,35,0.6)',
-  },
-  actionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  actionLabel: { color: '#e9d5ff', fontSize: 13, fontWeight: '700' },
-  actionSub: { color: 'rgba(203,182,255,0.7)', fontSize: 11, marginTop: 1 },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalSheet: {
-    backgroundColor: '#0f0523',
-    borderTopLeftRadius: 18, borderTopRightRadius: 18,
-    padding: 16, paddingBottom: 30,
-    borderTopWidth: 1, borderColor: 'rgba(251,191,36,0.3)',
-  },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  modalTitle: { color: '#fbbf24', fontSize: 16, fontWeight: '800' },
-  modalHint: { color: '#cbb6ff', fontSize: 12, marginBottom: 12 },
-  modalInput: {
-    color: '#e9d5ff', backgroundColor: 'rgba(124,58,237,0.10)',
-    paddingHorizontal: 11, paddingVertical: 10, borderRadius: 10, marginBottom: 8,
-    borderWidth: 1, borderColor: 'rgba(159,122,234,0.3)',
-    fontSize: 14,
-  },
-  modalBody: { minHeight: 120, textAlignVertical: 'top' },
-  modalSendBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#fbbf24', paddingVertical: 12, borderRadius: 12, marginTop: 6,
-  },
-  modalSendText: { color: '#1a0033', fontWeight: '800', fontSize: 14 },
 });
