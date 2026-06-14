@@ -50,8 +50,13 @@ export function useTrainingProgress(lessons: Lesson[]) {
 
           await Promise.allSettled(
             missing.map((key) => {
-              const [moduleId, lessonIdStr] = key.split('-');
-              const lessonId = parseInt(lessonIdStr, 10);
+              // Lesson keys look like `"beginner-1-2"` (module="beginner-1",
+              // lesson=2). Splitting on the LAST dash is required because the
+              // module id itself contains a dash.
+              const lastDash = key.lastIndexOf('-');
+              if (lastDash <= 0) return Promise.resolve();
+              const moduleId = key.slice(0, lastDash);
+              const lessonId = parseInt(key.slice(lastDash + 1), 10);
               if (!moduleId || Number.isNaN(lessonId)) return Promise.resolve();
               return fetch(`${BACKEND_URL}/api/training/lesson-complete`, {
                 method: 'POST',
@@ -90,8 +95,13 @@ export function useTrainingProgress(lessons: Lesson[]) {
       try {
         const auth = await AsyncStorage.getItem('session_token');
         if (!auth) return;
-        const [moduleId, lessonIdStr] = lessonKey.split('-');
-        const lessonId = parseInt(lessonIdStr, 10);
+        // Split on the LAST dash — module ids themselves contain a dash
+        // (e.g. "beginner-1"), so a naive `split('-')` would yield the wrong
+        // module id and a 404 from the backend.
+        const lastDash = lessonKey.lastIndexOf('-');
+        if (lastDash <= 0) return;
+        const moduleId = lessonKey.slice(0, lastDash);
+        const lessonId = parseInt(lessonKey.slice(lastDash + 1), 10);
         if (!moduleId || Number.isNaN(lessonId)) return;
         await fetch(`${BACKEND_URL}/api/training/lesson-complete`, {
           method: 'POST',
