@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "Admin@etheriasystems.online")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "dev@etheriasystems.online")
 RESEND_FROM_NAME = os.getenv("RESEND_FROM_NAME", "Etheria")
 RESEND_API_URL = "https://api.resend.com/emails"
 
