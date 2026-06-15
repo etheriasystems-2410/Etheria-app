@@ -30,6 +30,56 @@ RESEND_API_URL = "https://api.resend.com/emails"
 # Build the canonical "Name <email@domain>" format Resend expects.
 _FROM = f"{RESEND_FROM_NAME} <{RESEND_FROM_EMAIL}>" if RESEND_FROM_NAME else RESEND_FROM_EMAIL
 
+# ---------------------------------------------------------------------------
+# No-reply disclaimer
+# ---------------------------------------------------------------------------
+# `dev@etheriasystems.online` is a send-only mailbox on Resend (receiving is
+# disabled at the domain level). Any direct reply to it bounces silently and
+# the user never hears back. To prevent that, we append a small footer to every
+# outbound message instructing recipients to forward replies to the monitored
+# Gmail inbox.
+#
+# Exception: if the caller supplies an explicit `reply_to` (e.g. user-to-user
+# Mail-To forwarding, moderation reply-back, feedback ack), replies will reach
+# the right place automatically — no disclaimer needed.
+SUPPORT_EMAIL = "etheriasystems@gmail.com"
+
+_HTML_DISCLAIMER = (
+    '<hr style="border:none;border-top:1px solid #2d1b4e;margin:32px 0 12px;">'
+    '<p style="font-size:11px;color:#9f7aea;line-height:1.5;text-align:center;'
+    'font-family:-apple-system,BlinkMacSystemFont,sans-serif;">'
+    'This mailbox is not monitored. Please forward any replies to '
+    f'<a href="mailto:{SUPPORT_EMAIL}" '
+    f'style="color:#a855f7;text-decoration:underline;">{SUPPORT_EMAIL}</a>.'
+    '</p>'
+)
+
+_TEXT_DISCLAIMER = (
+    "\n\n— — —\n"
+    "This mailbox is not monitored. Please forward any replies to "
+    f"{SUPPORT_EMAIL}.\n"
+)
+
+
+def _apply_disclaimer(
+    html: str,
+    text: Optional[str],
+    reply_to: Optional[str],
+) -> tuple[str, Optional[str]]:
+    """
+    Append the no-reply disclaimer to the outgoing HTML (and text fallback) when
+    no explicit reply_to is configured. Idempotent — does nothing if the
+    disclaimer marker is already present.
+    """
+    if reply_to:
+        return html, text  # reply path is set, recipient can reach a human
+
+    new_html = html if SUPPORT_EMAIL in html else html + _HTML_DISCLAIMER
+    new_text = text
+    if text is not None and SUPPORT_EMAIL not in text:
+        new_text = text + _TEXT_DISCLAIMER
+    return new_html, new_text
+
 
 async def send_email(
     to: Union[str, List[str]],
@@ -48,6 +98,8 @@ async def send_email(
     if not RESEND_API_KEY:
         logging.error("[Email] RESEND_API_KEY not configured — email NOT sent")
         return False
+
+    html, text = _apply_disclaimer(html, text, reply_to)
 
     payload = {
         "from": from_override or _FROM,
@@ -92,6 +144,8 @@ def send_email_sync(
     if not RESEND_API_KEY:
         logging.error("[Email] RESEND_API_KEY not configured — email NOT sent")
         return False
+
+    html, text = _apply_disclaimer(html, text, reply_to)
 
     payload = {
         "from": from_override or _FROM,
