@@ -16,7 +16,7 @@ import CompanionBubble from '../components/CompanionBubble';
 import SplashVideo from '../components/SplashVideo';
 
 
-function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
+function ProtectedLayout() {  const { isAuthenticated, loading, user } = useAuth();
   const { theme } = useTheme();
   const { t } = useLanguage();
   const segments = useSegments();
@@ -28,7 +28,24 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
     const inAuthGroup = segments[0] === 'auth';
     const isHomePage = segments.length === 0 || (segments.length === 1 && segments[0] === '(drawer)');
     const isIndexPage = segments[0] === 'index' || segments.length === 0;
-    
+    const isTermsAcceptanceGate = segments[0] === 'terms-acceptance';
+
+    // ─── Authenticated users who haven't accepted Terms of Use ──────────
+    // Hard-gate: redirect to /terms-acceptance from anywhere else (including
+    // the home/index page). Decline → logout, so they can never bypass it.
+    if (isAuthenticated && user && !user.terms_accepted_at) {
+      if (!isTermsAcceptanceGate && !inAuthGroup) {
+        router.replace('/terms-acceptance');
+      }
+      return;
+    }
+
+    // If they HAVE accepted but land on the gate page anyway, push them home.
+    if (isAuthenticated && user?.terms_accepted_at && isTermsAcceptanceGate) {
+      router.replace('/');
+      return;
+    }
+
     // Allow home page without authentication
     if (isIndexPage || isHomePage) {
       return;
@@ -40,7 +57,7 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/');
     }
-  }, [isAuthenticated, loading, segments]);
+  }, [isAuthenticated, loading, segments, user]);
 
   if (loading) {
     return null; // Or a loading screen
@@ -249,6 +266,15 @@ function ProtectedLayout() {  const { isAuthenticated, loading } = useAuth();
         options={{
           drawerItemStyle: { display: 'none' },
           title: 'Signing In…',
+        }}
+      />
+      <Drawer.Screen
+        name="terms-acceptance"
+        options={{
+          drawerItemStyle: { display: 'none' },
+          title: 'Terms of Use',
+          swipeEnabled: false,
+          headerShown: false,
         }}
       />
       <Drawer.Screen

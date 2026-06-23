@@ -233,6 +233,8 @@ async def login(request: LoginRequest):
         "picture": user_doc.get("picture"),
         "is_admin": user_doc.get("is_admin", False),
         "admin_level": user_doc.get("admin_level"),
+        "terms_accepted_at": user_doc.get("terms_accepted_at"),
+        "terms_version": user_doc.get("terms_version"),
         "session_token": session_token,
     })
     response.set_cookie(
@@ -328,6 +330,48 @@ async def logout(request: Request):
     response = JSONResponse(content={"success": True})
     response.delete_cookie("session_token", path="/")
     return response
+
+
+# Bump this constant when Terms of Use materially change to force re-acceptance.
+TERMS_OF_USE_VERSION = "2026-06-14"
+
+
+@router.post("/auth/accept-terms")
+async def accept_terms(request: Request):
+    """
+    Record that the current user has accepted the Terms of Use.
+
+    Idempotent: re-calling does not change the original `terms_accepted_at`
+    once set. This is the one-time-per-user gate that unblocks the rest of
+    the app for logged-in users.
+    """
+    user = await get_current_user(request)
+    user_id = user["user_id"]
+
+    # Only set if not already present (true one-time).
+    existing = user.get("terms_accepted_at")
+    if not existing:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        await _db.users.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "terms_accepted_at": now_iso,
+                    "terms_version": TERMS_OF_USE_VERSION,
+                }
+            },
+        )
+        accepted_at = now_iso
+        version = TERMS_OF_USE_VERSION
+    else:
+        accepted_at = existing
+        version = user.get("terms_version", TERMS_OF_USE_VERSION)
+
+    return {
+        "success": True,
+        "terms_accepted_at": accepted_at,
+        "terms_version": version,
+    }
 
 
 @router.patch("/user/update-profile")

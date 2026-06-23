@@ -11,6 +11,8 @@ interface User {
   is_admin?: boolean;
   admin_level?: string;
   display_name?: string;
+  terms_accepted_at?: string | null;
+  terms_version?: string | null;
 }
 
 interface SubscriptionStatus {
@@ -223,7 +225,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         picture: data.picture,
         is_admin: data.is_admin,
         admin_level: data.admin_level,
-        display_name: data.display_name
+        display_name: data.display_name,
+        terms_accepted_at: data.terms_accepted_at ?? null,
+        terms_version: data.terms_version ?? null,
       };
       
       console.log('SETTING USER:', JSON.stringify(userObj, null, 2));
