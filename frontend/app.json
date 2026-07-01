@@ -64,7 +64,21 @@
       "expo-font",
       "expo-web-browser",
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose photos for your profile and readings",
+          "cameraPermission": "Capture moments for your spiritual journey"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

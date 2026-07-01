@@ -5,10 +5,13 @@
  *
  * Flow: native splash (solid black) → this component (black bg → video) → app.
  * No intermediate static logo image — straight from black into motion.
+ *
+ * Defensive: if `expo-video` is missing (e.g. bad native build) or the video
+ * file cannot be loaded, we still hold a black background for a moment then
+ * dismiss so the app boots. The splash MUST never be able to hard-crash the app.
  */
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Animated, Easing, Platform } from 'react-native';
-import { useVideoPlayer, VideoView } from 'expo-video';
+import { StyleSheet, Animated, Easing, Platform } from 'react-native';
 
 const SPLASH_VIDEO = require('../assets/video/splash-video.mp4');
 
@@ -18,6 +21,21 @@ const FADE_OUT_MS = 700;
 // On web autoplay of MP4 can be flaky/blocked → fall back to a longer black
 // hold so users still get the brand pause without a broken-video gap.
 const WEB_BLACK_HOLD_MS = 2200;
+// Native fallback if expo-video is missing / crashes
+const NATIVE_FALLBACK_HOLD_MS = 1600;
+
+// Lazily require expo-video so a missing native module never crashes the
+// module load itself — the caller code below handles the missing case.
+let expoVideo: {
+  useVideoPlayer?: any;
+  VideoView?: any;
+} = {};
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  expoVideo = require('expo-video');
+} catch (e) {
+  console.warn('[Splash] expo-video not available, falling back to black hold:', e);
+}
 
 interface Props {
   onDone: () => void;
@@ -26,12 +44,26 @@ interface Props {
 export const SplashVideo: React.FC<Props> = ({ onDone }) => {
   const opacity = useState(new Animated.Value(1))[0];
   const [hidden, setHidden] = useState(false);
+  const videoAvailable = !!(expoVideo.useVideoPlayer && expoVideo.VideoView);
 
-  const player = useVideoPlayer(SPLASH_VIDEO, (p) => {
-    p.loop = false;
-    p.muted = true; // splash plays muted — respects silent mode
-    p.play();
-  });
+  // Hook must be called unconditionally — but we swallow any error inside so a
+  // codec / native-module failure doesn't hard-crash the app.
+  let player: any = null;
+  try {
+    if (videoAvailable && Platform.OS !== 'web') {
+      player = expoVideo.useVideoPlayer(SPLASH_VIDEO, (p: any) => {
+        p.loop = false;
+        p.muted = true; // splash plays muted — respects silent mode
+        try {
+          p.play();
+        } catch (e) {
+          console.warn('[Splash] player.play() failed:', e);
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('[Splash] useVideoPlayer threw:', e);
+  }
 
   const dismiss = React.useCallback(() => {
     if (hidden) return;
@@ -46,26 +78,35 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
 
   // End of playback → hold a beat → fade out
   useEffect(() => {
-    if (Platform.OS === 'web') return; // web uses a fixed timer instead
-    const sub = player.addListener('playToEnd', () => {
-      setTimeout(dismiss, HOLD_AFTER_END_MS);
-    });
+    if (Platform.OS === 'web' || !player) return;
+    let sub: any;
+    try {
+      sub = player.addListener('playToEnd', () => {
+        setTimeout(dismiss, HOLD_AFTER_END_MS);
+      });
+    } catch (e) {
+      console.warn('[Splash] addListener failed:', e);
+    }
     return () => {
-      try { sub.remove(); } catch {}
+      try {
+        sub?.remove?.();
+      } catch {
+        /* noop */
+      }
     };
   }, [player, dismiss]);
 
   // Safety / web timers
   useEffect(() => {
-    const delay = Platform.OS === 'web' ? WEB_BLACK_HOLD_MS : MAX_DURATION_MS;
+    let delay = MAX_DURATION_MS;
+    if (Platform.OS === 'web') delay = WEB_BLACK_HOLD_MS;
+    else if (!player) delay = NATIVE_FALLBACK_HOLD_MS;
     const t = setTimeout(dismiss, delay);
     return () => clearTimeout(t);
-  }, [dismiss]);
+  }, [dismiss, player]);
 
-  // Web: just show the black background — most browsers gate MP4 autoplay
-  // even when muted unless the user has interacted, so a guaranteed-black
-  // hold is more reliable than a half-broken video.
-  if (Platform.OS === 'web') {
+  // Web or missing native module: just show the black background.
+  if (Platform.OS === 'web' || !player) {
     return (
       <Animated.View
         style={[StyleSheet.absoluteFill, styles.container, { opacity }]}
@@ -74,6 +115,7 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
     );
   }
 
+  const { VideoView } = expoVideo;
   return (
     <Animated.View
       style={[StyleSheet.absoluteFill, styles.container, { opacity }]}
