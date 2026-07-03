@@ -1,19 +1,12 @@
 /**
  * Reprogramming session player.
  *
- * Flow
- * ----
- * 1. Fetch session metadata + duration options.
- * 2. User picks a length (10 / 20 / 30 / 45 / 60 min).
- * 3. Fetch the pre-cached MP3 narration (base64) — server-side is cached so
- *    subsequent taps of the same session are near-instant.
- * 4. Play with loop = true. A sleep-timer starts a gentle fade-out at the
- *    chosen length, then stops playback.
- *
- * The frontend only ever handles ONE base narration per topic; longer
- * durations are achieved by looping the narration + timing the stop. This
- * keeps ElevenLabs cost bounded and gives users a hypnotic pattern of
- * repetition (which is exactly how classical self-hypnosis is dosed).
+ * Polish v2 — includes:
+ *  • Skip / rewind controls (±15s) that wrap loop boundaries safely.
+ *  • Per-topic radial gradient behind the icon halo, using the session
+ *    color (from the backend catalog).
+ *  • Persists the user's preferred duration per session in AsyncStorage
+ *    so the next visit defaults to their last choice.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -27,6 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -35,9 +29,10 @@ import { AudioPlayerManager } from '../../utils/audioPlayer';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-// Duration presets shown to the user (must match server DURATION_PRESETS).
 const DEFAULT_DURATIONS = [10, 20, 30, 45, 60];
 const PLAY_VOLUME = 0.9;
+const SKIP_SECONDS = 15;
+const STORAGE_KEY = (id: string) => `reprogramming:duration:${id}`;
 
 interface SessionMeta {
   id: string;
@@ -48,6 +43,16 @@ interface SessionMeta {
   is_free: boolean;
   locked: boolean;
   duration_presets?: number[];
+}
+
+/** Convert a hex like "#a855f7" to an rgba() string with the given alpha. */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const short = h.length === 3;
+  const r = parseInt(short ? h[0] + h[0] : h.substring(0, 2), 16);
+  const g = parseInt(short ? h[1] + h[1] : h.substring(2, 4), 16);
+  const b = parseInt(short ? h[2] + h[2] : h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 export default function ReprogrammingSession() {
@@ -69,7 +74,7 @@ export default function ReprogrammingSession() {
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ---------------- Load session metadata ----------------
+  // ---------------- Load session metadata + persisted duration ----------------
   useEffect(() => {
     (async () => {
       try {
@@ -81,8 +86,17 @@ export default function ReprogrammingSession() {
         const data = await r.json();
         if (!r.ok) throw new Error(data?.detail || 'Could not load session');
         setMeta(data);
-        // Reasonable default: 20 min
-        setSelectedDuration(20);
+
+        // Restore last-picked duration for this session
+        const saved = await AsyncStorage.getItem(STORAGE_KEY(String(id)));
+        const validSet = new Set(
+          (data.duration_presets as number[] | undefined) || DEFAULT_DURATIONS,
+        );
+        if (saved && validSet.has(Number(saved))) {
+          setSelectedDuration(Number(saved));
+        } else {
+          setSelectedDuration(20);
+        }
       } catch (e: any) {
         setMetaError(e?.message || 'Could not load session');
       } finally {
@@ -116,12 +130,10 @@ export default function ReprogrammingSession() {
   const scheduleFadeOut = (durationMinutes: number) => {
     clearTimers();
     const totalMs = durationMinutes * 60 * 1000;
-    // Start fade 30s before the end for a graceful exit
     const fadeLeadMs = 30_000;
     const fadeStartAt = Math.max(totalMs - fadeLeadMs, 5000);
 
     fadeTimerRef.current = setTimeout(async () => {
-      // Gentle 30s linear fade
       try {
         const steps = 30;
         for (let i = steps; i >= 0; i -= 1) {
@@ -135,10 +147,22 @@ export default function ReprogrammingSession() {
       setSessionActive(false);
     }, fadeStartAt);
 
-    // Tick counter for the header
     tickIntervalRef.current = setInterval(() => {
       setElapsedSeconds((s) => s + 1);
     }, 1000);
+  };
+
+  const persistDuration = async (mins: number) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY(String(id)), String(mins));
+    } catch {
+      // best-effort persistence
+    }
+  };
+
+  const pickDuration = (mins: number) => {
+    setSelectedDuration(mins);
+    persistDuration(mins);
   };
 
   const startSession = async () => {
@@ -203,6 +227,26 @@ export default function ReprogrammingSession() {
     }
   };
 
+  const skip = async (deltaSeconds: number) => {
+    if (!playerRef.current) return;
+    try {
+      // Manual wrap because the narration loops — if we seek past the end,
+      // we simply restart from the beginning (or seek back to a safe point).
+      const dur = playerRef.current.getDuration() ?? 0;
+      const cur = playerRef.current.getCurrentTime() ?? 0;
+      let target = cur + deltaSeconds;
+      if (dur > 0) {
+        if (target < 0) target = 0;
+        if (target >= dur - 0.5) target = dur > 5 ? dur - 5 : 0;
+      } else if (target < 0) {
+        target = 0;
+      }
+      await playerRef.current.seekTo(target);
+    } catch {
+      // ignore transient seek errors
+    }
+  };
+
   const endSession = async () => {
     clearTimers();
     try {
@@ -222,6 +266,8 @@ export default function ReprogrammingSession() {
   const durations = meta?.duration_presets?.length
     ? meta.duration_presets
     : DEFAULT_DURATIONS;
+
+  const themeColor = meta?.color || '#7c3aed';
 
   // ---------------- RENDER ----------------
   return (
@@ -267,17 +313,27 @@ export default function ReprogrammingSession() {
         ) : !sessionActive ? (
           // ---- Pre-flight: pick length, then Begin ----
           <ScrollView contentContainerStyle={styles.setupScroll}>
-            <View
-              style={[
-                styles.heroIcon,
-                { backgroundColor: (meta?.color || '#7c3aed') + '22' },
-              ]}
-            >
-              <Ionicons
-                name={(meta?.icon as any) || 'moon'}
-                size={44}
-                color={meta?.color || '#a855f7'}
+            <View style={styles.heroWrap}>
+              {/* Radial-ish colored halo using two stacked gradients */}
+              <LinearGradient
+                colors={[hexToRgba(themeColor, 0.45), hexToRgba(themeColor, 0)]}
+                style={styles.heroGlow}
               />
+              <View
+                style={[
+                  styles.heroIcon,
+                  {
+                    backgroundColor: hexToRgba(themeColor, 0.22),
+                    borderColor: hexToRgba(themeColor, 0.6),
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={(meta?.icon as any) || 'moon'}
+                  size={44}
+                  color={themeColor}
+                />
+              </View>
             </View>
             <Text style={styles.subtitleText}>{meta?.subtitle}</Text>
 
@@ -286,10 +342,13 @@ export default function ReprogrammingSession() {
               {durations.map((m) => (
                 <TouchableOpacity
                   key={m}
-                  onPress={() => setSelectedDuration(m)}
+                  onPress={() => pickDuration(m)}
                   style={[
                     styles.durationBtn,
-                    selectedDuration === m && styles.durationBtnActive,
+                    selectedDuration === m && {
+                      backgroundColor: themeColor,
+                      borderColor: themeColor,
+                    },
                   ]}
                 >
                   <Text
@@ -310,7 +369,11 @@ export default function ReprogrammingSession() {
             </Text>
 
             <TouchableOpacity
-              style={[styles.beginBtn, starting && { opacity: 0.6 }]}
+              style={[
+                styles.beginBtn,
+                { backgroundColor: themeColor },
+                starting && { opacity: 0.6 },
+              ]}
               onPress={startSession}
               disabled={starting}
             >
@@ -348,17 +411,26 @@ export default function ReprogrammingSession() {
         ) : (
           // ---- Active player ----
           <View style={styles.playerContainer}>
-            <View
-              style={[
-                styles.playerHalo,
-                { backgroundColor: (meta?.color || '#7c3aed') + '30' },
-              ]}
-            >
-              <Ionicons
-                name={(meta?.icon as any) || 'moon'}
-                size={64}
-                color={meta?.color || '#a855f7'}
+            <View style={styles.playerHaloWrap}>
+              <LinearGradient
+                colors={[hexToRgba(themeColor, 0.55), hexToRgba(themeColor, 0)]}
+                style={styles.playerHaloGradient}
               />
+              <View
+                style={[
+                  styles.playerHalo,
+                  {
+                    backgroundColor: hexToRgba(themeColor, 0.28),
+                    borderColor: hexToRgba(themeColor, 0.7),
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={(meta?.icon as any) || 'moon'}
+                  size={64}
+                  color={themeColor}
+                />
+              </View>
             </View>
 
             <Text style={styles.timer}>{formatTime(elapsedSeconds)}</Text>
@@ -366,13 +438,36 @@ export default function ReprogrammingSession() {
               Session ends in about {selectedDuration} minutes
             </Text>
 
-            <View style={styles.controls}>
-              <TouchableOpacity onPress={togglePlay} style={styles.playBtn}>
+            {/* Transport controls: -15s | play/pause | +15s */}
+            <View style={styles.controlsRow}>
+              <TouchableOpacity
+                onPress={() => skip(-SKIP_SECONDS)}
+                style={styles.skipBtn}
+                accessibilityLabel="Rewind 15 seconds"
+              >
+                <Ionicons name="play-back" size={26} color="#e9d5ff" />
+                <Text style={styles.skipLabel}>15s</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={togglePlay}
+                style={[styles.playBtn, { backgroundColor: themeColor }]}
+                accessibilityLabel={playing ? 'Pause' : 'Play'}
+              >
                 <Ionicons
                   name={playing ? 'pause' : 'play'}
                   size={40}
                   color="#0f0321"
                 />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => skip(SKIP_SECONDS)}
+                style={styles.skipBtn}
+                accessibilityLabel="Skip 15 seconds"
+              >
+                <Ionicons name="play-forward" size={26} color="#e9d5ff" />
+                <Text style={styles.skipLabel}>15s</Text>
               </TouchableOpacity>
             </View>
 
@@ -458,18 +553,32 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
   },
+  heroWrap: {
+    width: 220,
+    height: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  heroGlow: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    opacity: 0.9,
+  },
   heroIcon: {
     width: 96,
     height: 96,
     borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
+    borderWidth: 1,
   },
   subtitleText: {
     color: '#c4b5fd',
     fontSize: 14,
-    marginTop: 12,
+    marginTop: 4,
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -497,10 +606,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(159,122,234,0.3)',
   },
-  durationBtnActive: {
-    backgroundColor: '#a855f7',
-    borderColor: '#a855f7',
-  },
   durationBtnText: {
     color: '#c4b5fd',
     fontSize: 14,
@@ -526,7 +631,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 999,
-    backgroundColor: '#fbbf24',
   },
   beginBtnText: {
     color: '#0f0321',
@@ -555,19 +659,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
   },
+  playerHaloWrap: {
+    width: 260,
+    height: 260,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 22,
+  },
+  playerHaloGradient: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+  },
   playerHalo: {
     width: 160,
     height: 160,
     borderRadius: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 30,
+    borderWidth: 1,
   },
   timer: {
     color: '#e9d5ff',
     fontSize: 38,
     fontWeight: '700',
-    marginTop: 24,
+    marginTop: 6,
     letterSpacing: 2,
   },
   timerSub: {
@@ -575,14 +692,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  controls: {
-    marginTop: 32,
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 30,
+    gap: 22,
+  },
+  skipBtn: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(159,122,234,0.4)',
+    backgroundColor: 'rgba(45,27,78,0.55)',
+  },
+  skipLabel: {
+    color: '#c4b5fd',
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+    letterSpacing: 0.4,
   },
   playBtn: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#fbbf24',
     alignItems: 'center',
     justifyContent: 'center',
   },

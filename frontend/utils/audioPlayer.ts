@@ -308,6 +308,77 @@ export class AudioPlayerManager {
     }
   }
 
+  /**
+   * Seek to an absolute position in seconds. Safely clamped to [0, duration].
+   * Returns the new position (or null if the player isn't loaded).
+   */
+  async seekTo(seconds: number): Promise<number | null> {
+    const clamped = Math.max(0, seconds);
+    if (this.isWeb && this.webAudioElement) {
+      const dur = this.webAudioElement.duration || 0;
+      const target = dur > 0 ? Math.min(clamped, Math.max(0, dur - 0.1)) : clamped;
+      try {
+        this.webAudioElement.currentTime = target;
+      } catch (e) {
+        // Some browsers throw if the media isn't seekable yet
+      }
+      return this.webAudioElement.currentTime;
+    }
+    if (this.nativePlayer) {
+      try {
+        const dur = this.nativePlayer.duration || 0;
+        const target = dur > 0 ? Math.min(clamped, Math.max(0, dur - 0.1)) : clamped;
+        if (typeof this.nativePlayer.seekTo === 'function') {
+          await this.nativePlayer.seekTo(target);
+        } else {
+          this.nativePlayer.currentTime = target;
+        }
+        return this.nativePlayer.currentTime ?? target;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /** Seek by a relative offset (positive = forward, negative = rewind). */
+  async seekBy(deltaSeconds: number): Promise<number | null> {
+    const current = this.getCurrentTime() ?? 0;
+    return this.seekTo(current + deltaSeconds);
+  }
+
+  /** Current playback position in seconds (or null when unavailable). */
+  getCurrentTime(): number | null {
+    if (this.isWeb && this.webAudioElement) {
+      return this.webAudioElement.currentTime ?? null;
+    }
+    if (this.nativePlayer) {
+      try {
+        return this.nativePlayer.currentTime ?? null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /** Total audio duration in seconds (or null when unknown). */
+  getDuration(): number | null {
+    if (this.isWeb && this.webAudioElement) {
+      const d = this.webAudioElement.duration;
+      return Number.isFinite(d) ? d : null;
+    }
+    if (this.nativePlayer) {
+      try {
+        const d = this.nativePlayer.duration;
+        return Number.isFinite(d) ? d : null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
   async unload(): Promise<void> {
     this.stopStatusPolling();
     try {
