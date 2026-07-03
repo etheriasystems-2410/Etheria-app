@@ -438,6 +438,34 @@ export default function ReprogrammingSession() {
               Session ends in about {selectedDuration} minutes
             </Text>
 
+            {/* Progress bar (visual only) — elapsed vs planned duration */}
+            <View style={styles.progressWrap}>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      backgroundColor: themeColor,
+                      width: `${Math.min(
+                        100,
+                        (elapsedSeconds / Math.max(1, selectedDuration * 60)) * 100,
+                      )}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.progressLabels}>
+                <Text style={styles.progressLabelText}>
+                  {formatTime(elapsedSeconds)}
+                </Text>
+                <Text style={styles.progressLabelText}>
+                  −{formatTime(
+                    Math.max(0, selectedDuration * 60 - elapsedSeconds),
+                  )}
+                </Text>
+              </View>
+            </View>
+
             {/* Transport controls: -15s | play/pause | +15s */}
             <View style={styles.controlsRow}>
               <TouchableOpacity
@@ -691,6 +719,32 @@ const styles = StyleSheet.create({
     color: '#9f7aea',
     fontSize: 12,
     marginTop: 4,
+  },
+  progressWrap: {
+    width: '100%',
+    marginTop: 16,
+    paddingHorizontal: 4,
+  },
+  progressTrack: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(45,27,78,0.7)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  progressLabelText: {
+    color: '#c4b5fd',
+    fontSize: 11,
+    fontVariant: ['tabular-nums'],
   },
   controlsRow: {
     flexDirection: 'row',

@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Switch,
+  Alert,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -88,6 +90,10 @@ export default function AdminPanel() {
   // AI Moderation Settings
   const [aiModerationEnabled, setAiModerationEnabled] = useState(true);
   const [togglingModeration, setTogglingModeration] = useState(false);
+
+  // Reprogramming cache warmer
+  const [warmingCache, setWarmingCache] = useState(false);
+  const [cacheReport, setCacheReport] = useState<string | null>(null);
 
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -240,6 +246,61 @@ export default function AdminPanel() {
       setError('Failed to process emails');
     } finally {
       setProcessingEmails(false);
+    }
+  };
+
+  const warmReprogrammingCache = async () => {
+    // Warns the admin that this may take 1-3 minutes and cost ElevenLabs credits.
+    const proceed = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'Warm reprogramming cache?',
+        'This will re-synthesise every hypnosis session via ElevenLabs and cache the audio on disk. It may take 1-3 minutes and will consume TTS credits. Continue?',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Warm cache', style: 'destructive', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) },
+      );
+    });
+    if (!proceed) return;
+
+    setWarmingCache(true);
+    setCacheReport(null);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/reprogramming/warm-cache`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` },
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data?.detail || 'Failed to warm cache');
+        return;
+      }
+      const entries = Object.entries(data.results || {}) as [string, any][];
+      const okCount = entries.filter(([, r]) => r?.ok).length;
+      const failCount = entries.length - okCount;
+      setSuccess(`Reprogramming cache warmed: ${okCount}/${entries.length} sessions.`);
+      const totalBytes = entries.reduce(
+        (sum, [, r]) => sum + (r?.ok ? Number(r.bytes || 0) : 0),
+        0,
+      );
+      const lines = [
+        `${okCount} succeeded · ${failCount} failed`,
+        `${(totalBytes / (1024 * 1024)).toFixed(1)} MB cached`,
+      ];
+      const fails = entries.filter(([, r]) => !r?.ok);
+      if (fails.length) {
+        lines.push('Failed: ' + fails.map(([id]) => id).join(', '));
+      }
+      setCacheReport(lines.join(' · '));
+    } catch (err) {
+      setError('Failed to warm cache');
+    } finally {
+      setWarmingCache(false);
     }
   };
 
@@ -631,6 +692,38 @@ export default function AdminPanel() {
         </View>
       </View>
 
+      {/* Reprogramming Cache Warmer */}
+      <View style={reprogStyles.card}>
+        <View style={reprogStyles.left}>
+          <Ionicons name="cloud-download-outline" size={16} color="#a855f7" />
+          <View style={{ marginLeft: 8, flex: 1 }}>
+            <Text style={reprogStyles.title}>Reprogramming audio cache</Text>
+            <Text style={reprogStyles.hint}>
+              Re-synthesise all 12 hypnosis sessions via ElevenLabs. Run after
+              editing scripts.
+            </Text>
+            {cacheReport ? (
+              <Text style={reprogStyles.report}>{cacheReport}</Text>
+            ) : null}
+          </View>
+        </View>
+        <TouchableOpacity
+          onPress={warmReprogrammingCache}
+          disabled={warmingCache}
+          style={[reprogStyles.button, warmingCache && { opacity: 0.6 }]}
+          accessibilityLabel="Warm reprogramming cache"
+        >
+          {warmingCache ? (
+            <ActivityIndicator color="#0f0321" size="small" />
+          ) : (
+            <>
+              <Ionicons name="flame" size={14} color="#0f0321" />
+              <Text style={reprogStyles.buttonText}>Warm cache</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.content}
         refreshControl={
@@ -758,3 +851,62 @@ export default function AdminPanel() {
     </SafeAreaView>
   );
 }
+
+
+// Standalone stylesheet for the Reprogramming warm-cache card (kept local to
+// this file since it's only used inside AdminPanel).
+const reprogStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.35)',
+    backgroundColor: 'rgba(30,10,60,0.55)',
+  },
+  left: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+    marginRight: 12,
+  },
+  title: {
+    color: '#e9d5ff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  hint: {
+    color: '#c4b5fd',
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  report: {
+    color: '#22c55e',
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#fbbf24',
+    minWidth: 110,
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#0f0321',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+});
