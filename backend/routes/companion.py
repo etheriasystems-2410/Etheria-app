@@ -100,8 +100,6 @@ async def _generate_whisper(guide_name: str, seeker_name: Optional[str] = None) 
     if not persona:
         persona = GUIDE_PERSONALITIES.get("Male Guide", "")
 
-    seeker = (seeker_name or "seeker").strip().split()[0] if seeker_name else "seeker"
-
     system = (
         f"{persona}\n\n"
         "You are sending a single short whisper to the seeker — a one-line "
@@ -263,3 +261,106 @@ async def get_whisper(user: dict = Depends(get_current_user)):
         },
     )
     return {"whisper": whisper, "cached": False, "guide": companion}
+
+
+# ---------------------------------------------------------------------------
+# Email me my Companion's whisper — one-way "talk to your guide outside the app"
+# ---------------------------------------------------------------------------
+# Sends a beautifully-formatted email FROM the Etheria system TO the user's
+# registered address containing a fresh whisper from their chosen Companion
+# Guide. The `reply_to` is set to `etheriasystems@gmail.com` so if the user
+# replies to the email, their reply reaches a monitored human inbox.
+#
+# Rate-limit: max 1 email per user per 30 minutes to keep Resend costs bounded.
+COMPANION_EMAIL_COOLDOWN_SECONDS = 60 * 30
+
+
+@router.post("/email-me")
+async def email_me_from_companion(user: dict = Depends(get_current_user)):
+    """Send a fresh whisper as an email FROM the user's Companion TO their
+    registered email address."""
+    user_doc = await db.users.find_one({"user_id": user["user_id"]}) or {}
+
+    companion = user_doc.get("companion_guide")
+    if not companion:
+        raise HTTPException(
+            status_code=404,
+            detail="No Companion selected. Choose one from Spirit Guides first.",
+        )
+
+    email = user_doc.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="No email on file for this user")
+
+    now = datetime.now(timezone.utc)
+    last_sent_at = user_doc.get("companion_last_email_at")
+    if isinstance(last_sent_at, datetime) and last_sent_at.tzinfo is None:
+        last_sent_at = last_sent_at.replace(tzinfo=timezone.utc)
+    if isinstance(last_sent_at, datetime):
+        seconds_since = (now - last_sent_at).total_seconds()
+        if seconds_since < COMPANION_EMAIL_COOLDOWN_SECONDS:
+            wait_s = int(COMPANION_EMAIL_COOLDOWN_SECONDS - seconds_since)
+            wait_m = max(1, wait_s // 60)
+            raise HTTPException(
+                status_code=429,
+                detail=f"Please wait {wait_m} more minute(s) before requesting another whisper by email.",
+            )
+
+    # Fresh whisper — always regenerate for the email so it's not a repeat of
+    # what they've already seen in the bubble.
+    name_hint = user_doc.get("display_name") or user_doc.get("name")
+    whisper = await _generate_whisper(companion, name_hint)
+
+    # Persist so the bubble picks up the same fresh message on its next fetch.
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {
+            "$set": {
+                "companion_whisper": whisper,
+                "companion_whisper_at": now,
+                "companion_last_email_at": now,
+            }
+        },
+    )
+
+    seeker = name_hint or "beloved"
+    subject = f"✨ A whisper from {companion}"
+    html = f"""
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d0015;color:#e9d5ff;padding:32px 20px;max-width:560px;margin:0 auto;border-radius:16px;">
+      <p style="color:#fbbf24;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;text-align:center;margin:0 0 8px;">✦ A message from your Companion ✦</p>
+      <h1 style="color:#e9d5ff;font-size:22px;text-align:center;margin:0 0 4px;font-weight:800;">{companion}</h1>
+      <p style="color:#9f7aea;font-size:12px;text-align:center;margin:0 0 24px;">whispers to {seeker}…</p>
+      <div style="background:rgba(124,58,237,0.15);border-left:3px solid #a855f7;border-radius:8px;padding:20px 22px;margin:20px 0;">
+        <p style="color:#e9d5ff;font-size:16px;line-height:1.55;font-style:italic;margin:0;">"{whisper}"</p>
+      </div>
+      <p style="color:#9f7aea;font-size:13px;text-align:center;margin:28px 0 8px;">Open Etheria for a full reading, deeper conversation, or to change your Companion.</p>
+    </div>
+    """
+    text = f"✨ A whisper from {companion}\n\n\"{whisper}\"\n\n— Open Etheria to continue the conversation.\n"
+
+    try:
+        from services.email_service import send_email
+        sent = await send_email(
+            to=email,
+            subject=subject,
+            html=html,
+            text=text,
+            # No reply_to → email_service auto-appends the no-reply disclaimer
+            # instructing the user to forward replies to etheriasystems@gmail.com.
+        )
+    except Exception as e:
+        logging.error(f"[Companion] email send failed: {e}")
+        sent = False
+
+    if not sent:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not send email right now. Please try again in a bit.",
+        )
+
+    return {
+        "success": True,
+        "sent_to": email,
+        "companion": companion,
+        "whisper": whisper,
+    }

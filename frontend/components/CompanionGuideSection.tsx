@@ -50,7 +50,7 @@ export default function CompanionGuideSection({
   onUpgradePress,
 }: Props) {
   const { isPremium } = useAuth();
-  const { state, select, clear } = useCompanionGuide();
+  const { state, select, clear, emailMe } = useCompanionGuide();
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -111,6 +111,24 @@ export default function CompanionGuideSection({
     );
   };
 
+  const [emailing, setEmailing] = React.useState(false);
+  const handleEmailMe = async () => {
+    setEmailing(true);
+    try {
+      const res = await emailMe();
+      if (res.ok) {
+        Alert.alert(
+          '✨ Whisper on its way',
+          `Your Companion has sent a message to ${res.sent_to}. Check your inbox.`,
+        );
+      } else {
+        Alert.alert('Could not send', res.error || 'Please try again.');
+      }
+    } finally {
+      setEmailing(false);
+    }
+  };
+
   return (
     <>
       <View style={styles.card}>
@@ -167,10 +185,22 @@ export default function CompanionGuideSection({
         )}
 
         {currentGuide && (
-          <TouchableOpacity style={styles.releaseBtn} onPress={handleClear}>
-            <Ionicons name="close-circle-outline" size={14} color="#9f7aea" />
-            <Text style={styles.releaseBtnText}>Release Companion</Text>
-          </TouchableOpacity>
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.actionBtnPrimary, emailing && { opacity: 0.6 }]}
+              onPress={handleEmailMe}
+              disabled={emailing}
+            >
+              <Ionicons name="mail" size={13} color="#1a0033" />
+              <Text style={styles.actionBtnPrimaryText}>
+                {emailing ? 'Sending…' : 'Email me a whisper'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtn} onPress={handleClear}>
+              <Ionicons name="close-circle-outline" size={13} color="#9f7aea" />
+              <Text style={styles.actionBtnText}>Release</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -320,6 +350,32 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   releaseBtnText: { color: '#9f7aea', fontSize: 11 },
+
+  // New: side-by-side action buttons (Email me / Release) below the guide card
+  actionsRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(45, 27, 78, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(159, 122, 234, 0.35)',
+  },
+  actionBtnPrimary: {
+    backgroundColor: '#fbbf24',
+    borderColor: '#fbbf24',
+  },
+  actionBtnPrimaryText: { color: '#1a0033', fontSize: 12, fontWeight: '800' },
+  actionBtnText: { color: '#9f7aea', fontSize: 12, fontWeight: '600' },
 
   // Modal
   modalOverlay: {

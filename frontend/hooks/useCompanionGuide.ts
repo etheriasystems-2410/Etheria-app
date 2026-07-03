@@ -172,6 +172,38 @@ export function useCompanionGuide() {
     await persist(EMPTY);
   }, [authToken, headers, persist]);
 
+  // Sends the user an email FROM their Companion Guide (one-way).
+  // Rate-limited to once every 30 minutes server-side.
+  const emailMe = useCallback(async (): Promise<{
+    ok: boolean;
+    error?: string;
+    sent_to?: string;
+  }> => {
+    if (!authToken) return { ok: false, error: 'Not signed in' };
+    if (!state.companion) return { ok: false, error: 'No Companion selected' };
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/companion-guide/email-me`, {
+        method: 'POST',
+        headers: headers(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { ok: false, error: data?.detail || 'Could not send email.' };
+      }
+      // Refresh local state so the newly-generated whisper shows in the bubble too
+      if (data?.whisper) {
+        await persist({
+          ...state,
+          whisper: data.whisper,
+          whisper_at: new Date().toISOString(),
+        });
+      }
+      return { ok: true, sent_to: data?.sent_to };
+    } catch {
+      return { ok: false, error: 'Network error.' };
+    }
+  }, [authToken, headers, state, persist]);
+
   return {
     state,
     loading,
@@ -179,6 +211,7 @@ export function useCompanionGuide() {
     fetchNewWhisper,
     select,
     clear,
+    emailMe,
   };
 }
 

@@ -22,7 +22,6 @@ import {
   Easing,
   Image,
   PanResponder,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -221,7 +220,6 @@ export default function CompanionBubble() {
   const onAuthScreen =
     HIDDEN_SEGMENTS[segments[0] as string] || HIDDEN_SEGMENTS[segKey];
 
-  if (Platform.OS === 'web') return null; // web preview keeps things calm
   if (!isAuthenticated || !isPremium || !state.companion || onAuthScreen) {
     return null;
   }

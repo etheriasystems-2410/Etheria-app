@@ -13,6 +13,7 @@ import MenuButton from '../components/drawer/MenuButton';
 import MessagesDrawerLabel from '../components/drawer/MessagesDrawerLabel';
 import CustomDrawerContent from '../components/drawer/CustomDrawerContent';
 import CompanionBubble from '../components/CompanionBubble';
+import CompanionHeaderButton from '../components/CompanionHeaderButton';
 import SplashVideo from '../components/SplashVideo';
 
 
@@ -80,6 +81,7 @@ function ProtectedLayout() {  const { isAuthenticated, loading, user } = useAuth
           fontWeight: 'bold',
         },
         headerLeft: () => <MenuButton navigation={navigation} />,
+        headerRight: () => <CompanionHeaderButton />,
       })}
     >
       <Drawer.Screen
