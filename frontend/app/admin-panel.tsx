@@ -94,6 +94,13 @@ export default function AdminPanel() {
   // Reprogramming cache warmer
   const [warmingCache, setWarmingCache] = useState(false);
   const [cacheReport, setCacheReport] = useState<string | null>(null);
+  const [cacheStats, setCacheStats] = useState<{
+    total_chars: number;
+    cost_estimate_usd: { low: number; high: number };
+    cached_count: number;
+    sessions_count: number;
+    cached_mb: number;
+  } | null>(null);
 
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +112,7 @@ export default function AdminPanel() {
     // `?token=null` → backend returns 403 → user list appears empty.
     if (user?.is_admin && authToken) {
       loadData();
+      fetchCacheStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authToken, activeTab, userSubTab]);
@@ -297,10 +305,27 @@ export default function AdminPanel() {
         lines.push('Failed: ' + fails.map(([id]) => id).join(', '));
       }
       setCacheReport(lines.join(' · '));
+      // Refresh stats so the badge reflects new cached_count.
+      fetchCacheStats();
     } catch (err) {
       setError('Failed to warm cache');
     } finally {
       setWarmingCache(false);
+    }
+  };
+
+  const fetchCacheStats = async () => {
+    if (!authToken) return;
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/reprogramming/cache-stats`,
+        { headers: { 'Authorization': `Bearer ${authToken}` } },
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      setCacheStats(data);
+    } catch {
+      // silent
     }
   };
 
@@ -702,6 +727,49 @@ export default function AdminPanel() {
               Re-synthesise all 12 hypnosis sessions via ElevenLabs. Run after
               editing scripts.
             </Text>
+            <View style={reprogStyles.badgeRow}>
+              {cacheStats ? (
+                <>
+                  <View style={reprogStyles.badge}>
+                    <Ionicons name="cash-outline" size={11} color="#22c55e" />
+                    <Text style={reprogStyles.badgeText}>
+                      {`~$${cacheStats.cost_estimate_usd.low.toFixed(0)}–$${cacheStats.cost_estimate_usd.high.toFixed(0)} / run`}
+                    </Text>
+                  </View>
+                  <View style={reprogStyles.badge}>
+                    <Ionicons name="document-text-outline" size={11} color="#c4b5fd" />
+                    <Text style={reprogStyles.badgeText}>
+                      {`${(cacheStats.total_chars / 1000).toFixed(0)}k chars`}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      reprogStyles.badge,
+                      cacheStats.cached_count === cacheStats.sessions_count
+                        ? reprogStyles.badgeGood
+                        : reprogStyles.badgeWarn,
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        cacheStats.cached_count === cacheStats.sessions_count
+                          ? 'checkmark-circle-outline'
+                          : 'alert-circle-outline'
+                      }
+                      size={11}
+                      color={
+                        cacheStats.cached_count === cacheStats.sessions_count
+                          ? '#22c55e'
+                          : '#fbbf24'
+                      }
+                    />
+                    <Text style={reprogStyles.badgeText}>
+                      {`${cacheStats.cached_count}/${cacheStats.sessions_count} cached · ${cacheStats.cached_mb.toFixed(1)} MB`}
+                    </Text>
+                  </View>
+                </>
+              ) : null}
+            </View>
             {cacheReport ? (
               <Text style={reprogStyles.report}>{cacheReport}</Text>
             ) : null}
@@ -892,6 +960,36 @@ const reprogStyles = StyleSheet.create({
     fontSize: 10,
     marginTop: 4,
     fontWeight: '600',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 6,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(15,5,35,0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.35)',
+  },
+  badgeGood: {
+    borderColor: 'rgba(34,197,94,0.5)',
+    backgroundColor: 'rgba(34,197,94,0.1)',
+  },
+  badgeWarn: {
+    borderColor: 'rgba(251,191,36,0.5)',
+    backgroundColor: 'rgba(251,191,36,0.1)',
+  },
+  badgeText: {
+    color: '#e9d5ff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   button: {
     flexDirection: 'row',

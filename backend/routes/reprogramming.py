@@ -343,6 +343,46 @@ async def audio_base64(
     }
 
 
+@router.get("/cache-stats")
+async def cache_stats(user: dict = Depends(get_current_user)):
+    """Admin-only: returns character totals, ElevenLabs cost estimate, and
+    on-disk cache footprint. Used to render the warm-cache badge in the
+    admin panel."""
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    total_chars = 0
+    per_session_chars: dict[str, int] = {}
+    for sid in TOPIC_BODIES:
+        script = build_full_script(sid)
+        per_session_chars[sid] = len(script)
+        total_chars += len(script)
+
+    cached_bytes = 0
+    cached_count = 0
+    for s in SESSIONS:
+        p = _cache_path_for(s["id"])
+        if p.exists() and p.stat().st_size > 4096:
+            cached_count += 1
+            cached_bytes += p.stat().st_size
+
+    # ElevenLabs pricing (approx): $0.00018 – $0.00030 per character depending
+    # on the plan tier. We surface a low/high range so the admin sees a
+    # realistic bracket.
+    low_usd = round(total_chars * 0.00018, 2)
+    high_usd = round(total_chars * 0.00030, 2)
+
+    return {
+        "sessions_count": len(SESSIONS),
+        "total_chars": total_chars,
+        "per_session_chars": per_session_chars,
+        "cost_estimate_usd": {"low": low_usd, "high": high_usd},
+        "cached_count": cached_count,
+        "cached_bytes": cached_bytes,
+        "cached_mb": round(cached_bytes / (1024 * 1024), 1),
+    }
+
+
 @router.post("/warm-cache")
 async def warm_cache(user: dict = Depends(get_current_user)):
     """Admin-only: pre-synthesise every session so first-user latency is zero.

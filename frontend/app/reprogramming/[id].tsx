@@ -12,6 +12,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -69,6 +70,7 @@ export default function ReprogrammingSession() {
   const [playing, setPlaying] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [progressWidth, setProgressWidth] = useState(0);
 
   const playerRef = useRef<AudioPlayerManager | null>(null);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -127,11 +129,14 @@ export default function ReprogrammingSession() {
     }
   };
 
-  const scheduleFadeOut = (durationMinutes: number) => {
+  const scheduleFadeOut = (durationMinutes: number, elapsedOffset: number = 0) => {
     clearTimers();
     const totalMs = durationMinutes * 60 * 1000;
+    const remainingMs = Math.max(0, totalMs - elapsedOffset * 1000);
     const fadeLeadMs = 30_000;
-    const fadeStartAt = Math.max(totalMs - fadeLeadMs, 5000);
+    // Kick fade in 30s before the session ends. If we're already inside the
+    // fade window (or past it), start immediately.
+    const fadeStartAt = Math.max(remainingMs - fadeLeadMs, 200);
 
     fadeTimerRef.current = setTimeout(async () => {
       try {
@@ -150,6 +155,30 @@ export default function ReprogrammingSession() {
     tickIntervalRef.current = setInterval(() => {
       setElapsedSeconds((s) => s + 1);
     }, 1000);
+  };
+
+  /**
+   * Scrub the SESSION timeline (not the audio) to `newElapsedSeconds`.
+   * The audio keeps looping — this only affects the sleep-timer / fade-out.
+   * Loop-safe because the audio position is untouched.
+   */
+  const scrubSessionTo = (newElapsedSeconds: number) => {
+    if (!sessionActive) return;
+    const totalSeconds = selectedDuration * 60;
+    const clamped = Math.max(0, Math.min(totalSeconds, Math.round(newElapsedSeconds)));
+    setElapsedSeconds(clamped);
+    // Reschedule the fade-out timer based on the new position
+    scheduleFadeOut(selectedDuration, clamped);
+    // If we scrubbed all the way to the end, stop immediately.
+    if (clamped >= totalSeconds) {
+      (async () => {
+        try {
+          await playerRef.current?.unload();
+        } catch {}
+        setPlaying(false);
+        setSessionActive(false);
+      })();
+    }
   };
 
   const persistDuration = async (mins: number) => {
@@ -438,22 +467,55 @@ export default function ReprogrammingSession() {
               Session ends in about {selectedDuration} minutes
             </Text>
 
-            {/* Progress bar (visual only) — elapsed vs planned duration */}
-            <View style={styles.progressWrap}>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      backgroundColor: themeColor,
-                      width: `${Math.min(
-                        100,
-                        (elapsedSeconds / Math.max(1, selectedDuration * 60)) * 100,
-                      )}%`,
-                    },
-                  ]}
-                />
-              </View>
+            {/* Progress bar — tap anywhere to scrub the session timeline.
+                The audio itself continues to loop, so scrubbing is loop-safe. */}
+            <View
+              style={styles.progressWrap}
+              onLayout={(e) => setProgressWidth(e.nativeEvent.layout.width - 8)}
+            >
+              <Pressable
+                onPress={(e) => {
+                  const w = progressWidth;
+                  if (w <= 0) return;
+                  const x = Math.max(
+                    0,
+                    Math.min(w, e.nativeEvent.locationX),
+                  );
+                  const totalSecs = selectedDuration * 60;
+                  scrubSessionTo((x / w) * totalSecs);
+                }}
+                accessibilityLabel="Seek session"
+                style={styles.progressTouchTarget}
+              >
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        backgroundColor: themeColor,
+                        width: `${Math.min(
+                          100,
+                          (elapsedSeconds / Math.max(1, selectedDuration * 60)) * 100,
+                        )}%`,
+                      },
+                    ]}
+                  />
+                  {/* Small handle at the current position for affordance */}
+                  <View
+                    style={[
+                      styles.progressHandle,
+                      {
+                        backgroundColor: themeColor,
+                        borderColor: '#0f0321',
+                        left: `${Math.min(
+                          100,
+                          (elapsedSeconds / Math.max(1, selectedDuration * 60)) * 100,
+                        )}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </Pressable>
               <View style={styles.progressLabels}>
                 <Text style={styles.progressLabelText}>
                   {formatTime(elapsedSeconds)}
@@ -725,16 +787,30 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 4,
   },
+  progressTouchTarget: {
+    paddingVertical: 12,   // enlarge tap area vertically for easy scrubbing
+    marginVertical: -6,    // keep visual layout unchanged
+  },
   progressTrack: {
     width: '100%',
     height: 6,
     borderRadius: 3,
     backgroundColor: 'rgba(45,27,78,0.7)',
-    overflow: 'hidden',
+    overflow: 'visible',
+    justifyContent: 'center',
   },
   progressFill: {
-    height: '100%',
+    height: 6,
     borderRadius: 3,
+  },
+  progressHandle: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginLeft: -8,
+    top: -5,
+    borderWidth: 2,
   },
   progressLabels: {
     flexDirection: 'row',
