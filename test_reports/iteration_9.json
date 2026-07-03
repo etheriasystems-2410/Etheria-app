@@ -1,0 +1,37 @@
+{
+  "summary": "Reprogramming feature — full frontend E2E re-run after CompanionBubble fix. VERIFIED: (a) Metro cache had to be cleared once (rm -rf /app/frontend/.metro-cache + supervisorctl restart expo) because the old bundle with the buggy `[...bubblePosition.transform, {scale: pulseAnim}]` was still being served to the browser and reproduced the exact same crash even though the source file already had `pan.getTranslateTransform()` at line 231 and `[...(bubbleTranslate || []), { scale: pulseAnim }]` at line 273. After the cache clear the CompanionBubble crash disappears completely — zero pageerrors during the whole session. (b) Admin login with math captcha works. (c) /reprogramming route renders, admin sees 2 FREE badges (Deep Sleep + Deep Confidence) and ZERO PREMIUM lock badges (correct — admin has lifetime premium). (d) Deep Sleep setup screen renders correctly: moon icon, 'Drift into effortless rest' subtitle, duration pills 10m/20m/30m/45m/60m with 20m selected by default, 'Begin Session' button, and 3 tip rows. (e) Tapping 30m moves active state and updates hint text to include 'fade out at 30 minutes'. (f) Begin Session loads the active player: big halo icon, elapsed timer ticking upward (screenshot shows 00:17), 'Session ends in about 30 minutes' subtitle, large gold play/pause button, and 'End Session' pill at bottom. (g) Play/Pause toggle: hint switches to 'Paused' on first tap, returns to '✨ Close your eyes and let the words wash over you.' on second tap. (h) End Session tap navigates back (router.back()). ONE minor console warning surfaced from the web audio layer: 'Web audio error: Event' — non-blocking; the UI keeps updating and the pause/play hint text still toggles correctly. React Native issues detected: none new; the previously reported CompanionBubble transform issue is confirmed fixed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CompanionBubble.tsx", "issue": "The source code fix (line 231 `bubbleTranslate = pan.getTranslateTransform()` + line 273 spread of `bubbleTranslate || []`) is correct, but Metro's persistent cache under /app/frontend/.metro-cache continued to serve the OLD buggy bundle to browsers, so the crash still reproduced until the cache was cleared and expo restarted. Consider adding a post-fix workflow step (or CI hint) to clear .metro-cache after CompanionBubble-level rewrites. This is a Metro-cache artifact of the fix, not a code bug.", "testID": "n/a", "priority": "LOW"},
+      {"component": "reprogramming/[id].tsx", "issue": "Play/Pause button, End Session button, duration pills, and Begin Session button have no `testID` prop, so tests must fall back to text-based selectors and coordinate clicks (worked here, but brittle). Recommend adding testID to: begin-session-btn, play-pause-btn, end-session-btn, duration-{10|20|30|45|60}m.", "testID": "missing", "priority": "LOW"},
+      {"component": "reprogramming/[id].tsx", "issue": "One console error surfaced during active playback: 'Web audio error: Event'. Non-blocking (timer keeps ticking, pause/play toggle still works), but investigate the AudioPlayerManager on web — it may indicate the base64 blob decode is partially failing or that the browser is throttling a hidden audio element. Suggest wrapping with a user-visible warning if playback is silent.", "testID": "n/a", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/reprogramming/[id] (active player)", "issues": ["Play/pause button is a beautifully sized 90x90 gold pill (screenshot verified). End Session pill has adequate touch target. Timer is centered and legible at 00:17."]},
+      {"screen": "/reprogramming (grid)", "issues": ["FREE badge is legible green pill on Deep Sleep + Deep Confidence. Admin sees no PREMIUM lock badges — correct."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_reprogramming.py (unchanged from iter 8)",
+    "/app/test_reports/pytest/reprogramming_results.xml (unchanged from iter 8)"
+  ],
+  "action_items": [
+    "OPTIONAL: Add testID props to interactive elements in /app/frontend/app/reprogramming/[id].tsx (begin-session-btn, play-pause-btn, end-session-btn, duration-*m) for stable future E2E testing.",
+    "OPTIONAL: Investigate the 'Web audio error: Event' console warning surfaced during Deep Sleep playback on RN-Web — may need a try/catch around AudioPlayerManager.play() on web with a user-visible fallback.",
+    "DOCUMENT: When editing files under components/ that render in the root layout (e.g., CompanionBubble), remind future agents to clear /app/frontend/.metro-cache and restart the expo supervisor process so browsers stop receiving the stale bundle."
+  ],
+  "critical_code_review_comments": [
+    "CompanionBubble.tsx now correctly uses `pan.getTranslateTransform()` and defensively spreads with `|| []` — safe for both native and RN-Web.",
+    "reprogramming/[id].tsx: endSession() uses router.back(), which is correct for the normal user flow (drawer → /reprogramming → /reprogramming/[id] → back). Direct URL entry may pop to a different origin — expected behavior."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (10/10 from iter 8, not re-run)", "frontend": "100% — all 9 requested E2E steps pass"},
+  "seed_data_creation": "None. No test users created this iteration.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "CompanionBubble fix is verified. If a future edit changes CompanionBubble.tsx or any component in the root layout, remember to `rm -rf /app/frontend/.metro-cache && sudo supervisorctl restart expo` so the browser bundle refreshes; otherwise the old bundle will keep re-triggering the same crash even with correct source code. Reprogramming feature end-to-end (grid → setup → player → play/pause → end) is now green on web preview for the admin premium user.",
+  "rca_of_issue": "Original bug (iter 8) was that `pan.getLayout()` returns `{left, top}` (no `.transform`) on RN-Web, so `[...bubblePosition.transform, ...]` threw 'is not iterable'. Fix: switch to `pan.getTranslateTransform()` which returns an array of translateX/Y transforms, and defensively guard the spread with `|| []`. This iteration additionally revealed that Metro's on-disk cache (/app/frontend/.metro-cache) persisted the old bundle across supervisor restarts of expo; a full cache purge is required whenever a root-layout component is edited. Reproduction: (1) file was fixed by main agent, (2) supervisor restarted, (3) browser still received old bundle with the exact `bubblePosition.transform` line, (4) after `rm -rf .metro-cache` + expo restart, correct fixed bundle was served and no more crash."
+}

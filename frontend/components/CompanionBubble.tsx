@@ -228,6 +228,7 @@ export default function CompanionBubble() {
   if (!guide) return null;
 
   const bubblePosition = pan.getLayout();
+  const bubbleTranslate = pan.getTranslateTransform();
 
   // For the whisper bubble — anchor on whichever side the bubble is on
   const isOnLeft = lastPos.current.x < (SCREEN_W - BUBBLE_SIZE) / 2;
@@ -269,7 +270,7 @@ export default function CompanionBubble() {
           styles.bubble,
           bubblePosition,
           {
-            transform: [...bubblePosition.transform, { scale: pulseAnim }],
+            transform: [...(bubbleTranslate || []), { scale: pulseAnim }],
             borderColor: guide.color,
             shadowColor: guide.color,
           },
