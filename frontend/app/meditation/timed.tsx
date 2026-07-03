@@ -114,9 +114,9 @@ export default function TimedMeditation() {
     setSoundError(null);
     
     try {
-      // Generate ambient sound (request 60 seconds, we'll loop it)
+      // Generate ambient sound (request 60 seconds, we'll loop it seamlessly)
       const response = await fetch(
-        `${BACKEND_URL}/api/meditation/ambient/generate/${selectedSound}?duration=60`
+        `${BACKEND_URL}/api/meditation/ambient/generate/${selectedSound}?duration=60&loop=1`
       );
       
       if (!response.ok) {

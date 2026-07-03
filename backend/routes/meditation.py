@@ -772,69 +772,177 @@ SOUND_CONFIG = {
 
 
 @router.get("/ambient/generate/{sound_id}")
-async def generate_ambient_sound(sound_id: str, duration: int = 60):
-    """Generate ambient sound audio (synthesized)"""
+async def generate_ambient_sound(sound_id: str, duration: int = 60, loop: int = 1):
+    """Generate ambient sound audio (synthesized).
+
+    Returns base64-encoded 44.1 kHz WAV in JSON — used by the Timed Meditation
+    screen which builds a `data:audio/wav;base64,...` URI and loops it in
+    `AudioPlayerManager`.
+
+    Parameters
+    ----------
+    duration : int
+        Seconds of audio to synthesise (clamped to 20..300). Default 60.
+    loop : int
+        When 1 (default) the audio has NO fade-in/out envelope so it loops
+        seamlessly. When 0 a 1-second fade is applied on each end.
+    """
     if sound_id not in SOUND_CONFIG:
         raise HTTPException(status_code=404, detail="Sound not found")
-    
+
     config = SOUND_CONFIG[sound_id]
     sample_rate = 44100
-    duration_seconds = min(duration, 300)
+    duration_seconds = max(20, min(duration, 300))
     num_samples = int(sample_rate * duration_seconds)
-    
-    if config["type"] == "silence":
+    t = np.arange(num_samples) / sample_rate
+
+    stype = config["type"]
+
+    if stype == "silence":
         audio = np.zeros(num_samples, dtype=np.float32)
-    
-    elif config["type"] == "pink_noise":
+
+    elif stype == "pink_noise":
         white = np.random.randn(num_samples).astype(np.float32)
         b = [0.049922035, -0.095993537, 0.050612699, -0.004408786]
         a = [1, -2.494956002, 2.017265875, -0.522189400]
         pink = lfilter(b, a, white)
-        mod = 0.5 + config["modulation"] * np.sin(2 * np.pi * config["mod_freq"] * np.arange(num_samples) / sample_rate)
+        mod = 0.5 + config["modulation"] * np.sin(2 * np.pi * config["mod_freq"] * t)
         audio = (pink * mod * 0.3).astype(np.float32)
-    
-    elif config["type"] == "white_noise":
+
+    elif stype == "white_noise":
         white = np.random.randn(num_samples).astype(np.float32)
-        mod = 0.3 + config["modulation"] * np.abs(np.sin(2 * np.pi * config["mod_freq"] * np.arange(num_samples) / sample_rate + np.random.randn(num_samples) * 0.5))
+        mod = 0.3 + config["modulation"] * np.abs(
+            np.sin(2 * np.pi * config["mod_freq"] * t + np.random.randn(num_samples) * 0.5)
+        )
         audio = (white * mod * 0.25).astype(np.float32)
-    
-    elif config["type"] == "brown_noise":
+
+    elif stype == "brown_noise":
         white = np.random.randn(num_samples).astype(np.float32)
         brown = np.cumsum(white)
-        brown = brown / np.max(np.abs(brown))
-        mod = 0.7 + config["modulation"] * np.sin(2 * np.pi * config["mod_freq"] * np.arange(num_samples) / sample_rate)
+        brown = brown / max(np.max(np.abs(brown)), 1e-9)
+        mod = 0.7 + config["modulation"] * np.sin(2 * np.pi * config["mod_freq"] * t)
         audio = (brown * mod * 0.3).astype(np.float32)
-    
-    elif config["type"] == "sine_harmonic":
-        t = np.arange(num_samples) / sample_rate
+
+    elif stype == "sine_harmonic":
         audio = np.zeros(num_samples, dtype=np.float32)
         for i, h in enumerate(config["harmonics"]):
             freq = config["base_freq"] * h
-            decay = np.exp(-t * (0.1 + i * 0.05))
+            # Decay per-harmonic to give it a bell-like character. Retriggered
+            # every 6 seconds so the bowl "rings" throughout the meditation.
+            phase = (t % 6.0)
+            decay = np.exp(-phase * (0.4 + i * 0.15))
             audio += np.sin(2 * np.pi * freq * t) * decay * (1.0 / (i + 1))
-        audio = (audio / np.max(np.abs(audio)) * 0.5).astype(np.float32)
-    
+        audio = (audio / max(np.max(np.abs(audio)), 1e-9) * 0.5).astype(np.float32)
+
+    elif stype == "thunder":
+        # Low-frequency rumbling brown noise with occasional loud claps.
+        white = np.random.randn(num_samples).astype(np.float32)
+        rumble = np.cumsum(white) / max(np.max(np.abs(np.cumsum(white))), 1e-9)
+        rumble *= 0.15
+        # Sparse impulse claps ~ every 8-14 s with exponential decay tails.
+        num_claps = max(2, int(duration_seconds / 10))
+        rng = np.random.default_rng()
+        clap_positions = rng.integers(
+            int(sample_rate * 2), num_samples - int(sample_rate * 2), size=num_claps,
+        )
+        clap_envelope = np.zeros(num_samples, dtype=np.float32)
+        tail_len = int(sample_rate * 3.0)
+        tail = np.exp(-np.linspace(0, 6, tail_len, dtype=np.float32))
+        for pos in clap_positions:
+            end = min(pos + tail_len, num_samples)
+            clap_envelope[pos:end] += tail[: end - pos] * 0.6
+        clap_noise = np.random.randn(num_samples).astype(np.float32) * clap_envelope
+        audio = (rumble + clap_noise * 0.5).astype(np.float32)
+
+    elif stype == "wind":
+        # Band-passed white noise with slow amplitude modulation for gustiness.
+        white = np.random.randn(num_samples).astype(np.float32)
+        # Simple 1st-order low-pass filter (single-pole IIR) for whooshing feel.
+        b = [0.05]
+        a = [1, -0.95]
+        filtered = lfilter(b, a, white).astype(np.float32)
+        gust = 0.5 + 0.5 * np.sin(2 * np.pi * 0.08 * t + np.sin(2 * np.pi * 0.02 * t) * 2)
+        gust = gust ** 2  # sharper peaks
+        audio = (filtered * gust * 0.45).astype(np.float32)
+
+    elif stype == "fire":
+        # Brown noise base + Poisson-random crackle transients.
+        white = np.random.randn(num_samples).astype(np.float32)
+        brown = np.cumsum(white)
+        brown = brown / max(np.max(np.abs(brown)), 1e-9)
+        crackle = np.zeros(num_samples, dtype=np.float32)
+        crackle_rate = config.get("crackle_rate", 8)  # per second
+        num_crackles = int(duration_seconds * crackle_rate)
+        rng = np.random.default_rng()
+        positions = rng.integers(0, num_samples - 200, size=num_crackles)
+        # Each crackle is a short exponentially-decaying noise burst
+        for pos in positions:
+            burst_len = rng.integers(50, 200)
+            burst = np.random.randn(burst_len).astype(np.float32)
+            burst *= np.exp(-np.linspace(0, 4, burst_len, dtype=np.float32))
+            crackle[pos: pos + burst_len] += burst * rng.uniform(0.3, 0.8)
+        audio = (brown * 0.15 + crackle * 0.35).astype(np.float32)
+
+    elif stype == "stream":
+        # High-passed white noise + gentle 400-1200 Hz warbles for water sound.
+        white = np.random.randn(num_samples).astype(np.float32)
+        # Naive high-pass: subtract low-pass version
+        b_lp = [0.05]
+        a_lp = [1, -0.95]
+        lp = lfilter(b_lp, a_lp, white).astype(np.float32)
+        hp = white - lp
+        # Add sparkling upper "burble" tones that drift in frequency
+        drift = 600 + 200 * np.sin(2 * np.pi * 0.15 * t) + 100 * np.sin(2 * np.pi * 0.9 * t)
+        burble = np.sin(2 * np.pi * drift * t) * 0.05
+        flow = 0.6 + 0.4 * config.get("flow_rate", 0.3) * np.sin(2 * np.pi * 0.3 * t)
+        audio = ((hp * flow) * 0.35 + burble).astype(np.float32)
+
+    elif stype == "night":
+        # Quiet ambient hiss + periodic cricket chirp bursts.
+        white = np.random.randn(num_samples).astype(np.float32) * 0.05
+        cricket = np.zeros(num_samples, dtype=np.float32)
+        cricket_rate = config.get("cricket_rate", 4)  # crickets per second
+        num_chirps = int(duration_seconds * cricket_rate)
+        rng = np.random.default_rng()
+        for _ in range(num_chirps):
+            pos = rng.integers(0, num_samples - 4000)
+            chirp_freq = rng.uniform(3800, 4400)
+            chirp_len = rng.integers(1500, 3000)
+            env = np.exp(-np.linspace(0, 8, chirp_len, dtype=np.float32))
+            chirp_t = np.arange(chirp_len) / sample_rate
+            chirp = np.sin(2 * np.pi * chirp_freq * chirp_t) * env * 0.15
+            cricket[pos: pos + chirp_len] += chirp
+        audio = (white + cricket).astype(np.float32)
+
     else:
+        # Unknown → silence rather than a crash. Log so it's not silent silent.
+        logging.warning(f"[ambient] Unknown sound type '{stype}' for id '{sound_id}'")
         audio = np.zeros(num_samples, dtype=np.float32)
-    
-    # Fade in/out
-    fade_samples = int(sample_rate * 1)
-    audio[:fade_samples] *= np.linspace(0, 1, fade_samples, dtype=np.float32)
-    audio[-fade_samples:] *= np.linspace(1, 0, fade_samples, dtype=np.float32)
-    
+
+    # Normalise to prevent clipping.
+    peak = np.max(np.abs(audio))
+    if peak > 1e-9:
+        audio = audio / peak * 0.7
+
+    # Fade in/out ONLY when the caller intends one-shot playback. For looping
+    # (the default) a fade creates an audible silence gap between iterations.
+    if not loop:
+        fade_samples = int(sample_rate * 1.0)
+        if fade_samples * 2 < audio.shape[0]:
+            audio[:fade_samples] *= np.linspace(0, 1, fade_samples, dtype=np.float32)
+            audio[-fade_samples:] *= np.linspace(1, 0, fade_samples, dtype=np.float32)
+
     audio = np.clip(audio, -1, 1)
     audio_int16 = (audio * 32767).astype(np.int16)
-    
+
     buffer = io.BytesIO()
     wavfile.write(buffer, sample_rate, audio_int16)
-    buffer.seek(0)
-    
-    audio_base64 = base64.b64encode(buffer.read()).decode()
-    
+    audio_base64 = base64.b64encode(buffer.getvalue()).decode()
+
     return {
         "sound_id": sound_id,
         "duration_seconds": duration_seconds,
         "sample_rate": sample_rate,
         "audio_base64": audio_base64,
-        "format": "wav"
+        "format": "wav",
     }
