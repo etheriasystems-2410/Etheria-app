@@ -1,0 +1,51 @@
+{
+  "summary": "Reprogramming (Self-Hypnosis) feature — first testing pass. Backend fully verified: 10/10 pytest tests pass (public + admin sessions listing, session detail 200/404, base64 audio for deep-sleep and confidence with cache verification, MP3 stream with Content-Length, and premium paywall gating for a freshly-registered free user). ElevenLabs synthesis for premium sessions was intentionally NOT triggered (quota-safe). Frontend UI testing is BLOCKED by a pre-existing crash in components/CompanionBubble.tsx at line 272 (`transform: [...bubblePosition.transform, { scale: pulseAnim }]`) — pan.getLayout() on React-Native-Web returns `{left, top}` with no `.transform` array, throwing 'bubblePosition.transform is not iterable'. This crashes RootLayout for every authenticated route on web (including /reprogramming) and even a fresh signup flow lands on the Terms modal before ever seeing the grid. Backend paywall correctness confirmed via curl-level tests, but end-to-end UI journey (list → picker → player → end) could NOT be visually verified on web due to the CompanionBubble crash. React Native issues detected: CompanionBubble transform iteration crash.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/reprogramming/audio-base64/{id}", "issue": "get_current_user prefers cookie over Authorization header — when a test/browser shares a cookie jar between admin and free-user requests, the admin cookie bypasses the paywall and unintentionally triggered ElevenLabs synthesis of quit-smoking during first pytest run (cached now, quota consumed once). Not a production bug (real users don't share sessions), but consider preferring Authorization header when both are present, or documenting this."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "components/CompanionBubble.tsx", "issue": "BLOCKING: `[...bubblePosition.transform, { scale: pulseAnim }]` at line 272 throws 'bubblePosition.transform is not iterable' on web because `Animated.ValueXY.getLayout()` returns only `{left, top}` (no transform array). Crashes RootLayout for every authenticated screen on RN-Web including /reprogramming — page renders blank after error boundary. Fix: use `pan.getTranslateTransform()` (which returns `{transform: [{translateX},{translateY}]}`) instead of `pan.getLayout()`, and drop `bubblePosition` from the style spread; OR guard with `Platform.OS === 'web' ? [] : bubblePosition.transform`.", "testID": "n/a", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Reprogramming list & player (admin & free user)", "issue": "Could not verify grid, FREE badges, PREMIUM lock badges, duration picker, Begin Session, timer, End Session, or paywall route-to-/settings via the web preview because CompanionBubble crashes the authenticated shell. Recommend a manual/native re-test on Expo Go once CompanionBubble is patched.", "affected_testIDs": []}
+    ],
+    "design_issues": [
+      {"screen": "/reprogramming grid", "issues": ["Cards use only `borderColor: s.color + '88'` on a dark background — accessible but consider adding a subtle background tint per category for visual differentiation.", "Card touch target OK (padding 14 + 2-line subtitle). Grid uses gap:8, borderRadius:14 — 8pt-friendly."]},
+      {"screen": "/reprogramming/[id] player", "issues": ["playBtn is 90x90 (great touch target). durationBtn minWidth:60 padY:10 → acceptable (~44pt tall)."]}
+    ],
+    "react_native_issues": [
+      {"component": "CompanionBubble", "issue": "Uses Animated.ValueXY.getLayout() then spreads `.transform` from its result — but getLayout() returns {left, top} only. Should be getTranslateTransform() or Platform.OS-guarded. Reference: /app/frontend/components/CompanionBubble.tsx:230,272"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_reprogramming.py",
+    "/app/test_reports/pytest/reprogramming_results.xml"
+  ],
+  "action_items": [
+    "URGENT: Fix components/CompanionBubble.tsx:272 — replace `pan.getLayout()` + spread of .transform with `pan.getTranslateTransform()` (or Platform-guard for web). This unblocks Reprogramming UI + every other authenticated web screen.",
+    "After the CompanionBubble fix, re-run frontend testing of /reprogramming to visually verify: 12 cards, FREE badges on Deep Sleep & Confidence, no PREMIUM badges for admin, duration picker 10/20/30/45/60m (default 20m), Begin Session → active player with timer + play/pause + End Session, and free-user tap on premium session → /settings redirect + 'Unlock all 12 sessions' banner.",
+    "(Optional) Consider making auth prefer Authorization Bearer over session_token cookie when both are present to avoid subtle paywall-bypass in mixed-session test contexts.",
+    "(Optional) Pre-warm ElevenLabs cache for `confidence` and `deep-sleep` at startup (already done) — no change needed."
+  ],
+  "critical_code_review_comments": [
+    "reprogramming.py is clean and well-documented (~365 lines, under the 700-line limit).",
+    "MongoDB _id is not exposed anywhere in the reprogramming responses — good.",
+    "Audio cache path uses SHA1 of session_id + voice_id — cache safely invalidates if voice changes.",
+    "_ensure_access is called BEFORE _synthesise_and_cache, so paywall works before hitting ElevenLabs (verified: quit-smoking returns 402 in ~200ms for a free user).",
+    "Frontend uses process.env.EXPO_PUBLIC_BACKEND_URL correctly (not hardcoded).",
+    "Frontend duration_presets default hardcoded [10,20,30,45,60] mirrors server DURATION_PRESETS — consider a single source of truth if server list ever changes."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_reprogramming.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "0% (blocked by CompanionBubble crash — feature code itself looks correct)"},
+  "seed_data_creation": "Registered 2 fresh free users during backend tests (TEST_repro_*@example.com) to verify paywall; one was leaked into premium bypass via shared cookie (see minor issue) — resulted in one-time ElevenLabs synthesis of quit-smoking (~5.5MB cached on disk). No further quota impact — the file is now cached.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "After main agent fixes CompanionBubble.tsx, re-run: (a) `pytest /app/backend/tests/test_reprogramming.py -v` (should stay 10/10), and (b) UI E2E on /reprogramming with the admin creds; then log out and repeat as a fresh signup to verify PREMIUM lock badges + settings redirect + Unlock banner. Cached audio files exist for deep-sleep, confidence, and quit-smoking (unintended); do NOT delete them — they save ElevenLabs quota.",
+  "rca_of_issue": "CompanionBubble uses `pan.getLayout()` (returns {left,top}) but then spreads `bubblePosition.transform` which is undefined on RN-Web → 'is not iterable' TypeError → RootLayout error boundary catches → blank authenticated screens across the app. Native mobile behaves differently (getLayout may include transform on some RN versions), which is why this reached the branch. Fix: use `pan.getTranslateTransform()` OR `[...(bubblePosition.transform || []), { scale: pulseAnim }]` as a minimal defensive patch."
+}

@@ -537,10 +537,85 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Reprogramming (self-hypnosis) — backend endpoints"
+    - "Reprogramming (self-hypnosis) — frontend list + player"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+reprogramming_feature:
+  - task: "Reprogramming — /api/reprogramming/sessions (public list with lock flags)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/routes/reprogramming.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Returns 12 sessions with is_free, is_premium, locked (per-user), duration_presets [10,20,30,45,60], voice_provider. FREE = deep-sleep + confidence."
+
+  - task: "Reprogramming — /api/reprogramming/session/{id} (single session metadata)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/routes/reprogramming.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Public endpoint that returns session metadata including locked flag when authenticated."
+
+  - task: "Reprogramming — /api/reprogramming/audio-base64/{id} (auth + premium gate)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/routes/reprogramming.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Returns base64 MP3 for a session. Requires auth. Enforces 402 for premium sessions if user is not premium. Pre-warmed cache for deep-sleep + confidence (5.5MB each) saved on disk. Uses ElevenLabs TTS (voice=Sarah / EXAVITQu4vr4xnSDxMaL) with fallback to OpenAI TTS. Test only the free sessions to conserve ElevenLabs quota."
+
+  - task: "Reprogramming — /api/reprogramming/audio/{id} (streaming MP3 with Content-Length)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/routes/reprogramming.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Alternate streaming endpoint used for future native-URL playback. Currently the frontend uses audio-base64. Verify only that Content-Length header is present."
+
+  - task: "Reprogramming — Frontend list screen"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/reprogramming.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Mystical grid layout, FREE badge on deep-sleep/confidence, lock badge on premium sessions for free users, subscription banner CTA at bottom. Tapping a locked card routes to /settings."
+
+  - task: "Reprogramming — Frontend session player screen"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/reprogramming/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Two-phase UX: (1) length picker 10/20/30/45/60 min + tips + Begin button, (2) active player with elapsed timer, play/pause, and End Session. Uses AudioPlayerManager with loop=true and scheduled fade-out timer (30s ramp) at the chosen duration. Handles 402 premium responses gracefully with paywall alert."
 
 elevenlabs_tts_regression:
   - task: "ElevenLabs TTS across Spirit Guides endpoints (chat / tts/generate / divine-intro / chat-pair)"
