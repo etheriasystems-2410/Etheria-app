@@ -377,7 +377,7 @@ async def process_flag(db, user_id: str, content_type: str, content: str, conten
     if content_type == "chat":
         try:
             await db.community_chat.delete_one({"_id": ObjectId(content_id)})
-        except:
+        except Exception:
             pass
     
     # Check if suspension is needed
@@ -854,7 +854,7 @@ async def execute_moderation_command(db, flag_id: str, command: str) -> Dict[str
     # Get the flag record
     try:
         flag = await db.user_flags.find_one({"_id": ObjectId(flag_id)})
-    except:
+    except Exception:
         return {"success": False, "error": f"Invalid flag ID: {flag_id}"}
     
     if not flag:
@@ -871,7 +871,7 @@ async def execute_moderation_command(db, flag_id: str, command: str) -> Dict[str
     # Get user
     try:
         user = await db.users.find_one({"_id": ObjectId(user_id)})
-    except:
+    except Exception:
         user = await db.users.find_one({"user_id": user_id})
     
     if not user:
@@ -1066,6 +1066,19 @@ async def start_email_polling_task(db, interval_seconds: int = 300, timeline_int
                 await process_inbound_moderation_emails(db)
             except Exception as e:
                 print(f"[Moderation] Error in email polling task: {e}")
+
+            # Also check for Companion Guide reply-emails (two-way conversation).
+            try:
+                from services.companion_inbox_service import (
+                    process_inbound_companion_emails,
+                )
+                result = await process_inbound_companion_emails(db)
+                if result.get("processed", 0) > 0:
+                    print(
+                        f"[Companion IMAP] Processed {result['processed']} conversation reply/replies"
+                    )
+            except Exception as e:
+                print(f"[Companion IMAP] Error in companion email polling: {e}")
 
             # Process timeline expirations on schedule
             if iteration % iterations_per_timeline == 0:

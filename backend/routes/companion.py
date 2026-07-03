@@ -324,7 +324,11 @@ async def email_me_from_companion(user: dict = Depends(get_current_user)):
     )
 
     seeker = name_hint or "beloved"
-    subject = f"✨ A whisper from {companion}"
+    # Marker embedded in the subject so the IMAP poller can identify replies
+    # to this thread as belonging to this user (see services/companion_inbox_service.py).
+    from services.companion_inbox_service import build_companion_subject_marker
+    marker = build_companion_subject_marker(user_doc["user_id"])
+    subject = f"✨ A whisper from {companion} {marker}"
     html = f"""
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d0015;color:#e9d5ff;padding:32px 20px;max-width:560px;margin:0 auto;border-radius:16px;">
       <p style="color:#fbbf24;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;text-align:center;margin:0 0 8px;">✦ A message from your Companion ✦</p>
@@ -333,20 +337,25 @@ async def email_me_from_companion(user: dict = Depends(get_current_user)):
       <div style="background:rgba(124,58,237,0.15);border-left:3px solid #a855f7;border-radius:8px;padding:20px 22px;margin:20px 0;">
         <p style="color:#e9d5ff;font-size:16px;line-height:1.55;font-style:italic;margin:0;">"{whisper}"</p>
       </div>
-      <p style="color:#9f7aea;font-size:13px;text-align:center;margin:28px 0 8px;">Open Etheria for a full reading, deeper conversation, or to change your Companion.</p>
+      <p style="color:#9f7aea;font-size:13px;text-align:center;margin:28px 0 8px;">Reply to this email to continue the conversation. Your Companion will answer.</p>
     </div>
     """
-    text = f"✨ A whisper from {companion}\n\n\"{whisper}\"\n\n— Open Etheria to continue the conversation.\n"
+    text = (
+        f"✨ A whisper from {companion}\n\n"
+        f"\"{whisper}\"\n\n"
+        f"— Reply to this email to continue the conversation.\n"
+    )
 
     try:
         from services.email_service import send_email
+        # Setting reply_to to the monitored gmail inbox means the user's reply
+        # lands where the IMAP poller can pick it up and generate an AI reply.
         sent = await send_email(
             to=email,
             subject=subject,
             html=html,
             text=text,
-            # No reply_to → email_service auto-appends the no-reply disclaimer
-            # instructing the user to forward replies to etheriasystems@gmail.com.
+            reply_to=os.getenv("GMAIL_EMAIL", "etheriasystems@gmail.com"),
         )
     except Exception as e:
         logging.error(f"[Companion] email send failed: {e}")
