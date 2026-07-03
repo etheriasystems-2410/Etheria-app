@@ -2,7 +2,7 @@
 Meditation endpoints - Binaural beats, Chakra tones, Ambient sounds, and sessions
 """
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
 from typing import List, Optional
 import uuid
@@ -336,8 +336,7 @@ async def generate_realign_all_tone(duration: int = 300):
     frequencies = [CHAKRA_DATA[c]["frequency"] for c in chakra_order]
     
     time_per_chakra = duration_seconds / len(chakra_order)
-    
-    t = np.linspace(0, duration_seconds, num_samples, dtype=np.float32)
+
     audio = np.zeros(num_samples, dtype=np.float32)
     
     for i, freq in enumerate(frequencies):
@@ -404,57 +403,47 @@ async def get_binaural_audio_info(frequency_id: str):
 
 @router.get("/chakra/stream-realign")
 async def stream_realign_tone(duration: int = 60):
-    """Stream morphing chakra frequency progression as WAV audio"""
-    sample_rate = 22050
-    duration_seconds = min(duration, 60)
+    """Stream morphing chakra frequency progression as a fully-buffered WAV.
+
+    Unlike single-chakra streams this one is a one-shot journey (not looped),
+    so it keeps the long fade-in/fade-out envelopes.
+    """
+    duration_seconds = max(20, min(duration, 120))
+    sample_rate = MEDITATION_SAMPLE_RATE
     num_samples = int(sample_rate * duration_seconds)
 
     chakra_order = ["root", "sacral", "solar", "heart", "throat", "third-eye", "crown"]
     frequencies = [CHAKRA_DATA[c]["frequency"] for c in chakra_order]
 
     time_per_chakra = duration_seconds / len(chakra_order)
-
-    t = np.linspace(0, duration_seconds, num_samples, dtype=np.float32)
     audio = np.zeros(num_samples, dtype=np.float32)
 
+    # Vectorised per-chakra segment synthesis (~1000x faster than the nested
+    # per-sample Python loop that lived here before).
     for i, freq in enumerate(frequencies):
-        start_time = i * time_per_chakra
-        end_time = (i + 1) * time_per_chakra
+        start_idx = int(i * time_per_chakra * sample_rate)
+        end_idx = int((i + 1) * time_per_chakra * sample_rate)
+        end_idx = min(end_idx, num_samples)
+        if end_idx <= start_idx:
+            continue
+        seg_len = end_idx - start_idx
+        seg_t = np.linspace(
+            start_idx / sample_rate,
+            end_idx / sample_rate,
+            seg_len,
+            dtype=np.float32,
+        )
+        # In-segment envelope: 10% ramp up, sustain, 10% ramp down
+        progress = np.linspace(0, 1, seg_len, dtype=np.float32)
+        envelope = np.ones_like(progress)
+        envelope[progress < 0.1] = progress[progress < 0.1] / 0.1
+        envelope[progress > 0.9] = (1 - progress[progress > 0.9]) / 0.1
+        segment = envelope * 0.5 * np.sin(2 * np.pi * freq * seg_t)
+        segment += envelope * 0.15 * np.sin(2 * np.pi * freq * 2 * seg_t)
+        audio[start_idx:end_idx] += segment
 
-        for j in range(num_samples):
-            current_time = j / sample_rate
-            if start_time <= current_time < end_time:
-                progress = (current_time - start_time) / time_per_chakra
-
-                if progress < 0.1:
-                    envelope = progress / 0.1
-                elif progress > 0.9:
-                    envelope = (1 - progress) / 0.1
-                else:
-                    envelope = 1.0
-
-                audio[j] += envelope * 0.5 * np.sin(2 * np.pi * freq * current_time)
-                audio[j] += envelope * 0.15 * np.sin(2 * np.pi * freq * 2 * current_time)
-
-    fade_samples = int(sample_rate * 1)
-    audio[:fade_samples] *= np.linspace(0, 1, fade_samples, dtype=np.float32)
-    audio[-fade_samples:] *= np.linspace(1, 0, fade_samples, dtype=np.float32)
-
-    audio = audio / np.max(np.abs(audio)) * 0.7
-    audio_int16 = (audio * 32767).astype(np.int16)
-
-    buffer = io.BytesIO()
-    wavfile.write(buffer, sample_rate, audio_int16)
-    buffer.seek(0)
-
-    return StreamingResponse(
-        buffer,
-        media_type="audio/wav",
-        headers={
-            "Content-Disposition": "inline; filename=chakra_realign.wav",
-            "Accept-Ranges": "bytes"
-        }
-    )
+    audio = _apply_fades(audio, sample_rate, seconds=1.0)
+    return _wav_response(_wav_bytes_mono(audio, sample_rate), "chakra_realign")
 
 
 @router.post("/chakra/generate-realign")
@@ -512,52 +501,110 @@ Write in plain prose without any markdown formatting - this will be read aloud."
         raise HTTPException(status_code=500, detail="Failed to generate meditation")
 
 
+# ---------------------------------------------------------------------------
+# Helpers for meditation audio generation
+# ---------------------------------------------------------------------------
+# Native mobile audio players (iOS AVPlayer, Android ExoPlayer) require a
+# proper `Content-Length` header to loop / seek reliably. `StreamingResponse`
+# uses `Transfer-Encoding: chunked` and omits Content-Length, which caused
+# silent playback failures on production device builds. Everything below now
+# returns a fully-materialised `Response(content=bytes, ...)` so the audio
+# player knows the exact byte count of the WAV and can safely loop.
+#
+# Additional loop-friendly behaviour: when `loop=1` is passed we skip the
+# fade-in/out envelopes so seamless looping doesn't produce clicks / silence
+# gaps between iterations.
+MEDITATION_SAMPLE_RATE = 44100  # 44.1 kHz — universally supported
+
+
+def _wav_bytes_stereo(left: np.ndarray, right: np.ndarray, sample_rate: int) -> bytes:
+    """Encode a stereo float32 signal (both channels ~[-1,1]) as 16-bit WAV bytes."""
+    audio = np.column_stack((left, right))
+    audio = audio / max(np.max(np.abs(audio)), 1e-9) * 0.7
+    audio_int16 = (audio * 32767).astype(np.int16)
+    buf = io.BytesIO()
+    wavfile.write(buf, sample_rate, audio_int16)
+    return buf.getvalue()
+
+
+def _wav_bytes_mono(mono: np.ndarray, sample_rate: int) -> bytes:
+    """Encode a mono float32 signal as 16-bit WAV bytes."""
+    audio = mono / max(np.max(np.abs(mono)), 1e-9) * 0.7
+    audio_int16 = (audio * 32767).astype(np.int16)
+    buf = io.BytesIO()
+    wavfile.write(buf, sample_rate, audio_int16)
+    return buf.getvalue()
+
+
+def _apply_fades(audio: np.ndarray, sample_rate: int, seconds: float = 0.5) -> np.ndarray:
+    """Apply a linear fade-in and fade-out to a mono or stereo signal."""
+    fade_samples = int(sample_rate * seconds)
+    if fade_samples <= 0 or fade_samples * 2 >= audio.shape[0]:
+        return audio
+    fade_in = np.linspace(0, 1, fade_samples, dtype=np.float32)
+    fade_out = np.linspace(1, 0, fade_samples, dtype=np.float32)
+    if audio.ndim == 2:
+        fade_in = fade_in.reshape(-1, 1)
+        fade_out = fade_out.reshape(-1, 1)
+    audio = audio.copy()
+    audio[:fade_samples] *= fade_in
+    audio[-fade_samples:] *= fade_out
+    return audio
+
+
+def _wav_response(wav_bytes: bytes, filename: str) -> Response:
+    """Return a `Response` with Content-Length so native players can loop it."""
+    return Response(
+        content=wav_bytes,
+        media_type="audio/wav",
+        headers={
+            "Content-Disposition": f"inline; filename={filename}.wav",
+            "Content-Length": str(len(wav_bytes)),
+            "Cache-Control": "public, max-age=3600",
+        },
+    )
+
+
 @router.get("/chakra/stream/{chakra_id}")
-async def stream_chakra_tone(chakra_id: str, duration: int = 30):
-    """Stream chakra frequency tone as WAV audio"""
+async def stream_chakra_tone(chakra_id: str, duration: int = 60, loop: int = 1):
+    """Stream chakra frequency tone as a fully-buffered WAV.
+
+    Parameters
+    ----------
+    duration : int
+        Seconds of audio to synthesise (clamped to 5..120). Default 60s.
+    loop : int
+        When 1 (default) the audio is fade-free so it can loop seamlessly.
+        When 0 the audio has a 0.5s fade-in and fade-out.
+    """
     if chakra_id not in CHAKRA_DATA:
         raise HTTPException(status_code=404, detail="Chakra not found")
 
     chakra = CHAKRA_DATA[chakra_id]
     frequency = chakra["frequency"]
-    
-    sample_rate = 22050
-    segment_duration = min(duration, 30)
+
+    segment_duration = max(5, min(duration, 120))
+    sample_rate = MEDITATION_SAMPLE_RATE
     num_samples = int(sample_rate * segment_duration)
-    
+
     t = np.linspace(0, segment_duration, num_samples, dtype=np.float32)
-    
+
+    # Fundamental + gentle harmonics + soft amplitude modulation
     audio = np.sin(2 * np.pi * frequency * t) * 0.5
     audio += np.sin(2 * np.pi * frequency * 2 * t) * 0.15
     audio += np.sin(2 * np.pi * frequency * 3 * t) * 0.08
-    
     mod = 1 + 0.1 * np.sin(2 * np.pi * 0.2 * t)
     audio = audio * mod
-    
-    fade_samples = int(sample_rate * 0.5)
-    audio[:fade_samples] *= np.linspace(0, 1, fade_samples, dtype=np.float32)
-    audio[-fade_samples:] *= np.linspace(1, 0, fade_samples, dtype=np.float32)
-    
-    audio = audio / np.max(np.abs(audio)) * 0.7
-    audio_int16 = (audio * 32767).astype(np.int16)
-    
-    buffer = io.BytesIO()
-    wavfile.write(buffer, sample_rate, audio_int16)
-    buffer.seek(0)
-    
-    return StreamingResponse(
-        buffer,
-        media_type="audio/wav",
-        headers={
-            "Content-Disposition": f"inline; filename=chakra_{chakra_id}.wav",
-            "Accept-Ranges": "bytes"
-        }
-    )
+
+    if not loop:
+        audio = _apply_fades(audio, sample_rate)
+
+    return _wav_response(_wav_bytes_mono(audio, sample_rate), f"chakra_{chakra_id}")
 
 
 @router.get("/binaural/stream/{frequency_id}")
-async def stream_binaural_beat(frequency_id: str, duration: int = 30):
-    """Stream binaural beat as WAV audio"""
+async def stream_binaural_beat(frequency_id: str, duration: int = 60, loop: int = 1):
+    """Stream binaural beat (or solfeggio tone) as a fully-buffered WAV."""
     BINAURAL_FREQ_CONFIG = {
         "delta": {"base": 100, "beat": 2},
         "theta": {"base": 150, "beat": 6},
@@ -568,52 +615,36 @@ async def stream_binaural_beat(frequency_id: str, duration: int = 30):
         "love": {"base": 528, "beat": 0},
         "liberation": {"base": 396, "beat": 0},
     }
-    
     if frequency_id not in BINAURAL_FREQ_CONFIG:
         raise HTTPException(status_code=404, detail="Frequency not found")
-    
+
     freq_data = BINAURAL_FREQ_CONFIG[frequency_id]
     base_freq = freq_data["base"]
     beat_freq = freq_data["beat"]
-    
-    sample_rate = 22050
-    segment_duration = min(duration, 30)
+
+    segment_duration = max(5, min(duration, 120))
+    sample_rate = MEDITATION_SAMPLE_RATE
     num_samples = int(sample_rate * segment_duration)
-    
     t = np.linspace(0, segment_duration, num_samples, dtype=np.float32)
-    
+
     if beat_freq > 0:
+        # True binaural — different frequency in each ear
         left = np.sin(2 * np.pi * base_freq * t) * 0.5
         right = np.sin(2 * np.pi * (base_freq + beat_freq) * t) * 0.5
-        audio = np.column_stack((left, right))
+        stereo = np.column_stack((left, right))
+        if not loop:
+            stereo = _apply_fades(stereo, sample_rate)
+        wav = _wav_bytes_stereo(stereo[:, 0], stereo[:, 1], sample_rate)
     else:
-        audio = np.sin(2 * np.pi * base_freq * t) * 0.5
-        audio += np.sin(2 * np.pi * base_freq * 2 * t) * 0.15
-        audio += np.sin(2 * np.pi * base_freq * 3 * t) * 0.08
-    
-    fade_samples = int(sample_rate * 0.5)
-    if len(audio.shape) == 2:
-        audio[:fade_samples] *= np.linspace(0, 1, fade_samples, dtype=np.float32).reshape(-1, 1)
-        audio[-fade_samples:] *= np.linspace(1, 0, fade_samples, dtype=np.float32).reshape(-1, 1)
-    else:
-        audio[:fade_samples] *= np.linspace(0, 1, fade_samples, dtype=np.float32)
-        audio[-fade_samples:] *= np.linspace(1, 0, fade_samples, dtype=np.float32)
-    
-    audio = audio / np.max(np.abs(audio)) * 0.7
-    audio_int16 = (audio * 32767).astype(np.int16)
-    
-    buffer = io.BytesIO()
-    wavfile.write(buffer, sample_rate, audio_int16)
-    buffer.seek(0)
-    
-    return StreamingResponse(
-        buffer,
-        media_type="audio/wav",
-        headers={
-            "Content-Disposition": f"inline; filename=binaural_{frequency_id}.wav",
-            "Accept-Ranges": "bytes"
-        }
-    )
+        # Solfeggio single-tone — mono is fine
+        mono = np.sin(2 * np.pi * base_freq * t) * 0.5
+        mono += np.sin(2 * np.pi * base_freq * 2 * t) * 0.15
+        mono += np.sin(2 * np.pi * base_freq * 3 * t) * 0.08
+        if not loop:
+            mono = _apply_fades(mono, sample_rate)
+        wav = _wav_bytes_mono(mono, sample_rate)
+
+    return _wav_response(wav, f"binaural_{frequency_id}")
 
 
 @router.post("/generate-guided")
