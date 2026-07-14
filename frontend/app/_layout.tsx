@@ -105,6 +105,23 @@ function ProtectedLayout() {  const { isAuthenticated, loading, user } = useAuth
         }}
       />
       <Drawer.Screen
+        name="reprogramming"
+        options={{
+          drawerLabel: 'Reprogramming',
+          title: 'Reprogramming',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="pulse" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="reprogramming/[id]"
+        options={{
+          drawerItemStyle: { display: 'none' },
+          title: 'Session',
+        }}
+      />
+      <Drawer.Screen
         name="spirit-guides"
         options={{
           drawerLabel: t('spiritGuidesTitle'),
@@ -162,23 +179,6 @@ function ProtectedLayout() {  const { isAuthenticated, loading, user } = useAuth
           drawerIcon: ({ color, size }) => (
             <Ionicons name="book" size={size} color={color} />
           ),
-        }}
-      />
-      <Drawer.Screen
-        name="reprogramming"
-        options={{
-          drawerLabel: 'Reprogramming',
-          title: 'Reprogramming',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="sparkles" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="reprogramming/[id]"
-        options={{
-          drawerItemStyle: { display: 'none' },
-          title: 'Session',
         }}
       />
       <Drawer.Screen

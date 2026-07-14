@@ -134,6 +134,17 @@ export default function Home() {
         ko: '명상과 마음챙김을 실천하세요',
         zh: '练习冥想和正念',
       },
+      reprogramming: {
+        en: 'Voice-guided self-hypnosis for sleep',
+        es: 'Autohipnosis guiada por voz para dormir',
+        fr: 'Auto-hypnose guidée par la voix pour le sommeil',
+        de: 'Sprachgeführte Selbsthypnose zum Einschlafen',
+        it: 'Autoipnosi guidata dalla voce per dormire',
+        pt: 'Autohipnose guiada por voz para dormir',
+        ja: '眠りのための音声誘導自己催眠',
+        ko: '수면을 위한 음성 안내 자기 최면',
+        zh: '语音引导的睡眠自我催眠',
+      },
       journal: {
         en: 'Track your spiritual journey',
         es: 'Registra tu viaje espiritual',
@@ -189,6 +200,12 @@ export default function Home() {
       description: getFeatureDescription('meditation'),
       icon: 'fitness' as const,
       route: '/meditation',
+    },
+    {
+      title: 'Reprogramming',
+      description: getFeatureDescription('reprogramming'),
+      icon: 'pulse' as const,
+      route: '/reprogramming',
     },
     {
       title: t('spiritGuidesTitle'),

@@ -270,103 +270,215 @@ class MultiCardDrawRequest(BaseModel):
     positions: List[str] = ["Guidance"]
 
 
+# ---------------------------------------------------------------------------
+# LLM interpretation helpers
+# ---------------------------------------------------------------------------
+# Voice used across every reading. This is the persona the model channels.
+_ORACLE_VOICE = (
+    "You are Madame Sable, a seasoned oracle-card reader who has spent forty "
+    "years reading for seekers in a candlelit parlour. You do not lecture. "
+    "You do not moralise. You *see* and you *speak*. Your voice is warm, "
+    "unhurried, poetic, and specific — as if you are looking directly into "
+    "the seeker's eyes across the table. You address the seeker as 'you' and "
+    "occasionally as 'dear one'. You use the present tense. You weave "
+    "sensory detail (the way a card feels, the way its imagery moves) into "
+    "your speaking. You never say 'this card means…' — instead you say what "
+    "you SEE, what you FEEL, what the card WHISPERS. You are willing to "
+    "name difficulty gently. You never predict fixed outcomes; you speak of "
+    "currents, invitations, and doorways. Never mention that you are an AI. "
+    "Never break character."
+)
+
+
+async def _single_card_reading(card: dict) -> str:
+    """Rich narrative reading for a single-card draw (~150 words)."""
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"oracle-{uuid.uuid4()}",
+            system_message=(
+                _ORACLE_VOICE
+                + " For a single-card draw, speak in one flowing passage of "
+                "roughly 150–180 words. Begin by describing what you notice "
+                "as the card turns face-up. Move through what the imagery "
+                "and element are whispering to the seeker's present moment. "
+                "Close with a specific, poetic invitation for the next step "
+                "the seeker can take today or tonight. Do NOT use headings, "
+                "bullet points, or the word 'meaning'. Just speak."
+            ),
+        ).with_model("gemini", "gemini-2.5-pro")
+
+        prompt = (
+            f"The card that has turned for the seeker is '{card['name']}', "
+            f"an oracle of {card['element']}. Its keeper is described as: "
+            f"'{card['description']}'. Speak now, Madame Sable."
+        )
+        return await chat.send_message(UserMessage(text=prompt))
+    except Exception as e:
+        logging.error(f"[oracle] single-card interpretation error: {e}")
+        return (
+            f"The {card['name']} turns for you, and its {card['element']} "
+            f"breath fills the room. {card['description']} Sit with this a "
+            "moment, dear one — the card has come for a reason only you can "
+            "name."
+        )
+
+
+async def _per_card_reading(card: dict, position: str, spread_name: str) -> str:
+    """Narrative reading for one card WITHIN a larger spread (~110 words).
+    Written so each card's voice can later be woven into the overall
+    story."""
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"oracle-{uuid.uuid4()}",
+            system_message=(
+                _ORACLE_VOICE
+                + f" Right now you are turning the '{position}' card of a "
+                f"{spread_name} spread. Speak in one flowing passage of "
+                "roughly 110–140 words that stays inside this card's "
+                "meaning for THIS position. Do not summarise the whole "
+                "reading — that comes later. Do not use headings or bullets."
+            ),
+        ).with_model("gemini", "gemini-2.5-pro")
+
+        prompt = (
+            f"The card in the '{position}' position is '{card['name']}', an "
+            f"oracle of {card['element']}. Its keeper: '{card['description']}'."
+            " Speak now, Madame Sable — but only about this position."
+        )
+        return await chat.send_message(UserMessage(text=prompt))
+    except Exception as e:
+        logging.error(f"[oracle] per-card interpretation error: {e}")
+        return (
+            f"In the {position}, the {card['name']} lifts its "
+            f"{card['element']} light. {card['description']} This is what "
+            "wants your attention here."
+        )
+
+
+async def _overall_reading(cards_result: list, spread_name: str) -> str:
+    """One long, story-woven narrative that ties EVERY card of the spread
+    into a single unfolding tale (~280–380 words)."""
+    if len(cards_result) < 2:
+        return ""
+    try:
+        lines = []
+        for entry in cards_result:
+            c = entry["card"]
+            lines.append(
+                f"• {entry['position']}: {c['name']} ({c['element']}) — "
+                f"{c['description']}"
+            )
+        card_block = "\n".join(lines)
+
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"oracle-overall-{uuid.uuid4()}",
+            system_message=(
+                _ORACLE_VOICE
+                + " Now you set your hand over all the cards on the table and "
+                "give the seeker the full story you see in them together. "
+                "Write ONE flowing narrative of roughly 280–380 words. Read "
+                "the cards LEFT-TO-RIGHT as a journey unfolding in time. "
+                "Notice the ELEMENTAL pattern — which elements dominate, "
+                "which are missing, what that says about balance. Notice the "
+                "PROGRESSION — how one card gives birth to the next. Notice "
+                "any TENSION between cards and how the resolution wants to "
+                "come. End with a single, specific invitation the seeker can "
+                "act on. Do NOT use bullet points, headings, or the word "
+                "'meaning'. No card names in bold. Just speak in one warm, "
+                "unhurried voice. Weave, do not list."
+            ),
+        ).with_model("gemini", "gemini-2.5-pro")
+
+        prompt = (
+            f"The spread is '{spread_name}'. Here is what the table shows, "
+            f"in order:\n\n{card_block}\n\nSpeak now, Madame Sable — the "
+            "whole story, told once, from beginning to end."
+        )
+        return await chat.send_message(UserMessage(text=prompt))
+    except Exception as e:
+        logging.error(f"[oracle] overall reading error: {e}")
+        return (
+            "The cards on the table share a single breath, dear one. Read "
+            "them as one story — each an act in a play only you can finish. "
+            "Trust what rises when you look at them together."
+        )
+
+
 @router.post("/draw")
 async def draw_oracle_card(request: MultiCardDrawRequest = None):
-    """Draw oracle cards and get AI interpretation with AI-generated images"""
-    
-    # Handle both old single-card and new multi-card requests
+    """Draw oracle cards and get AI interpretation with AI-generated images."""
+
+    # ---------- Single-card draw ----------
     if request is None or request.card_count == 1:
-        # Single card draw (original behavior)
         card = random.choice(ORACLE_CARDS)
-        
-        # Get or generate card image
-        image_base64 = await get_or_generate_card_image(card['name'], card.get('image_prompt', ''))
-        card_with_image = {**card, 'image_base64': image_base64}
-        
-        try:
-            chat = LlmChat(
-                api_key=EMERGENT_LLM_KEY,
-                session_id=f"oracle-{uuid.uuid4()}",
-                system_message="You are a wise spiritual guide providing oracle card interpretations. Give meaningful, insightful readings that help people on their spiritual journey. Keep responses under 100 words."
-            ).with_model("gemini", "gemini-2.0-flash")
-            
-            prompt = f"The seeker has drawn '{card['name']}' ({card['element']}). Description: {card['description']}. Give a brief spiritual interpretation."
-            
-            user_message = UserMessage(text=prompt)
-            interpretation = await chat.send_message(user_message)
-            
-            return {
-                "spread_type": "single",
-                "cards": [{
+        image_base64 = await get_or_generate_card_image(
+            card["name"], card.get("image_prompt", "")
+        )
+        card_with_image = {**card, "image_base64": image_base64}
+
+        interpretation = await _single_card_reading(card)
+        return {
+            "spread_type": "single",
+            "cards": [
+                {
                     "card": card_with_image,
                     "position": "Guidance",
-                    "interpretation": interpretation
-                }],
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        except Exception as e:
-            logging.error(f"Error generating interpretation: {e}")
-            return {
-                "spread_type": "single",
-                "cards": [{
-                    "card": card_with_image,
-                    "position": "Guidance",
-                    "interpretation": f"The {card['name']} speaks of {card['description'].lower()}. This card brings the energy of {card['element']} into your life."
-                }],
-                "timestamp": datetime.utcnow().isoformat()
-            }
-    
-    # Multi-card spread - generate interpretations in parallel for speed
+                    "interpretation": interpretation,
+                }
+            ],
+            "overall_interpretation": "",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    # ---------- Multi-card spread ----------
     card_count = min(request.card_count, 10)
     positions = request.positions[:card_count]
-    
-    # Draw unique cards
+    spread_name = (request.spread_type or "spread").replace("_", " ").title()
+
     drawn_cards = random.sample(ORACLE_CARDS, min(card_count, len(ORACLE_CARDS)))
-    
-    # Generate images for all cards in parallel
+
     async def get_card_with_image(card):
-        image_base64 = await get_or_generate_card_image(card['name'], card.get('image_prompt', ''))
-        return {**card, 'image_base64': image_base64}
-    
-    cards_with_images = await asyncio.gather(*[get_card_with_image(card) for card in drawn_cards])
-    
-    async def get_interpretation(card, position, spread_type):
-        try:
-            chat = LlmChat(
-                api_key=EMERGENT_LLM_KEY,
-                session_id=f"oracle-{uuid.uuid4()}",
-                system_message=f"You are a wise spiritual guide. Give a brief oracle interpretation for the {position} position. Keep it under 80 words."
-            ).with_model("gemini", "gemini-2.0-flash")
-            
-            prompt = f"Card '{card['name']}' ({card['element']}) in the '{position}' position. Description: {card['description']}. Interpret briefly for {position}."
-            
-            user_message = UserMessage(text=prompt)
-            return await chat.send_message(user_message)
-        except Exception as e:
-            logging.error(f"Error generating interpretation: {e}")
-            return f"The {card['name']} in the {position} position speaks of {card['description'].lower()}. This {card['element']} energy guides this aspect of your journey."
-    
-    # Run all interpretations in parallel
-    tasks = []
+        image_base64 = await get_or_generate_card_image(
+            card["name"], card.get("image_prompt", "")
+        )
+        return {**card, "image_base64": image_base64}
+
+    cards_with_images = await asyncio.gather(
+        *[get_card_with_image(card) for card in drawn_cards]
+    )
+
+    # Per-card readings run in parallel for speed
+    per_card_tasks = []
     for i, card in enumerate(cards_with_images):
-        position = positions[i] if i < len(positions) else f"Card {i+1}"
-        tasks.append(get_interpretation(card, position, request.spread_type))
-    
-    interpretations = await asyncio.gather(*tasks)
-    
+        position = positions[i] if i < len(positions) else f"Card {i + 1}"
+        per_card_tasks.append(_per_card_reading(card, position, spread_name))
+    interpretations = await asyncio.gather(*per_card_tasks)
+
     cards_result = []
-    for i, (card, interpretation) in enumerate(zip(cards_with_images, interpretations)):
-        position = positions[i] if i < len(positions) else f"Card {i+1}"
-        cards_result.append({
-            "card": card,
-            "position": position,
-            "interpretation": interpretation
-        })
-    
+    for i, (card, interpretation) in enumerate(
+        zip(cards_with_images, interpretations)
+    ):
+        position = positions[i] if i < len(positions) else f"Card {i + 1}"
+        cards_result.append(
+            {
+                "card": card,
+                "position": position,
+                "interpretation": interpretation,
+            }
+        )
+
+    # Overall woven story runs after per-card interps are known so we can
+    # feed the model the SAME positions the seeker will see.
+    overall = await _overall_reading(cards_result, spread_name)
+
     return {
         "spread_type": request.spread_type,
         "cards": cards_result,
-        "timestamp": datetime.utcnow().isoformat()
+        "overall_interpretation": overall,
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 
@@ -411,3 +523,120 @@ async def get_saved_readings(request: Request, limit: int = 20):
     except Exception as e:
         logging.error(f"Error fetching readings: {e}")
         return []
+
+
+# ---------------------------------------------------------------------------
+# Quantum AI — follow-up chat about a reading
+# ---------------------------------------------------------------------------
+class ChatMessage(BaseModel):
+    role: str = Field(..., description="'user' or 'assistant'")
+    text: str
+
+
+class OracleChatRequest(BaseModel):
+    """A user question about an active reading. The frontend passes the full
+    reading + chat history each turn so the backend stays stateless."""
+    reading: dict
+    history: List[ChatMessage] = Field(default_factory=list)
+    question: str
+
+
+_QUANTUM_VOICE = (
+    "You are Quantum, the deeper intelligence that lives behind every oracle "
+    "reading. Where Madame Sable speaks the poetry of the cards, you speak "
+    "the pattern beneath them — the geometry of causes, the currents of "
+    "probability, the way one choice ripples through every future self. You "
+    "have already reviewed the reading the seeker holds in their hands. When "
+    "they ask a question, you draw ONLY from the cards they were given, the "
+    "positions those cards occupy, and the elemental interplay between them. "
+    "You do not draw new cards. You do not predict fixed outcomes. You "
+    "reveal what is ALREADY encoded in the spread and give the seeker a "
+    "specific way to work with it. Your voice is calm, precise, warm, and "
+    "unhurried. You speak in ordinary language shot through with occasional "
+    "cosmic imagery. Never use markdown, headings, bullet points, or the "
+    "word 'meaning'. Never break character. Keep every answer under 220 "
+    "words unless the seeker explicitly asks for depth."
+)
+
+
+def _serialise_reading(reading: dict) -> str:
+    """Turn the reading dict into a compact text block the model can see."""
+    lines = []
+    spread = reading.get("spread_type", "reading")
+    lines.append(f"Spread: {spread}")
+    for c in reading.get("cards", []):
+        card = c.get("card", {})
+        lines.append(
+            f"[{c.get('position')}] {card.get('name')} ({card.get('element')}) "
+            f"— {card.get('description')}"
+        )
+        interp = (c.get("interpretation") or "").strip()
+        if interp:
+            lines.append(f"   Madame Sable said: {interp}")
+    overall = (reading.get("overall_interpretation") or "").strip()
+    if overall:
+        lines.append("")
+        lines.append(f"Overall vision: {overall}")
+    return "\n".join(lines)
+
+
+@router.post("/chat")
+async def oracle_chat(body: OracleChatRequest):
+    """Follow-up conversation with the Quantum AI about a completed reading."""
+    if not body.question or not body.question.strip():
+        raise HTTPException(status_code=400, detail="Question is required")
+    if not body.reading or not body.reading.get("cards"):
+        raise HTTPException(
+            status_code=400, detail="An active reading is required for chat"
+        )
+
+    reading_block = _serialise_reading(body.reading)
+
+    # Fold the multi-turn history into the user's message. Emergent LLM
+    # sessions are ephemeral per call, so we embed the transcript inline —
+    # this is the standard emergentintegrations pattern.
+    transcript_lines = []
+    for turn in body.history[-8:]:  # last 8 turns keeps context manageable
+        role = "Seeker" if turn.role == "user" else "Quantum"
+        transcript_lines.append(f"{role}: {turn.text}")
+    transcript = "\n".join(transcript_lines)
+
+    prompt_parts = [
+        "The reading currently on the table:",
+        "",
+        reading_block,
+    ]
+    if transcript:
+        prompt_parts += [
+            "",
+            "The conversation so far:",
+            transcript,
+        ]
+    prompt_parts += [
+        "",
+        f"The seeker now asks: {body.question.strip()}",
+        "",
+        "Answer them now, Quantum — grounded in the cards above, in "
+        "flowing prose, no headings, no bullets.",
+    ]
+
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"oracle-chat-{uuid.uuid4()}",
+            system_message=_QUANTUM_VOICE,
+        ).with_model("gemini", "gemini-2.5-pro")
+
+        response_text = await chat.send_message(
+            UserMessage(text="\n".join(prompt_parts))
+        )
+        # Strip any stray markdown
+        cleaned = response_text.replace("**", "").replace("##", "").strip()
+        return {"response": cleaned}
+    except Exception as e:
+        logging.error(f"[oracle chat] failed: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail="Quantum is momentarily out of reach. Please try again.",
+        )
+

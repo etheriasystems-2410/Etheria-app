@@ -127,6 +127,86 @@ export default function Oracle() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showJournalPrompt, setShowJournalPrompt] = useState(false);
   const [readingQuestion, setReadingQuestion] = useState('');
+
+  // ---- Quantum AI follow-up chat ----
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; text: string }[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const chatScrollRef = React.useRef<ScrollView | null>(null);
+
+  const sendChat = async () => {
+    const q = chatInput.trim();
+    if (!q || chatSending || !currentReading) return;
+    const nextMessages = [...chatMessages, { role: 'user' as const, text: q }];
+    setChatMessages(nextMessages);
+    setChatInput('');
+    setChatSending(true);
+    try {
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const r = await fetch(`${backendUrl}/api/oracle/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reading: {
+            spread_type: currentReading.spread_type,
+            cards: currentReading.cards.map((c) => ({
+              position: c.position,
+              card: {
+                name: c.card.name,
+                element: c.card.element,
+                description: c.card.description,
+              },
+              interpretation: c.interpretation,
+            })),
+            overall_interpretation: currentReading.overall_interpretation || '',
+          },
+          history: chatMessages,
+          question: q,
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setChatMessages([
+          ...nextMessages,
+          {
+            role: 'assistant',
+            text:
+              data?.detail ||
+              'Quantum is momentarily out of reach. Please try again.',
+          },
+        ]);
+      } else {
+        setChatMessages([
+          ...nextMessages,
+          { role: 'assistant', text: (data.response || '').trim() },
+        ]);
+      }
+      // Scroll to bottom after render
+      setTimeout(() => {
+        chatScrollRef.current?.scrollToEnd({ animated: true });
+      }, 60);
+    } catch (e: any) {
+      setChatMessages([
+        ...nextMessages,
+        {
+          role: 'assistant',
+          text: 'Quantum is momentarily out of reach. Please try again.',
+        },
+      ]);
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  // Reset chat state whenever a fresh reading is opened
+  React.useEffect(() => {
+    if (!showReading) {
+      setChatOpen(false);
+      setChatMessages([]);
+      setChatInput('');
+    }
+  }, [showReading]);
   
   const cardFlipAnim = useRef(new Animated.Value(0)).current;
   const cardScaleAnim = useRef(new Animated.Value(1)).current;
@@ -707,6 +787,151 @@ export default function Oracle() {
                       )}
                     </>
                   )}
+
+                  {/* Fortune-teller's woven story of ALL the cards together */}
+                  {currentReading.overall_interpretation ? (
+                    <View style={styles.overallReadingSection}>
+                      <View style={styles.overallHeader}>
+                        <Ionicons name="eye" size={20} color="#fbbf24" />
+                        <Text style={styles.overallTitle}>
+                          The Reader{'\u2019'}s Full Vision
+                        </Text>
+                      </View>
+                      <View style={styles.overallDivider} />
+                      <Text style={styles.overallBody}>
+                        {currentReading.overall_interpretation}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {/* Chat with Quantum AI — follow-up conversation */}
+                  <View style={styles.quantumSection}>
+                    {!chatOpen ? (
+                      <TouchableOpacity
+                        style={styles.quantumOpenBtn}
+                        onPress={() => setChatOpen(true)}
+                        activeOpacity={0.85}
+                      >
+                        <View style={styles.quantumOpenLeft}>
+                          <View style={styles.quantumIconWrap}>
+                            <Ionicons name="planet" size={22} color="#e9d5ff" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.quantumOpenTitle}>
+                              Chat with Quantum AI
+                            </Text>
+                            <Text style={styles.quantumOpenSubtitle}>
+                              Ask deeper questions about your reading
+                            </Text>
+                          </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color="#c4b5fd" />
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.quantumChat}>
+                        <View style={styles.quantumChatHeader}>
+                          <View style={styles.quantumChatHeaderLeft}>
+                            <Ionicons name="planet" size={18} color="#a855f7" />
+                            <Text style={styles.quantumChatTitle}>Quantum</Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => setChatOpen(false)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          >
+                            <Ionicons name="close" size={18} color="#c4b5fd" />
+                          </TouchableOpacity>
+                        </View>
+                        <ScrollView
+                          ref={chatScrollRef}
+                          style={styles.quantumMessages}
+                          contentContainerStyle={styles.quantumMessagesContent}
+                          nestedScrollEnabled
+                          showsVerticalScrollIndicator={false}
+                        >
+                          {chatMessages.length === 0 ? (
+                            <Text style={styles.quantumEmpty}>
+                              I have read the pattern of your cards. Ask me
+                              anything — about the elements, the progression,
+                              a specific card, or the way forward.
+                            </Text>
+                          ) : (
+                            chatMessages.map((m, idx) => (
+                              <View
+                                key={idx}
+                                style={[
+                                  styles.chatBubble,
+                                  m.role === 'user'
+                                    ? styles.chatBubbleUser
+                                    : styles.chatBubbleAssistant,
+                                ]}
+                              >
+                                {m.role === 'assistant' ? (
+                                  <View style={styles.chatBubbleLabelRow}>
+                                    <Ionicons
+                                      name="planet"
+                                      size={12}
+                                      color="#a855f7"
+                                    />
+                                    <Text style={styles.chatBubbleLabel}>Quantum</Text>
+                                  </View>
+                                ) : null}
+                                <Text
+                                  style={
+                                    m.role === 'user'
+                                      ? styles.chatBubbleTextUser
+                                      : styles.chatBubbleTextAssistant
+                                  }
+                                >
+                                  {m.text}
+                                </Text>
+                              </View>
+                            ))
+                          )}
+                          {chatSending ? (
+                            <View
+                              style={[styles.chatBubble, styles.chatBubbleAssistant]}
+                            >
+                              <ActivityIndicator size="small" color="#a855f7" />
+                            </View>
+                          ) : null}
+                        </ScrollView>
+
+                        <View style={styles.quantumInputRow}>
+                          <TextInput
+                            style={styles.quantumInput}
+                            value={chatInput}
+                            onChangeText={setChatInput}
+                            placeholder="Ask about your reading…"
+                            placeholderTextColor="#7c6ba0"
+                            multiline
+                            maxLength={500}
+                            editable={!chatSending}
+                            onSubmitEditing={sendChat}
+                            blurOnSubmit={false}
+                          />
+                          <TouchableOpacity
+                            style={[
+                              styles.quantumSendBtn,
+                              (!chatInput.trim() || chatSending) &&
+                                styles.quantumSendBtnDisabled,
+                            ]}
+                            onPress={sendChat}
+                            disabled={!chatInput.trim() || chatSending}
+                          >
+                            <Ionicons
+                              name="send"
+                              size={16}
+                              color={
+                                !chatInput.trim() || chatSending
+                                  ? '#7c6ba0'
+                                  : '#0f0321'
+                              }
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
+                  </View>
                 </>
               )}
 
@@ -1220,6 +1445,201 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#e9d5ff',
     lineHeight: 24,
+  },
+  overallReadingSection: {
+    marginTop: 24,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.45)',
+    backgroundColor: 'rgba(30,14,58,0.75)',
+  },
+  overallHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  overallTitle: {
+    color: '#fbbf24',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  overallDivider: {
+    height: 1,
+    backgroundColor: 'rgba(251,191,36,0.35)',
+    marginBottom: 12,
+  },
+  overallBody: {
+    color: '#e9d5ff',
+    fontSize: 15,
+    lineHeight: 24,
+    fontStyle: 'italic',
+  },
+
+  // ---- Quantum AI chat ----
+  quantumSection: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  quantumOpenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.55)',
+    backgroundColor: 'rgba(30,14,58,0.75)',
+  },
+  quantumOpenLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  quantumIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(168,85,247,0.28)',
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.6)',
+  },
+  quantumOpenTitle: {
+    color: '#e9d5ff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  quantumOpenSubtitle: {
+    color: '#c4b5fd',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  quantumChat: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.55)',
+    backgroundColor: 'rgba(15,5,35,0.85)',
+    overflow: 'hidden',
+  },
+  quantumChatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(30,14,58,0.9)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(168,85,247,0.35)',
+  },
+  quantumChatHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  quantumChatTitle: {
+    color: '#e9d5ff',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  quantumMessages: {
+    maxHeight: 320,
+  },
+  quantumMessagesContent: {
+    padding: 12,
+    gap: 8,
+  },
+  quantumEmpty: {
+    color: '#9f7aea',
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 19,
+    textAlign: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  chatBubble: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    maxWidth: '90%',
+    marginBottom: 8,
+  },
+  chatBubbleUser: {
+    backgroundColor: 'rgba(168,85,247,0.85)',
+    alignSelf: 'flex-end',
+    borderBottomRightRadius: 2,
+  },
+  chatBubbleAssistant: {
+    backgroundColor: 'rgba(30,14,58,0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.35)',
+    alignSelf: 'flex-start',
+    borderBottomLeftRadius: 2,
+  },
+  chatBubbleLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  chatBubbleLabel: {
+    color: '#a855f7',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  chatBubbleTextUser: {
+    color: '#0f0321',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  chatBubbleTextAssistant: {
+    color: '#e9d5ff',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  quantumInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(168,85,247,0.35)',
+    backgroundColor: 'rgba(15,5,35,0.85)',
+  },
+  quantumInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 120,
+    color: '#e9d5ff',
+    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.35)',
+    backgroundColor: 'rgba(30,14,58,0.8)',
+  },
+  quantumSendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fbbf24',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantumSendBtnDisabled: {
+    backgroundColor: 'rgba(45,27,78,0.7)',
   },
   cardNavigationSection: {
     marginTop: 20,
