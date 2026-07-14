@@ -51,7 +51,7 @@ Generate a single unique promotional code in the format: WORD-WORD-WORD (3 mysti
 Use spiritual, cosmic, or mystical terminology. Keep it uppercase.
 Examples: LUNAR-SPIRIT-RISE, COSMIC-DREAM-FLOW, MYSTIC-STAR-BLOOM
 Just output the code, nothing else."""
-            ).with_model("gemini", "gemini-2.0-flash")
+            ).with_model("gemini", "gemini-2.5-flash")
             
             response = await chat.send_message(UserMessage(text="Generate a unique mystical promo code now."))
             code = response.strip().upper().replace(" ", "-")

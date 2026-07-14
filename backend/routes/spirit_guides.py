@@ -506,7 +506,7 @@ async def chat_with_divine_pair(payload: DivinePairMessage, request: Request):
             api_key=EMERGENT_LLM_KEY,
             session_id=f"divine-pair-{uuid.uuid4()}",
             system_message=script_system,
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
         resp = await chat.send_message(UserMessage(text=script_prompt))
         return resp.text if hasattr(resp, "text") else str(resp)
 

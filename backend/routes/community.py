@@ -175,7 +175,7 @@ If flagged but approved, it means human review is recommended but content can be
             api_key=llm_api_key,
             session_id=f"moderation-{uuid.uuid4()}",
             system_message="You are a content moderator for a spiritual wellness community."
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
         
         user_message = UserMessage(text=moderation_prompt)
         response = await chat.send_message(user_message)

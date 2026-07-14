@@ -70,7 +70,7 @@ The interpretation should be 2-3 paragraphs."""
             api_key=EMERGENT_LLM_KEY,
             session_id=f"dream-interpret-{uuid.uuid4()}",
             system_message=system_message
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
         
         response = await chat.send_message(
             UserMessage(text=prompt)

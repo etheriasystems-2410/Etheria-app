@@ -151,7 +151,7 @@ async def generate_mystical_code():
             api_key=EMERGENT_LLM_KEY,
             session_id=f"code-gen-{uuid.uuid4()}",
             system_message="You generate mystical, spiritual-themed promotional codes. Generate codes that feel magical and otherworldly. Format: 1-3 words separated by hyphens, using mystical/cosmic terminology."
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
         
         response = await chat.send_message(
             UserMessage(text="Generate a single mystical promotional code (format: WORD-WORD-WORD, cosmic/spiritual themed, uppercase). Just the code, nothing else.")

@@ -665,7 +665,7 @@ IMPORTANT FORMATTING RULES:
 2. Keep language calm, soothing, and spiritually uplifting
 3. DO NOT use any markdown formatting
 4. Write in plain flowing prose that sounds natural when spoken aloud"""
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
         
         prompt = f"Create a complete {duration_minutes}-minute guided meditation focused on {focus}. Include breathing instructions, visualization, and body awareness. Use [pause for X seconds] format for pauses."
         
