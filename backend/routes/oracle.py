@@ -2,8 +2,9 @@
 Oracle Divination endpoints
 """
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 import random
 import uuid
@@ -259,9 +260,20 @@ class OracleReading(BaseModel):
 
 
 class SaveReadingRequest(BaseModel):
-    card: dict
-    interpretation: str
-    timestamp: str
+    """Persist an oracle reading (single or multi-card) plus its Quantum
+    chat history. Only spread_type + cards are strictly required — every
+    other field is optional so this model can accept both single-card
+    legacy payloads and full multi-card readings."""
+    model_config = {"extra": "allow"}
+
+    spread_type: Optional[str] = None
+    cards: Optional[List[dict]] = None
+    overall_interpretation: Optional[str] = None
+    card: Optional[dict] = None            # legacy single-card
+    interpretation: Optional[str] = None   # legacy single-card
+    chat_history: Optional[List[dict]] = None
+    reading_question: Optional[str] = None
+    timestamp: Optional[str] = None
 
 
 class MultiCardDrawRequest(BaseModel):
@@ -484,27 +496,81 @@ async def draw_oracle_card(request: MultiCardDrawRequest = None):
 
 @router.post("/save")
 async def save_oracle_reading(reading: SaveReadingRequest, request: Request):
-    """Save an oracle reading to database"""
+    """Save an oracle reading (including Quantum chat history) to the DB.
+    Returns the generated `reading_id` so the client can later PATCH the
+    chat_history when the user keeps chatting after saving."""
+    reading_dict = reading.model_dump(exclude_none=True)
+    reading_dict.setdefault("chat_history", [])
+    reading_dict["_id"] = str(uuid.uuid4())
+    reading_dict["saved_at"] = datetime.utcnow().isoformat()
     try:
-        # Get current user
         user = await get_current_user(request)
-        
-        reading_dict = reading.dict()
-        reading_dict['_id'] = str(uuid.uuid4())
-        reading_dict['user_id'] = user['user_id']
-        reading_dict['saved_at'] = datetime.utcnow().isoformat()
-        await db.oracle_readings.insert_one(reading_dict)
-        return {"success": True, "message": "Reading saved"}
+        reading_dict["user_id"] = user["user_id"]
     except HTTPException:
-        # If not authenticated, save without user_id
-        reading_dict = reading.dict()
-        reading_dict['_id'] = str(uuid.uuid4())
-        reading_dict['saved_at'] = datetime.utcnow().isoformat()
+        pass  # allow anonymous saves too
+    except Exception as e:
+        logging.error(f"Error resolving user during save: {e}")
+
+    try:
         await db.oracle_readings.insert_one(reading_dict)
-        return {"success": True, "message": "Reading saved"}
+        return {
+            "success": True,
+            "message": "Reading saved",
+            "reading_id": reading_dict["_id"],
+        }
     except Exception as e:
         logging.error(f"Error saving reading: {e}")
         raise HTTPException(status_code=500, detail="Failed to save reading")
+
+
+class ChatPatchRequest(BaseModel):
+    """Append one user→assistant exchange to a saved reading's chat log."""
+    user_text: str
+    assistant_text: str
+
+
+@router.patch("/readings/{reading_id}/chat")
+async def append_chat_to_reading(
+    reading_id: str, body: ChatPatchRequest, request: Request
+):
+    """Append the latest Quantum exchange to a saved reading. Users may
+    only patch their own readings (or anonymous readings)."""
+    if not body.user_text.strip() or not body.assistant_text.strip():
+        raise HTTPException(status_code=400, detail="Empty chat exchange")
+
+    query: dict = {"_id": reading_id}
+    try:
+        user = await get_current_user(request)
+        # Restrict to caller's own readings; anonymous saves have no user_id.
+        query = {
+            "_id": reading_id,
+            "$or": [{"user_id": user["user_id"]}, {"user_id": {"$exists": False}}],
+        }
+    except HTTPException:
+        # Anonymous callers can only patch anonymous readings.
+        query = {"_id": reading_id, "user_id": {"$exists": False}}
+
+    now = datetime.utcnow().isoformat()
+    result = await db.oracle_readings.update_one(
+        query,
+        {
+            "$push": {
+                "chat_history": {
+                    "$each": [
+                        {"role": "user", "text": body.user_text.strip(), "at": now},
+                        {
+                            "role": "assistant",
+                            "text": body.assistant_text.strip(),
+                            "at": now,
+                        },
+                    ]
+                }
+            }
+        },
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Reading not found")
+    return {"success": True}
 
 
 @router.get("/readings")
@@ -589,7 +655,6 @@ async def oracle_chat(body: OracleChatRequest):
         raise HTTPException(
             status_code=400, detail="An active reading is required for chat"
         )
-
     reading_block = _serialise_reading(body.reading)
 
     # Fold the multi-turn history into the user's message. Emergent LLM
@@ -640,3 +705,56 @@ async def oracle_chat(body: OracleChatRequest):
             detail="Quantum is momentarily out of reach. Please try again.",
         )
 
+
+
+# ---------------------------------------------------------------------------
+# Quantum voice — ElevenLabs TTS for Quantum's replies
+# ---------------------------------------------------------------------------
+# A resonant, calm, slightly authoritative voice fits Quantum's persona.
+# Adam — deep male voice — is a natural choice and is distinct from the
+# reader/reprogramming voices already in use in the app.
+_QUANTUM_VOICE_ID = "pNInz6obpgDQGcFmaJgB"  # Adam
+_QUANTUM_VOICE_CFG = {
+    "voice": _QUANTUM_VOICE_ID,
+    "openai_voice": "onyx",
+    "stability": 0.55,
+    "style": 0.35,
+    "speed": 0.95,
+}
+
+_TTS_MAX_CHARS = 2000  # safety cap per synthesis
+
+
+class TTSRequest(BaseModel):
+    text: str
+
+
+@router.post("/tts")
+async def quantum_tts(body: TTSRequest):
+    """Synthesise a Quantum reply into an MP3 the client can play. Returns
+    audio/mpeg with a correct Content-Length header so native players can
+    seek. Trims text to a safe length so accidental huge inputs don't burn
+    the whole ElevenLabs quota."""
+    from .deps import tts_with_fallback
+
+    text = (body.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
+    if len(text) > _TTS_MAX_CHARS:
+        text = text[:_TTS_MAX_CHARS].rsplit(" ", 1)[0] + "…"
+
+    audio_bytes = await tts_with_fallback(text, _QUANTUM_VOICE_CFG)
+    if not audio_bytes:
+        raise HTTPException(
+            status_code=502,
+            detail="Voice synthesis is temporarily unavailable.",
+        )
+
+    return Response(
+        content=audio_bytes,
+        media_type="audio/mpeg",
+        headers={
+            "Content-Length": str(len(audio_bytes)),
+            "Cache-Control": "no-store",
+        },
+    )

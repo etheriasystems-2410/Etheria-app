@@ -24,6 +24,7 @@ import HeaderBanner from '../components/HeaderBanner';
 import { Paywall } from '../components/Paywall';
 import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
 import { Mist } from '../components/ui';
+import { AudioPlayerManager } from '../utils/audioPlayer';
 import { palette, radii, spacing } from '../theme/tokens';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -47,6 +48,9 @@ interface Reading {
   cards: CardReading[];
   overall_interpretation?: string;
   timestamp: string;
+  chat_history?: { role: 'user' | 'assistant'; text: string; at?: string }[];
+  _id?: string;
+  reading_id?: string;
 }
 
 interface SpreadType {
@@ -133,7 +137,11 @@ export default function Oracle() {
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; text: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatSending, setChatSending] = useState(false);
+  const [savedReadingId, setSavedReadingId] = useState<string | null>(null);
+  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
+  const [loadingAudioIdx, setLoadingAudioIdx] = useState<number | null>(null);
   const chatScrollRef = React.useRef<ScrollView | null>(null);
+  const quantumPlayerRef = React.useRef<AudioPlayerManager | null>(null);
 
   const sendChat = async () => {
     const q = chatInput.trim();
@@ -166,27 +174,45 @@ export default function Oracle() {
         }),
       });
       const data = await r.json();
+      let assistantText = '';
       if (!r.ok) {
-        setChatMessages([
-          ...nextMessages,
-          {
-            role: 'assistant',
-            text:
-              data?.detail ||
-              'Quantum is momentarily out of reach. Please try again.',
-          },
-        ]);
+        assistantText =
+          data?.detail ||
+          'Quantum is momentarily out of reach. Please try again.';
       } else {
-        setChatMessages([
-          ...nextMessages,
-          { role: 'assistant', text: (data.response || '').trim() },
-        ]);
+        assistantText = (data.response || '').trim();
+      }
+      setChatMessages([
+        ...nextMessages,
+        { role: 'assistant', text: assistantText },
+      ]);
+      // Persist to the saved reading if it has been saved.
+      if (r.ok && savedReadingId) {
+        try {
+          const token = await AsyncStorage.getItem('session_token');
+          await fetch(
+            `${backendUrl}/api/oracle/readings/${savedReadingId}/chat`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({
+                user_text: q,
+                assistant_text: assistantText,
+              }),
+            },
+          );
+        } catch {
+          // silent — chat still shows locally even if persistence fails
+        }
       }
       // Scroll to bottom after render
       setTimeout(() => {
         chatScrollRef.current?.scrollToEnd({ animated: true });
       }, 60);
-    } catch (e: any) {
+    } catch {
       setChatMessages([
         ...nextMessages,
         {
@@ -199,12 +225,94 @@ export default function Oracle() {
     }
   };
 
-  // Reset chat state whenever a fresh reading is opened
+  const speakQuantumReply = async (text: string, idx: number) => {
+    if (!text.trim()) return;
+    // Toggle off if this bubble is already playing.
+    if (playingIdx === idx) {
+      try {
+        await quantumPlayerRef.current?.unload();
+      } catch {}
+      quantumPlayerRef.current = null;
+      setPlayingIdx(null);
+      return;
+    }
+    // Stop any previously playing bubble first.
+    try {
+      await quantumPlayerRef.current?.unload();
+    } catch {}
+    quantumPlayerRef.current = null;
+
+    setLoadingAudioIdx(idx);
+    try {
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const r = await fetch(`${backendUrl}/api/oracle/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        Alert.alert(
+          'Voice unavailable',
+          err?.detail || 'Please try again shortly.',
+        );
+        return;
+      }
+      const blob = await r.blob();
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Failed to decode audio'));
+        reader.onloadend = () => {
+          const raw = String(reader.result || '');
+          const idxComma = raw.indexOf(',');
+          resolve(idxComma >= 0 ? raw.slice(idxComma + 1) : raw);
+        };
+        reader.readAsDataURL(blob);
+      });
+      const player = new AudioPlayerManager();
+      await player.loadAndPlay(`data:audio/mp3;base64,${b64}`, {
+        loop: false,
+        volume: 0.95,
+      });
+      quantumPlayerRef.current = player;
+      setPlayingIdx(idx);
+      // Auto-clear when finished (best-effort poll — status API isn't public)
+      const check = setInterval(async () => {
+        const cur = quantumPlayerRef.current?.getCurrentTime() ?? 0;
+        const dur = quantumPlayerRef.current?.getDuration() ?? 0;
+        if (dur > 0 && cur >= dur - 0.3) {
+          clearInterval(check);
+          try {
+            await quantumPlayerRef.current?.unload();
+          } catch {}
+          quantumPlayerRef.current = null;
+          setPlayingIdx((p) => (p === idx ? null : p));
+        }
+      }, 500);
+    } catch (e: any) {
+      Alert.alert('Voice error', e?.message || 'Please try again.');
+    } finally {
+      setLoadingAudioIdx(null);
+    }
+  };
+
+  // Cleanup audio on unmount / modal close
+  React.useEffect(() => {
+    return () => {
+      quantumPlayerRef.current?.unload().catch(() => {});
+    };
+  }, []);
+
+  // Reset chat state whenever the reading modal fully closes.
   React.useEffect(() => {
     if (!showReading) {
       setChatOpen(false);
       setChatMessages([]);
       setChatInput('');
+      setSavedReadingId(null);
+      setPlayingIdx(null);
+      quantumPlayerRef.current?.unload().catch(() => {});
+      quantumPlayerRef.current = null;
     }
   }, [showReading]);
   
@@ -297,14 +405,43 @@ export default function Oracle() {
     }
   };
 
+  const openSavedReading = (reading: Reading) => {
+    // Restore Quantum chat state alongside the reading. If the reading has
+    // no persisted chat_history we start empty. `savedReadingId` is set so
+    // future chats append to this record via PATCH.
+    setCurrentReading(reading);
+    setCurrentCardIndex(0);
+    setSavedReadingId(reading._id || reading.reading_id || null);
+    const restored = (reading.chat_history || []).map((m) => ({
+      role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+      text: m.text,
+    }));
+    setChatMessages(restored);
+    setChatOpen(restored.length > 0);
+    setShowHistory(false);
+    setShowReading(true);
+  };
+
+
   const saveReading = async () => {
     if (!currentReading) return;
     try {
-      await fetch(`${BACKEND_URL}/api/oracle/save`, {
+      const token = await AsyncStorage.getItem('session_token');
+      const r = await fetch(`${BACKEND_URL}/api/oracle/save`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentReading),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          ...currentReading,
+          chat_history: chatMessages,
+        }),
       });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && data?.reading_id) {
+        setSavedReadingId(data.reading_id);
+      }
       setSavedReadings([currentReading, ...savedReadings]);
       setShowReading(false);
       setCurrentReading(null);
@@ -364,6 +501,28 @@ export default function Oracle() {
       });
 
       if (response.ok) {
+        // Also persist the reading + Quantum chat_history to the oracle DB so
+        // the seeker can re-open it from the History tab and continue the
+        // conversation.
+        try {
+          const saveResp = await fetch(`${BACKEND_URL}/api/oracle/save`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+            },
+            body: JSON.stringify({
+              ...currentReading,
+              chat_history: chatMessages,
+            }),
+          });
+          const saveData = await saveResp.json().catch(() => ({}));
+          if (saveResp.ok && saveData?.reading_id) {
+            setSavedReadingId(saveData.reading_id);
+          }
+        } catch {
+          // best-effort persistence — never block the journal save
+        }
         Alert.alert('Saved!', 'Reading saved to your journal.');
         setShowJournalPrompt(false);
         setReadingQuestion('');
@@ -384,9 +543,12 @@ export default function Oracle() {
 
   const loadHistory = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/oracle/readings`);
+      const token = await AsyncStorage.getItem('session_token');
+      const response = await fetch(`${BACKEND_URL}/api/oracle/readings`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       const data = await response.json();
-      setSavedReadings(data);
+      setSavedReadings(Array.isArray(data) ? data : []);
       setShowHistory(true);
     } catch (error) {
       console.error('Error loading history:', error);
@@ -572,19 +734,28 @@ export default function Oracle() {
                   </View>
                 ) : (
                   savedReadings.map((reading, index) => (
-                    <View key={index} style={styles.historyCard}>
+                    <TouchableOpacity
+                      key={reading._id || index}
+                      style={styles.historyCard}
+                      activeOpacity={0.8}
+                      onPress={() => openSavedReading(reading)}
+                    >
                       <View style={styles.historyCardContent}>
                         <Text style={styles.historySpreadType}>
                           {SPREAD_TYPES.find(s => s.id === reading.spread_type)?.name || 'Reading'}
                         </Text>
                         <Text style={styles.historyCardCount}>
                           {reading.cards?.length || 1} card{(reading.cards?.length || 1) > 1 ? 's' : ''}
+                          {reading.chat_history && reading.chat_history.length > 0
+                            ? ` · 💬 ${Math.floor(reading.chat_history.length / 2)} Quantum reply${Math.floor(reading.chat_history.length / 2) === 1 ? '' : 'ies'}`
+                            : ''}
                         </Text>
                         <Text style={styles.historyDate}>
                           {new Date(reading.timestamp).toLocaleDateString()}
                         </Text>
                       </View>
-                    </View>
+                      <Ionicons name="chevron-forward" size={18} color="#9f7aea" />
+                    </TouchableOpacity>
                   ))
                 )}
               </ScrollView>
@@ -873,6 +1044,30 @@ export default function Oracle() {
                                       color="#a855f7"
                                     />
                                     <Text style={styles.chatBubbleLabel}>Quantum</Text>
+                                    <TouchableOpacity
+                                      onPress={() => speakQuantumReply(m.text, idx)}
+                                      style={styles.chatSpeakerBtn}
+                                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                                      accessibilityLabel={
+                                        playingIdx === idx ? 'Stop voice' : 'Play voice'
+                                      }
+                                    >
+                                      {loadingAudioIdx === idx ? (
+                                        <ActivityIndicator size="small" color="#a855f7" />
+                                      ) : (
+                                        <Ionicons
+                                          name={
+                                            playingIdx === idx
+                                              ? 'stop-circle'
+                                              : 'volume-high'
+                                          }
+                                          size={14}
+                                          color={
+                                            playingIdx === idx ? '#fbbf24' : '#a855f7'
+                                          }
+                                        />
+                                      )}
+                                    </TouchableOpacity>
                                   </View>
                                 ) : null}
                                 <Text
@@ -1596,6 +1791,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.6,
+  },
+  chatSpeakerBtn: {
+    marginLeft: 'auto',
+    paddingLeft: 6,
   },
   chatBubbleTextUser: {
     color: '#0f0321',
