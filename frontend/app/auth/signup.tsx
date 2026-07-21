@@ -14,8 +14,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -29,7 +27,6 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [emailExists, setEmailExists] = useState(false);
 
@@ -67,83 +64,6 @@ export default function Signup() {
     }
   };
 
-  const handleGoogleSignup = async () => {
-    if (Platform.OS === 'web') {
-      const redirectUrl = window.location.origin + '/auth/callback';
-      window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-    } else {
-      try {
-        setGoogleLoading(true);
-        const redirectUrl = Linking.createURL('/auth/callback');
-        const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-        
-        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
-        
-        if (result.type === 'success' && result.url) {
-          let sessionId: string | null = null;
-          
-          try {
-            const url = new URL(result.url);
-            sessionId = url.searchParams.get('session_id');
-            
-            if (!sessionId && url.hash) {
-              const hashParams = new URLSearchParams(url.hash.substring(1));
-              sessionId = hashParams.get('session_id');
-            }
-          } catch (e) {
-            const match = result.url.match(/session_id=([^&]+)/);
-            if (match) {
-              sessionId = match[1];
-            }
-          }
-          
-          if (sessionId) {
-            await processOAuthCallback(sessionId);
-          } else {
-            Alert.alert('Signup Failed', 'No session ID returned. Please try again.');
-          }
-        }
-      } catch (error: any) {
-        console.error('Google signup error:', error);
-        Alert.alert('Signup Error', error.message || 'Failed to complete Google signup. Please try again.');
-      } finally {
-        setGoogleLoading(false);
-      }
-    }
-  };
-
-  const processOAuthCallback = async (sessionId: string) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/auth/google-callback?session_id=${sessionId}`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Authentication failed');
-      }
-
-      const userData = await response.json();
-
-      const setCookie = response.headers.get('set-cookie');
-      if (setCookie) {
-        const tokenMatch = setCookie.match(/session_token=([^;]+)/);
-        if (tokenMatch) {
-          await AsyncStorage.setItem('session_token', tokenMatch[1]);
-        }
-      }
-
-      if (userData.session_token) {
-        await AsyncStorage.setItem('session_token', userData.session_token);
-      }
-
-      await AsyncStorage.setItem('user_data', JSON.stringify(userData));
-      router.replace('/');
-    } catch (error: any) {
-      Alert.alert('Signup Failed', error.message || 'Authentication failed');
-    }
-  };
 
   return (
     <KeyboardAvoidingView
@@ -252,27 +172,6 @@ export default function Signup() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.signupButtonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.googleButton, googleLoading && styles.signupButtonDisabled]}
-            onPress={handleGoogleSignup}
-            disabled={googleLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="logo-google" size={20} color="#fff" />
-                <Text style={styles.googleButtonText}>Sign up with Google</Text>
-              </>
             )}
           </TouchableOpacity>
 

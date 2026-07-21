@@ -15,30 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-
-// Simple math captcha generator
-const generateCaptcha = () => {
-  const num1 = Math.floor(Math.random() * 10) + 1;
-  const num2 = Math.floor(Math.random() * 10) + 1;
-  const operators = ['+', '-'];
-  const operator = operators[Math.floor(Math.random() * operators.length)];
-  
-  let answer: number;
-  if (operator === '+') {
-    answer = num1 + num2;
-  } else {
-    // Ensure positive result
-    if (num1 >= num2) {
-      answer = num1 - num2;
-    } else {
-      return { question: `${num2} ${operator} ${num1}`, answer: num2 - num1 };
-    }
-  }
-  
-  return { question: `${num1} ${operator} ${num2}`, answer };
-};
 
 export default function Login() {
   const router = useRouter();
@@ -48,11 +24,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  
-  // Captcha state
-  const [captcha, setCaptcha] = useState(generateCaptcha());
-  const [captchaAnswer, setCaptchaAnswer] = useState('');
-  const [captchaError, setCaptchaError] = useState(false);
 
   // Load remembered email on mount
   useEffect(() => {
@@ -72,24 +43,9 @@ export default function Login() {
     }
   };
 
-  const refreshCaptcha = () => {
-    setCaptcha(generateCaptcha());
-    setCaptchaAnswer('');
-    setCaptchaError(false);
-  };
-
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    // Validate captcha
-    const userAnswer = parseInt(captchaAnswer, 10);
-    if (isNaN(userAnswer) || userAnswer !== captcha.answer) {
-      setCaptchaError(true);
-      refreshCaptcha();
-      Alert.alert('Captcha Error', 'Please solve the math problem correctly');
       return;
     }
 
@@ -108,153 +64,12 @@ export default function Login() {
       
       router.replace('/');
     } catch (error: any) {
-      refreshCaptcha();
       Alert.alert('Login Failed', error.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = async () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    // Using Emergent Google OAuth - derive redirect URL dynamically
-    if (Platform.OS === 'web') {
-      const redirectUrl = window.location.origin + '/auth/callback';
-      window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-    } else {
-      // For native apps, use WebBrowser for auth session
-      try {
-        setLoading(true);
-        // Create the redirect URL using expo-linking
-        const redirectUrl = Linking.createURL('/auth/callback');
-        const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-        
-        console.log('Opening auth URL:', authUrl);
-        console.log('Redirect URL:', redirectUrl);
-        
-        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
-        
-        console.log('Auth result type:', result.type);
-        if (result.type === 'success') {
-          console.log('Auth result URL:', (result as any).url);
-        }
-        
-        if (result.type === 'success' && (result as any).url) {
-          const resultUrl = (result as any).url as string;
-          // Parse the session_id from the returned URL
-          // Emergent OAuth returns: redirect_url#session_id=xxx
-          let sessionId: string | null = null;
-          
-          // Method 1: Check hash fragment first (most common for OAuth)
-          if (resultUrl.includes('#')) {
-            const hashPart = resultUrl.split('#')[1];
-            if (hashPart) {
-              const hashParams = new URLSearchParams(hashPart);
-              sessionId = hashParams.get('session_id');
-              console.log('Session ID from hash:', sessionId);
-            }
-          }
-          
-          // Method 2: Check query params
-          if (!sessionId && resultUrl.includes('?')) {
-            try {
-              const url = new URL(resultUrl);
-              sessionId = url.searchParams.get('session_id');
-              console.log('Session ID from query:', sessionId);
-            } catch (e) {
-              // URL parsing might fail for exp:// URLs
-              const queryMatch = resultUrl.match(/\?([^#]*)/);
-              if (queryMatch) {
-                const queryParams = new URLSearchParams(queryMatch[1]);
-                sessionId = queryParams.get('session_id');
-                console.log('Session ID from manual query parse:', sessionId);
-              }
-            }
-          }
-          
-          // Method 3: Regex fallback for any location
-          if (!sessionId) {
-            const match = resultUrl.match(/session_id=([^&\s#]+)/);
-            if (match) {
-              sessionId = decodeURIComponent(match[1]);
-              console.log('Session ID from regex:', sessionId);
-            }
-          }
-          
-          if (sessionId) {
-            // Process the callback
-            await processOAuthCallback(sessionId);
-          } else {
-            console.log('Full result URL:', resultUrl);
-            Alert.alert('Login Failed', 'No session ID returned from authentication. Please try again.');
-          }
-        } else if (result.type === 'cancel') {
-          // User cancelled - do nothing
-          console.log('User cancelled login');
-        } else if (result.type === 'dismiss') {
-          console.log('Browser dismissed');
-        }
-      } catch (error: any) {
-        console.error('Google login error:', error);
-        Alert.alert('Login Error', error.message || 'Failed to complete Google login. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const processOAuthCallback = async (sessionId: string) => {
-    setLoading(true);
-    try {
-      const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
-      console.log('Processing OAuth callback with session:', sessionId);
-      
-      const response = await fetch(`${BACKEND_URL}/api/auth/google-callback?session_id=${sessionId}`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      console.log('OAuth callback response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('OAuth callback error:', errorData);
-        throw new Error(errorData.detail || 'Authentication failed');
-      }
-
-      const userData = await response.json();
-      console.log('OAuth callback user data:', JSON.stringify(userData));
-
-      // Get session token from response body (for mobile)
-      if (userData.session_token) {
-        console.log('Saving session token from response');
-        await AsyncStorage.setItem('session_token', userData.session_token);
-      }
-
-      // Also check cookies as fallback
-      const setCookie = response.headers.get('set-cookie');
-      if (setCookie && !userData.session_token) {
-        const tokenMatch = setCookie.match(/session_token=([^;]+)/);
-        if (tokenMatch) {
-          console.log('Saving session token from cookie');
-          await AsyncStorage.setItem('session_token', tokenMatch[1]);
-        }
-      }
-
-      // Store user data
-      await AsyncStorage.setItem('user_data', JSON.stringify(userData));
-      
-      console.log('Google login successful, redirecting...');
-      
-      // Navigate to home
-      router.replace('/');
-    } catch (error: any) {
-      console.error('processOAuthCallback error:', error);
-      Alert.alert('Login Failed', error.message || 'Authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <KeyboardAvoidingView
@@ -318,37 +133,6 @@ export default function Login() {
               </TouchableOpacity>
             </View>
 
-            {/* Captcha Section */}
-            <View style={styles.captchaSection}>
-              <View style={styles.captchaHeader}>
-                <Ionicons name="shield-checkmark" size={18} color="#9f7aea" />
-                <Text style={styles.captchaLabel}>Security Check</Text>
-              </View>
-              <View style={styles.captchaRow}>
-                <View style={styles.captchaQuestion}>
-                  <Text style={styles.captchaText}>What is {captcha.question} = ?</Text>
-                </View>
-                <TextInput
-                  style={[
-                    styles.captchaInput,
-                    captchaError && styles.captchaInputError
-                  ]}
-                  placeholder="?"
-                  placeholderTextColor="#9f7aea"
-                  value={captchaAnswer}
-                  onChangeText={(text) => {
-                    setCaptchaAnswer(text);
-                    setCaptchaError(false);
-                  }}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                />
-                <TouchableOpacity onPress={refreshCaptcha} style={styles.refreshButton}>
-                  <Ionicons name="refresh" size={20} color="#b794f6" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
             {/* Remember Me Checkbox */}
             <TouchableOpacity
               style={styles.rememberMeRow}
@@ -374,24 +158,8 @@ export default function Login() {
               )}
             </TouchableOpacity>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Google Login - No captcha needed */}
-            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
-              <Ionicons name="logo-google" size={20} color="#fff" />
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
-              <View style={styles.noCaptchaBadge}>
-                <Ionicons name="flash" size={12} color="#ffd700" />
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.googleHint}>No captcha required</Text>
-
             <View style={styles.signupPrompt}>
-              <Text style={styles.signupPromptText}>Don't have an account? </Text>
+              <Text style={styles.signupPromptText}>Don{'\u2019'}t have an account? </Text>
               <TouchableOpacity onPress={() => router.push('/auth/signup')}>
                 <Text style={styles.signupLink}>Sign Up</Text>
               </TouchableOpacity>

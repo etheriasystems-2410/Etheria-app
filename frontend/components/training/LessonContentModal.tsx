@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import MeditationPlayer from './MeditationPlayer';
 import LessonWorkbook from './LessonWorkbook';
+import LessonHeroBanner from './LessonHeroBanner';
 import type { Lesson } from './types';
 
 interface Props {
@@ -56,41 +57,52 @@ export default function LessonContentModal({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        <View style={styles.header}>
+        <ScrollView contentContainerStyle={styles.lessonContentContainer}>
+          {/* Hero — sits at the very top; the back button + header title
+              float over it so the title is READ over the nebula image. */}
+          <View style={styles.heroWrap}>
+            <LessonHeroBanner
+              eyebrow={`Lesson ${lesson?.id ?? ''}`}
+              title={lesson?.title}
+              height={200}
+            />
+          </View>
+          <View style={styles.innerPad}>
+            <View style={styles.lessonContentBox}>
+              <Text style={styles.lessonContentText}>{lesson?.content}</Text>
+            </View>
+
+            {lesson?.meditation && (
+              <MeditationPlayer
+                meditation={lesson.meditation}
+                isPlayingMeditation={isPlayingMeditation}
+                isGeneratingTTS={isGeneratingTTS}
+                ttsProgress={ttsProgress}
+                onPlay={onPlayMeditation}
+                onStop={onStopMeditation}
+              />
+            )}
+
+            {moduleId && lesson ? (
+              <LessonWorkbook
+                moduleId={moduleId}
+                lessonId={lesson.id}
+                onCertificateChange={onCertificateChange}
+              />
+            ) : null}
+          </View>
+        </ScrollView>
+
+        {/* Floating transparent header — sits above the hero. */}
+        <View style={styles.floatHeader} pointerEvents="box-none">
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>
+          <Text style={styles.floatHeaderTitle} numberOfLines={1}>
             Lesson {lesson?.id}
           </Text>
-          <View style={{ width: 24 }} />
+          <View style={{ width: 32 }} />
         </View>
-
-        <ScrollView contentContainerStyle={styles.lessonContentContainer}>
-          <Text style={styles.lessonContentTitle}>{lesson?.title}</Text>
-          <View style={styles.lessonContentBox}>
-            <Text style={styles.lessonContentText}>{lesson?.content}</Text>
-          </View>
-
-          {lesson?.meditation && (
-            <MeditationPlayer
-              meditation={lesson.meditation}
-              isPlayingMeditation={isPlayingMeditation}
-              isGeneratingTTS={isGeneratingTTS}
-              ttsProgress={ttsProgress}
-              onPlay={onPlayMeditation}
-              onStop={onStopMeditation}
-            />
-          )}
-
-          {moduleId && lesson ? (
-            <LessonWorkbook
-              moduleId={moduleId}
-              lessonId={lesson.id}
-              onCertificateChange={onCertificateChange}
-            />
-          ) : null}
-        </ScrollView>
 
         <View style={styles.lessonFooter}>
           <TouchableOpacity style={styles.completeButton} onPress={onComplete}>
@@ -116,7 +128,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#2d1b4e',
   },
-  backButton: { padding: 4 },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15,3,33,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(159,122,234,0.35)',
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -124,7 +142,37 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  lessonContentContainer: { padding: 16, paddingBottom: 100 },
+  lessonContentContainer: { paddingBottom: 100 },
+  heroWrap: {
+    marginBottom: 16,
+  },
+  innerPad: {
+    paddingHorizontal: 16,
+  },
+  floatHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 44,   // safe-area breathing room
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    zIndex: 10,
+  },
+  floatHeaderTitle: {
+    color: '#e9d5ff',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    flex: 1,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
   lessonContentTitle: {
     fontSize: 24,
     fontWeight: 'bold',

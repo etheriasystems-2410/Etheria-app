@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { CosmicBackdrop } from '../ui';
+import LessonHeroBanner from './LessonHeroBanner';
 import type { Lesson, Module } from './types';
 
 interface Props {
@@ -41,15 +42,6 @@ export default function LessonListModal({
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
         <CosmicBackdrop />
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {module?.title || 'Lessons'}
-          </Text>
-          <View style={{ width: 24 }} />
-        </View>
 
         {loadingLessons ? (
           <View style={styles.loadingContainer}>
@@ -58,9 +50,15 @@ export default function LessonListModal({
           </View>
         ) : (
           <ScrollView contentContainerStyle={styles.lessonListContent}>
-            <Text style={styles.moduleDescHeader}>{module?.description}</Text>
+            <LessonHeroBanner
+              eyebrow="Module"
+              title={module?.title}
+              height={180}
+            />
+            <View style={styles.innerPad}>
+              <Text style={styles.moduleDescHeader}>{module?.description}</Text>
 
-            {lessons.map((lesson, index) => {
+              {lessons.map((lesson, index) => {
               const completed = module
                 ? isLessonCompleted(module.id, lesson.id)
                 : false;
@@ -92,8 +90,20 @@ export default function LessonListModal({
                 </TouchableOpacity>
               );
             })}
+            </View>
           </ScrollView>
         )}
+
+        {/* Floating transparent header — sits above the hero. */}
+        <View style={styles.floatHeader} pointerEvents="box-none">
+          <TouchableOpacity onPress={onClose} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
+          </TouchableOpacity>
+          <Text style={styles.floatHeaderTitle} numberOfLines={1}>
+            {module?.title || 'Lessons'}
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
       </View>
     </Modal>
   );
@@ -101,6 +111,30 @@ export default function LessonListModal({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0d0015' },
+  floatHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 44,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    zIndex: 10,
+  },
+  floatHeaderTitle: {
+    color: '#e9d5ff',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    flex: 1,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -110,7 +144,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#2d1b4e',
   },
-  backButton: { padding: 4 },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15,3,33,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(159,122,234,0.35)',
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -125,7 +165,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#0d0015',
   },
   loadingText: { color: '#c4b5fd', marginTop: 16, fontSize: 16 },
-  lessonListContent: { padding: 16 },
+  lessonListContent: { paddingBottom: 20 },
+  innerPad: { paddingHorizontal: 16, paddingTop: 12 },
   moduleDescHeader: {
     fontSize: 15,
     color: '#9f7aea',

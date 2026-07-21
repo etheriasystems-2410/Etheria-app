@@ -1,0 +1,51 @@
+{
+  "summary": "Verified 3 frontend changes: (1) SplashVideo audio-fade code path is correct for native (muted=false, volume=1.0, 12-step volume fade in dismiss); on web the component intentionally skips video and only shows the black-fade hold (~2.2s), so browser autoplay-with-sound restriction does not apply. (2) Login screen has NO captcha UI, NO 'Continue with Google' button, NO 'or' divider, and NO 'No captcha required' hint. Admin login (etheriasystems@gmail.com / $Tory2410) succeeded end-to-end and redirected to /. Remember Me & Sign Up link present. (3) Signup screen has NO 'Sign up with Google' button and NO 'or' divider. Fresh signup with a random email created the account and redirected to /terms-acceptance. Backend /api/auth/login sanity: HTTP 200 with session_token.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/auth/login",
+        "issues": [
+          "Review request mentions 'Forgot Password?' link should still be present, but there is NO 'Forgot Password?' link in login.tsx (nothing between the Sign In button and the Sign Up prompt). This is likely a pre-existing gap unrelated to the captcha/Google removal, but flagging since the review explicitly asked to verify it."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "StyleSheet cleanup (login.tsx)",
+        "issue": "Orphan unused styles remain after captcha + Google removal: captchaSection, captchaHeader, captchaLabel, captchaRow, captchaQuestion, captchaText, captchaInput, captchaInputError, refreshButton, divider, dividerLine, dividerText, googleButton, googleButtonText, noCaptchaBadge, googleHint. Reference: /app/frontend/app/auth/login.tsx:262-396. Harmless (RN drops unused keys at runtime) but adds ~130 lines of dead code."
+      },
+      {
+        "component": "StyleSheet cleanup (signup.tsx)",
+        "issue": "Orphan unused styles after Google removal: divider, dividerLine, dividerText, googleButton, googleButtonText. Reference: /app/frontend/app/auth/signup.tsx:313-341."
+      },
+      {
+        "component": "Unused import (signup.tsx)",
+        "issue": "`const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;` declared at line 19 but never referenced after Google OAuth callback removal. Reference: /app/frontend/app/auth/signup.tsx:19. Safe to delete."
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "OPTIONAL cleanup: remove the orphaned captcha/Google/divider styles from login.tsx (lines 262-396) and signup.tsx (lines 313-341) — dead code only, no functional impact.",
+    "OPTIONAL cleanup: remove unused `const BACKEND_URL` at signup.tsx:19.",
+    "Clarify with product: is the 'Forgot Password?' link intentionally not on the login screen? The review request says it 'should still be present' but it is not in login.tsx today. If it should exist, add a TouchableOpacity linking to the reset flow between the Sign In button and the signup prompt.",
+    "NOTE (not a bug): Web splash never plays the video (component returns black view when Platform.OS === 'web'), so the audio-fade behavior on web is essentially a no-op. This is by design in SplashVideo.tsx:144-151. The volume-fade code paths for native builds look correct and defensive (try/catch around every volume mutation)."
+  ],
+  "critical_code_review_comments": [
+    "SplashVideo.tsx dismiss(): the 12-step setTimeout audio fade fires asynchronously and is not cleared if the component unmounts mid-fade — the setTimeouts will still run and touch a possibly-freed player. Low risk (each step is wrapped in try/catch), but worth tracking the timers in a ref and clearing on unmount.",
+    "Both login.tsx and signup.tsx still ship large blocks of unused styles from the removed captcha/Google features — harmless but adds ~135 lines of dead code across the two files."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "One throwaway signup account created during E2E: test_0mt0dbzp@example.com / TestPass123! (redirected to /terms-acceptance, never accepted). Safe to leave or purge.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login/signup no longer render captcha or Google auth. Only email/password path is exercised. Admin creds still valid (etheriasystems@gmail.com / $Tory2410). Web splash is a plain black fade (~2.2s) because SplashVideo skips <VideoView> on web — do not treat the missing video/audio on web preview as a bug. For native audio testing, a real device build is required (expo-video needs the native module).",
+  "rca_of_issue": "N/A — this was a verification pass, not a bug fix. All three requested changes work end-to-end on the web preview."
+}

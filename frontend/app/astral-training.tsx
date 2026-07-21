@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Paywall } from '../components/Paywall';
 import { CosmicBackdrop } from '../components/ui';
 import LessonWorkbook from '../components/training/LessonWorkbook';
+import LessonHeroBanner from '../components/training/LessonHeroBanner';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const ASTRAL_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/36730.jpg';

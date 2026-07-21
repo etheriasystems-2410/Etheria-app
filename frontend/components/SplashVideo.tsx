@@ -53,7 +53,14 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
     if (videoAvailable && Platform.OS !== 'web') {
       player = expoVideo.useVideoPlayer(SPLASH_VIDEO, (p: any) => {
         p.loop = false;
-        p.muted = true; // splash plays muted — respects silent mode
+        // Audio ON — the splash video has an audio track the user wants to hear.
+        // If the device is in silent mode iOS will respect that automatically.
+        p.muted = false;
+        try {
+          p.volume = 1.0;
+        } catch {
+          /* older API */
+        }
         try {
           p.play();
         } catch (e) {
@@ -68,13 +75,41 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
   const dismiss = React.useCallback(() => {
     if (hidden) return;
     setHidden(true);
+    // Fade audio volume in parallel with opacity so the transition feels
+    // like a single unified exit rather than a hard cut.
+    if (player) {
+      try {
+        const startVol = typeof player.volume === 'number' ? player.volume : 1;
+        const steps = 12;
+        const stepMs = FADE_OUT_MS / steps;
+        for (let i = 1; i <= steps; i += 1) {
+          setTimeout(() => {
+            try {
+              player.volume = Math.max(0, startVol * (1 - i / steps));
+            } catch {
+              /* ignore */
+            }
+            if (i === steps) {
+              try {
+                player.muted = true;
+                player.pause?.();
+              } catch {
+                /* ignore */
+              }
+            }
+          }, stepMs * i);
+        }
+      } catch (e) {
+        console.warn('[Splash] audio fade failed:', e);
+      }
+    }
     Animated.timing(opacity, {
       toValue: 0,
       duration: FADE_OUT_MS,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start(() => onDone());
-  }, [hidden, onDone, opacity]);
+  }, [hidden, onDone, opacity, player]);
 
   // End of playback → hold a beat → fade out
   useEffect(() => {
