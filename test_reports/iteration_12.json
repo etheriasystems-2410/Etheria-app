@@ -1,0 +1,43 @@
+{
+  "summary": "Verified Oracle deck 'endless spinner' bug fix end-to-end. Backend pytest (7/7 pass) confirms /api/oracle/draw latencies are well under the review-request bars: single-card 7.8s (<15s), three-card 14.3s (<25s), 5-card celtic 15.3s (<40s), and /api/oracle/chat 5.4s. Image cache is fully warm — 9/9 sampled draws returned cached image_base64. Overall narrative for 3-card is 367 words (in spec). Frontend E2E on mobile viewport (390×844) via public URL: admin logged in with math captcha, Single Card → Draw 1 Card resolved and rendered card + interpretation in 8.9s; Three Card Spread → Draw 3 Cards resolved in 16.1s network / 17.1s UI (repeat run 11.8s). All 3 cards render with image, element, name, interpretation, and the 'Reader's Full Vision' overall panel is present. 'Chat with Quantum AI' panel opens and displays the input; send-icon click did not fire a network request in my automation (icon-based button, not text) — chat itself is verified 200 OK via backend pytest. No React Native red screens; no console errors during the Oracle flows (only the pre-existing shadow*/textShadow*/pointerEvents/useNativeDriver/route-'files' warnings inherited from previous iterations).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Oracle chat send button", "issue": "Send button in 'Chat with Quantum' expanded panel is icon-only with no accessible name/testID, making automated E2E send action unreliable (could not trigger network request from the automation).", "testID": "missing (suggest chat-send-btn)", "priority": "LOW"},
+      {"component": "Oracle spread cards (draw button + Draw N Card(s))", "issue": "No testID on 'Draw N Cards' button, 'Back to Spreads', spread tiles, Full Vision panel, or Chat panel — E2E must rely on text selectors which are brittle.", "testID": "missing", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "package.json", "issue": "expo-av ^16.0.8 still listed as dependency (deprecated — should be expo-audio for audio, expo-video for video). Reference: /app/frontend/package.json:26. Carried over from iteration_11."},
+      {"component": "Global styles", "issue": "Persistent RN-web deprecation warnings on every page: shadow* → boxShadow, textShadow* → textShadow, props.pointerEvents → style.pointerEvents. Not blocking but noisy. Same as iteration_11."},
+      {"component": "Expo Router layout", "issue": "Console warning '[Layout children]: No route named \"files\" exists in nested children' — stale route reference. Same as iteration_11."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_oracle.py",
+    "/app/test_reports/pytest/oracle_results.xml"
+  ],
+  "action_items": [
+    "Add testID to Oracle interactive elements: spread-tile-{id}, draw-cards-btn, back-to-spreads, quantum-chat-header, quantum-chat-input, quantum-chat-send. Would unlock reliable E2E automation.",
+    "Investigate the pre-existing '[Layout children]: No route named \"files\"' warning — either add the route or remove the stray reference.",
+    "Remove unused expo-av dependency (deprecated; migrate future usage to expo-audio / expo-video).",
+    "Replace shadow*/textShadow*/pointerEvents props with modern boxShadow/textShadow/style.pointerEvents to silence RN-web deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "oracle.py fix is clean and low-risk: get_or_generate_card_image now returns None on cache miss and schedules generation via asyncio.create_task — no fire-and-forget task leak because the task upserts and self-completes; identical concurrent requests are idempotent thanks to upsert-by-card_name.",
+    "_multi_card_readings_bundle wraps the JSON parse in try/except and falls back to the parallel two-step path — good defensive design; the fallback still lands under budget because both paths use gemini-2.5-flash.",
+    "datetime.utcnow() is used throughout /app/backend/routes/oracle.py (lines 277, 561, 611, 622, 670) — deprecated in Python 3.12+. Prefer datetime.now(timezone.utc). Not a bug now but worth cleaning during the next refactor.",
+    "oracle.py is 878 lines (over 700-line guideline) — consider splitting: cards data → oracle_cards.py, LLM helpers → oracle_readings.py, chat/TTS → oracle_chat.py.",
+    "SaveReadingRequest uses model_config={'extra': 'allow'} which is pragmatic but means unknown fields silently persist to Mongo — audit that clients don't PUSH _id or arbitrary junk."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_oracle.py (new — 7 pytest cases covering single/three/five-card latency, image cache coverage, and chat regression + validation)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (single-card + three-card draw flows fully rendered; Full Vision + Chat panels present)"},
+  "seed_data_creation": "None. Pytest uses no auth (oracle draw is public) and does not persist any data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Bug is fixed. Backend suite is at /app/backend/tests/test_oracle.py — run with `pytest /app/backend/tests/test_oracle.py -v`. All 3 latency envelopes have solid headroom (single 7.8s vs 15s bar, 3-card 14.3s vs 25s bar, 5-card 15.3s vs 40s bar). If chat-send E2E automation is needed later, first add testID='quantum-chat-send' to the send button in /app/frontend/app/oracle.tsx.",
+  "rca_of_issue": "Root cause was correctly identified by main agent: (1) inline gpt-image-1 calls on cache miss added 30-90s to /draw, (2) gemini-2.5-pro for interpretations added ~25s for a 3-card spread. Fix moved image gen to fire-and-forget via asyncio.create_task (get_or_generate_card_image returns None on miss and schedules _synth_and_cache_card_image), moved all Madame Sable calls to gemini-2.5-flash, and consolidated per-card + overall vision into a single structured-JSON call via _multi_card_readings_bundle (with graceful two-step fallback). Verified live latencies: 7.8s / 14.3s / 15.3s / 5.4s (single/3-card/5-card draw, chat). No regressions in /oracle/chat or validation (missing reading → 400, empty question → 400)."
+}
