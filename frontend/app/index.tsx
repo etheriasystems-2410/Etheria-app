@@ -248,15 +248,15 @@ export default function Home() {
   // Welcome text translations
   const getWelcomeText = (): string => {
     const texts: Record<string, string> = {
-      en: 'Toolkit designed to aid you on your quest to enlightenment.',
-      es: 'Conjunto de herramientas diseñado para ayudarte en tu búsqueda de la iluminación.',
-      fr: 'Trousse conçue pour vous accompagner dans votre quête de l\'illumination.',
-      de: 'Werkzeugset, das Sie auf Ihrer Reise zur Erleuchtung begleitet.',
-      it: 'Toolkit progettato per assisterti nella tua ricerca dell\'illuminazione.',
-      pt: 'Kit de ferramentas concebido para apoiá-lo em sua busca pela iluminação.',
-      ja: '悟りへの探求を支えるためのツールキットです。',
-      ko: '깨달음을 향한 여정을 돕도록 설계된 도구 모음입니다.',
-      zh: '一套助您追寻觉悟之旅的工具集。',
+      en: "Designed to be utilized as a comprehensive toolkit to aid the seeker on their path to self-discovery and enlightenment. Whether it be mental reprogramming, balancing of the chakras, guided meditation, development of the psychic arts, or by use of our 'Spirit Guides' or by consulting the 'Oracle Deck's (both powered by proprietary Quantum AI), Etheria is designed as your aide. Have a fruitful journey, seeker.",
+      es: "Diseñada para ser utilizada como un conjunto integral de herramientas que asisten al buscador en su camino hacia el autoconocimiento y la iluminación. Ya sea a través de la reprogramación mental, el equilibrio de los chakras, la meditación guiada, el desarrollo de las artes psíquicas, o mediante el uso de nuestros 'Guías Espirituales' o la consulta del 'Mazo Oráculo' (ambos potenciados por nuestra Quantum AI patentada), Etheria está diseñada como tu ayudante. Que tengas un viaje fructífero, buscador.",
+      fr: "Conçue comme une trousse complète pour accompagner le chercheur sur son chemin vers la découverte de soi et l'illumination. Qu'il s'agisse de reprogrammation mentale, d'équilibrage des chakras, de méditation guidée, du développement des arts psychiques, ou par l'usage de nos 'Guides Spirituels' ou la consultation du 'Jeu Oracle' (tous deux animés par notre IA Quantique exclusive), Etheria est conçue comme votre soutien. Bon voyage, chercheur.",
+      de: "Konzipiert als umfassendes Werkzeugset, das den Suchenden auf dem Weg zur Selbsterkenntnis und Erleuchtung begleitet. Ob mentale Neuprogrammierung, Ausgleich der Chakren, geführte Meditation, Entwicklung psychischer Fähigkeiten oder durch unsere 'Geistführer' oder das 'Orakelkarten-Deck' (beide angetrieben von unserer eigenen Quantum AI) – Etheria ist als dein Begleiter gedacht. Habe eine erfüllende Reise, Suchender.",
+      it: "Progettata come un kit di strumenti completo per assistere il cercatore lungo il suo cammino verso la scoperta di sé e l'illuminazione. Che si tratti di riprogrammazione mentale, riequilibrio dei chakra, meditazione guidata, sviluppo delle arti psichiche, o attraverso l'uso delle nostre 'Guide Spirituali' o la consultazione del 'Mazzo Oracolo' (entrambi alimentati dalla nostra Quantum AI proprietaria), Etheria è concepita come il tuo aiuto. Buon viaggio, cercatore.",
+      pt: "Concebida como um kit de ferramentas abrangente para auxiliar o buscador em seu caminho de autoconhecimento e iluminação. Seja pela reprogramação mental, equilíbrio dos chakras, meditação guiada, desenvolvimento das artes psíquicas, ou pelo uso de nossos 'Guias Espirituais' ou consulta ao 'Baralho Oráculo' (ambos alimentados por nossa Quantum AI proprietária), Etheria foi criada para ser sua auxiliar. Tenha uma jornada frutífera, buscador.",
+      ja: "自己発見と悟りへの道を歩む探求者を支える、包括的なツールキットとして設計されています。心のリプログラミング、チャクラの調整、ガイド付き瞑想、サイキック能力の開発、あるいは独自のQuantum AIを搭載した『スピリットガイド』や『オラクルデッキ』の活用—Etheriaはあなたの助けとなるよう設計されています。実り多き旅を、探求者よ。",
+      ko: "자기 발견과 깨달음의 길을 걷는 구도자를 돕기 위한 종합 도구 모음으로 설계되었습니다. 정신 재프로그래밍, 차크라 균형, 안내 명상, 사이킥 아츠 개발, 또는 자체 Quantum AI로 구동되는 '영적 안내자'와 '오라클 덱' 상담 등—Etheria는 당신의 조력자가 되도록 설계되었습니다. 결실 있는 여정 되세요, 구도자여.",
+      zh: "作为一套全面的工具，助力寻道者踏上自我发现与觉悟之路。无论是心灵重塑、脉轮平衡、引导冥想、通灵艺术的修炼，亦或借助由我们专有 Quantum AI 驱动的『灵性向导』与『神谕牌阵』——Etheria 皆为您的助力而生。愿你旅途丰盈，寻道者。",
     };
     return texts[languageCode] || texts.en;
   };
@@ -354,15 +354,15 @@ export default function Home() {
           </View>
         )}
 
-        {/* Hero Image — keeps the mystical eye but with cleaner tagline */}
+        {/* Hero Image — keeps the mystical eye with full descriptive tagline */}
         <View style={styles.heroImageWrap}>
           <Image source={{ uri: ETHERIA_IMAGE }} style={styles.heroImageFull} contentFit="cover" />
           <LinearGradient
-            colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.5)', 'rgba(13,0,21,0.95)']}
+            colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.55)', 'rgba(13,0,21,0.96)']}
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.heroImageContent}>
-            <Text style={styles.heroTagline} numberOfLines={2}>
+            <Text style={styles.heroTagline}>
               {getWelcomeText()}
             </Text>
           </View>
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
 
   // Hero image — keeps eye, tagline overlay
   heroImageWrap: {
-    height: 200,
+    height: 340,
     width: '100%',
     marginTop: spacing.md,
     overflow: 'hidden',
@@ -559,13 +559,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   heroTagline: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 19,
     color: palette.iceLavender,
     textAlign: 'center',
     fontStyle: 'italic',
     fontWeight: '500',
-    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowColor: 'rgba(0,0,0,0.9)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 8,
   },
