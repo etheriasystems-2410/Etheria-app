@@ -122,6 +122,13 @@ function ProtectedLayout() {  const { isAuthenticated, loading, user } = useAuth
         }}
       />
       <Drawer.Screen
+        name="bi-weekly-contest"
+        options={{
+          drawerItemStyle: { display: 'none' },
+          title: 'Bi-weekly Contest',
+        }}
+      />
+      <Drawer.Screen
         name="spirit-guides"
         options={{
           drawerLabel: t('spiritGuidesTitle'),

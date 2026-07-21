@@ -393,74 +393,8 @@ export default function Home() {
           </TouchableOpacity>
         )}
 
-        {/* Prize Drawing */}
-        {isAuthenticated && (
-          <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md }}>
-            <View style={styles.prizeCard}>
-              <View style={styles.prizeHeader}>
-                <View style={styles.giftBubble}>
-                  <Ionicons name="gift" size={16} color={palette.gold} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.prizeTitle}>Monthly Prize Drawing</Text>
-                  <Text style={styles.prizeSubtitle}>Win a FREE month of Premium</Text>
-                </View>
-              </View>
-
-              {loadingPrizeStatus ? (
-                <ActivityIndicator color={palette.lavender} style={{ marginVertical: 4 }} />
-              ) : prizeDrawingStatus ? (
-                <>
-                  <View style={styles.usageRow}>
-                    <Text style={styles.usageLabel}>This week</Text>
-                    <Text style={styles.usageValue}>
-                      {prizeDrawingStatus.weekly_usage_minutes.toFixed(0)}/{prizeDrawingStatus.required_minutes} min
-                    </Text>
-                  </View>
-                  <View style={styles.progressBar}>
-                    <LinearGradient
-                      colors={['#fcd34d', '#fbbf24']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={[
-                        styles.progressFill,
-                        { width: `${Math.min(100, (prizeDrawingStatus.weekly_usage_minutes / prizeDrawingStatus.required_minutes) * 100)}%` },
-                      ]}
-                    />
-                  </View>
-
-                  {prizeDrawingStatus.opted_in ? (
-                    <View style={styles.optedInRow}>
-                      <View style={styles.optedInBadge}>
-                        <Ionicons name="checkmark-circle" size={13} color={palette.success} />
-                        <Text style={styles.optedInText}>Entered</Text>
-                      </View>
-                      <TouchableOpacity onPress={() => handleOptInPrizeDrawing(false)} disabled={optingIn} hitSlop={8}>
-                        <Text style={styles.optOutText}>Opt out</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      activeOpacity={0.85}
-                      onPress={() => handleOptInPrizeDrawing(true)}
-                      disabled={optingIn}
-                      style={styles.enterDrawingBtn}
-                    >
-                      {optingIn ? (
-                        <ActivityIndicator color="#1a0033" size="small" />
-                      ) : (
-                        <>
-                          <Ionicons name="ticket" size={14} color="#1a0033" />
-                          <Text style={styles.enterDrawingText}>Enter Drawing</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                </>
-              ) : null}
-            </View>
-          </View>
-        )}
+        {/* Prize drawing lives on its own page now — access via
+            Settings → Bi-weekly Contest. Banner removed from home. */}
 
         {/* Daily Oracle Card + Streak (auth only) */}
         {isAuthenticated && <DailyCardWidget />}

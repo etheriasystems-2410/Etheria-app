@@ -370,6 +370,41 @@ async def get_prize_drawing_status(request: Request):
     }
 
 
+@prize_drawing_router.get("/winners")
+async def get_past_winners(limit: int = 30):
+    """Public leaderboard of past bi-weekly contest winners.
+    Returns masked member IDs + the date each won."""
+    try:
+        limit = max(1, min(int(limit or 30), 100))
+    except Exception:
+        limit = 30
+
+    docs = await db.contest_winners.find({}).sort("selected_at", -1).limit(limit).to_list(limit)
+    winners = []
+    for d in docs:
+        raw = d.get("user_id") or ""
+        # Mask everything except the leading "user_" prefix + last 4 chars.
+        if raw.startswith("user_"):
+            tail = raw[5:]
+            masked = f"user_{tail[:2]}…{tail[-4:]}" if len(tail) > 6 else raw
+        elif raw:
+            masked = f"{raw[:2]}…{raw[-4:]}" if len(raw) > 6 else raw
+        else:
+            masked = "(anonymous)"
+
+        # Prefer selected_at, fall back to any other timestamp on the doc.
+        when = d.get("selected_at") or d.get("won_at") or d.get("created_at")
+        if hasattr(when, "isoformat"):
+            when = when.isoformat()
+
+        winners.append({
+            "member_id": masked,
+            "won_at": when,
+            "contest_id": str(d.get("contest_id") or ""),
+        })
+    return {"winners": winners, "count": len(winners)}
+
+
 # ==================== USAGE TRACKING ROUTER ====================
 usage_router = APIRouter(prefix="/usage", tags=["usage"])
 

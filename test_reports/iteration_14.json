@@ -1,0 +1,37 @@
+{
+  "summary": "Feature verified end-to-end: Monthly Prize Drawing banner successfully moved from home page to a hidden /bi-weekly-contest page. Backend endpoint GET /api/prize-drawing/winners is public and returns the correct shape ({winners:[], count:N}) with limit clamping (1..100) and masked member IDs. Regression on /api/prize-drawing/status still works both with and without auth. Frontend: home no longer renders the prize banner, drawer does not list Bi-weekly Contest, Settings shows the new gold row between Contact and Admin sections, tapping it navigates to /bi-weekly-contest, direct URL loads the same page, opt-in/opt-out toggle works, empty leaderboard state renders, rules card + self-link render, back button returns home, pull-to-refresh does not crash, 0 red console errors during the flow.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_prize_drawing_winners.py",
+    "/app/test_reports/pytest/prize_drawing_winners.xml"
+  ],
+  "action_items": [
+    "Non-blocking (already flagged by main agent): /app/frontend/app/index.tsx has 14 leftover unused imports/vars/styles from the removed prize drawing block (prizeDrawingStatus state, fetchPrizeDrawingStatus, handleOptInPrizeDrawing, prizeCard/prizeHeader/prizeTitle/prizeSubtitle/giftBubble/enterDrawingBtn/enterDrawingText StyleSheet entries). Remove them at leisure — no functional impact."
+  ],
+  "critical_code_review_comments": [
+    "Winners endpoint masking correctly strips uuid tails and never leaks the raw user_id — verified in test_winners_masked_member_id_shape.",
+    "Winners endpoint clamps limit into [1,100] safely — verified with limit=0 and limit=9999.",
+    "bi-weekly-contest.tsx correctly uses process.env.EXPO_PUBLIC_BACKEND_URL and AsyncStorage session_token; no hard-coded URLs."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_prize_drawing_winners.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 pytest cases passed)",
+    "frontend": "100% (all 13 verification points from the request confirmed on mobile viewport 390x844)"
+  },
+  "seed_data_creation": "None — contest_winners collection is empty in Mongo; empty-state leaderboard rendered as designed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The admin account (etheriasystems@gmail.com) is currently opted IN to the bi-weekly drawing after this test run. If your next test needs the opted-out initial state, tap 'Opt out' on /bi-weekly-contest first. Login flow requires clicking the FORM 'Sign In' button (bounding_box y > 400) — there is a same-text drawer link at the top of the page that must NOT be used.",
+  "rca_of_issue": "N/A — no issues found."
+}

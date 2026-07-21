@@ -427,6 +427,25 @@ export default function Settings() {
         onTerms={() => router.push('/terms')}
       />
 
+      {/* Bi-weekly Contest — hidden page, only reachable from here or the
+          contest rules card. */}
+      <TouchableOpacity
+        style={styles.contestRow}
+        onPress={() => router.push('/bi-weekly-contest' as any)}
+        activeOpacity={0.85}
+      >
+        <View style={styles.contestIconWrap}>
+          <Ionicons name="gift" size={16} color="#fbbf24" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.contestTitle}>Bi-weekly Contest</Text>
+          <Text style={styles.contestSubtitle}>
+            Opt-in, leaderboard, and rules
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#9f7aea" />
+      </TouchableOpacity>
+
       <AdminSection
         user={user}
         onAdminPanel={() => router.push('/admin-panel')}
@@ -521,6 +540,31 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   processingText: { marginTop: 16, fontSize: 16, color: '#e9d5ff' },
+  contestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.35)',
+    backgroundColor: 'rgba(30,14,58,0.65)',
+  },
+  contestIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(251,191,36,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.55)',
+  },
+  contestTitle: { color: '#e9d5ff', fontSize: 14, fontWeight: '700' },
+  contestSubtitle: { color: '#c4b5fd', fontSize: 11, marginTop: 2 },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
