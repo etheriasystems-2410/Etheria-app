@@ -226,6 +226,7 @@ export default function Training() {
         onClose={() => setCurrentLesson(null)}
         lesson={currentLesson}
         lessons={lessons}
+        moduleId={currentModule?.id}
         onComplete={markLessonComplete}
         isPlayingMeditation={isPlayingMeditation}
         isGeneratingTTS={isGeneratingTTS}

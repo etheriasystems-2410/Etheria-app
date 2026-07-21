@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -15,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { Paywall } from '../components/Paywall';
 import { CosmicBackdrop } from '../components/ui';
+import LessonWorkbook from '../components/training/LessonWorkbook';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const ASTRAL_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/36730.jpg';
@@ -65,6 +67,7 @@ export default function AstralTravel() {
   const [sessionActive, setSessionActive] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [completedLevels, setCompletedLevels] = useState<string[]>([]);
+  const [workbookLevel, setWorkbookLevel] = useState<AstralLevel | null>(null);
 
   // Load completed levels from storage
   useEffect(() => {
@@ -279,6 +282,16 @@ export default function AstralTravel() {
             </View>
             <Text style={styles.levelName}>{level.name}</Text>
             <Text style={styles.levelDescription}>{level.description}</Text>
+            <TouchableOpacity
+              style={styles.workbookLink}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                setWorkbookLevel(level);
+              }}
+            >
+              <Ionicons name="book-outline" size={14} color="#fbbf24" />
+              <Text style={styles.workbookLinkText}>Open Workbook</Text>
+            </TouchableOpacity>
             {selectedLevel?.id === level.id && (
               <View style={styles.selectedIndicator}>
                 <Ionicons name="checkmark-circle" size={20} color="#10b981" />
@@ -314,6 +327,39 @@ export default function AstralTravel() {
         }}
         feature="Astral Travel Practice"
       />
+
+      {/* Astral workbook modal — notes / practice log / quiz per level */}
+      <Modal
+        visible={!!workbookLevel}
+        animationType="slide"
+        onRequestClose={() => setWorkbookLevel(null)}
+      >
+        <View style={styles.workbookModal}>
+          <View style={styles.workbookHeader}>
+            <TouchableOpacity
+              onPress={() => setWorkbookLevel(null)}
+              style={styles.workbookHeaderBtn}
+            >
+              <Ionicons name="arrow-back" size={22} color="#e9d5ff" />
+            </TouchableOpacity>
+            <Text style={styles.workbookHeaderTitle} numberOfLines={1}>
+              {workbookLevel?.name || 'Workbook'}
+            </Text>
+            <View style={{ width: 22 }} />
+          </View>
+          <ScrollView contentContainerStyle={styles.workbookScroll}>
+            <Text style={styles.workbookHint}>
+              {workbookLevel?.description}
+            </Text>
+            {workbookLevel ? (
+              <LessonWorkbook
+                moduleId="astral-training"
+                lessonId={workbookLevel.id}
+              />
+            ) : null}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -641,5 +687,58 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#e9d5ff',
+  },
+  workbookLink: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(251,191,36,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.4)',
+  },
+  workbookLinkText: {
+    color: '#fbbf24',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  workbookModal: {
+    flex: 1,
+    backgroundColor: '#0d0015',
+  },
+  workbookHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2d1b4e',
+    backgroundColor: '#1a0033',
+  },
+  workbookHeaderBtn: { padding: 4 },
+  workbookHeaderTitle: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '800',
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
+  },
+  workbookScroll: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  workbookHint: {
+    color: '#c4b5fd',
+    fontSize: 13,
+    lineHeight: 19,
+    fontStyle: 'italic',
+    marginBottom: 4,
   },
 });

@@ -1,0 +1,46 @@
+{
+  "summary": "Tested Training Workbook feature end-to-end. Created /app/backend/tests/test_training_workbook.py with 15 pytest cases covering all 4 priorities (happy path notes/practice/quiz, Astral quiz, certificate rollup, auth guards). Found and FIXED one real bug: route ordering — GET /certificate/{module_id} was shadowed by the earlier catch-all /{module_id}/{lesson_id} route and always returned 404 'Unknown lesson'. After fix, all 15 tests pass. Frontend E2E via mobile viewport confirmed: Psychic Training lesson modal renders Certificate progress ring (0/5 lessons quizzed), My Notes textarea with 'Autosaved on blur' footer, Practice Log with +/trash controls, and Quiz auto-loaded with 5 questions × 4 radio options. Astral Training level cards show gold-bordered 'Open Workbook' pill; tapping opens a fullscreen modal with identical workbook sections and 0/4 certificate ring. correct_index is NOT leaked in /quiz responses (verified). Wrong answer count returns 400 as expected.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LessonWorkbook / LessonContentModal", "issue": "No testID attributes anywhere in workbook components — makes future automated E2E fragile (had to use text-based selectors)", "testID": "missing", "priority": "LOW"},
+      {"component": "LessonContentModal quiz section", "issue": "'Load Quiz' button never appears in Psychic Training modal because the quiz auto-loads on lesson open (fine functionally, but the review request explicitly mentions a 'Load Quiz' button). Verify this matches PRD.", "testID": "n/a", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "package.json", "issue": "expo-av ^16.0.8 is listed as a dependency (deprecated). Not imported anywhere in /app/frontend/app or /app/frontend/components, so safe to remove and migrate any future usage to expo-audio / expo-video. Reference: /app/frontend/package.json:26"},
+      {"component": "Global styles", "issue": "Numerous deprecated RN-web warnings on load: `shadow*` (use boxShadow), `textShadow*` (use textShadow), `props.pointerEvents` (use style.pointerEvents), and 'useNativeDriver is not supported' fallbacks. Not blocking but noisy on web preview."},
+      {"component": "Expo Router layout", "issue": "Console warning: '[Layout children]: No route named \"files\" exists in nested children' — a stray reference to a non-existent route."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_training_workbook.py",
+    "/app/test_reports/pytest/training_workbook_results.xml"
+  ],
+  "action_items": [
+    "Optional: add testID props to LessonWorkbook (notes-input, practice-input, practice-add-btn, quiz-submit, cert-ring) for future E2E stability.",
+    "Optional: remove unused expo-av dependency from package.json (deprecated; not imported).",
+    "Optional: replace shadow*/textShadow* style props with the modern boxShadow/textShadow equivalents to silence RN-web deprecation warnings.",
+    "Investigate '[Layout children]: No route named \"files\" exists' warning in the Expo Router layout — either add the file or remove the reference."
+  ],
+  "critical_code_review_comments": [
+    "FIXED: /app/backend/routes/training_workbook.py — the GET /certificate/{module_id} route was declared AFTER GET /{module_id}/{lesson_id}, so FastAPI matched 'certificate' as module_id and returned 404. Moved the certificate route above the catch-all handler. This bug would have made the frontend cert ring on the Astral 'Open Workbook' modal show 404 whenever a fresh lesson state was requested via the standalone certificate endpoint.",
+    "LessonWorkbook.tsx is 788 lines — consider splitting Notes / Practice / Quiz / Certificate into 3-4 subcomponents (>700 LOC guideline).",
+    "training_workbook.py uses `datetime.utcnow()` (deprecated in Python 3.12+). Prefer `datetime.now(timezone.utc)`.",
+    "Quiz caching is keyed by (module_id, lesson_id) globally — good, but there's no admin-facing regeneration endpoint if a lesson's content is edited later."
+  ],
+  "updated_files": [
+    "/app/backend/routes/training_workbook.py (moved /certificate/{module_id} route above /{module_id}/{lesson_id} to fix route shadowing)",
+    "/app/backend/tests/test_training_workbook.py (new — 15 pytest cases)"
+  ],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% of manually verified flows (Psychic lesson modal, Astral 'Open Workbook' modal, both show all 4 workbook sections)"},
+  "seed_data_creation": "Backend tests create one TEST_ user via /api/auth/signup (session-scoped fixture) and populate training_quizzes/attempts for beginner-1 lessons 1-5 and astral-training/intro. No production data touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Feature works. Route ordering bug fixed. If frontend needs deeper interaction testing (typing notes, submitting quiz via UI, checking cert ring updates), add testID props first — currently text selectors work but are brittle. Backend test suite is at /app/backend/tests/test_training_workbook.py and reuses the session-scoped fresh_user fixture from conftest.py.",
+  "rca_of_issue": "Bug: GET /api/training-workbook/certificate/{module_id} returned 404 'Unknown lesson'. Root cause: FastAPI matches routes in declaration order. The catch-all GET /{module_id}/{lesson_id} was declared before GET /certificate/{module_id}, so any request to /certificate/beginner-1 was matched as module_id='certificate', lesson_id='beginner-1'. _find_lesson('certificate', 'beginner-1') returned None → HTTPException 404. Reproduction: `curl -H 'Authorization: Bearer <token>' <BASE>/api/training-workbook/certificate/beginner-1` → 404. Fix: moved @router.get('/certificate/{module_id}') declaration above the catch-all route. Verified: returns 200 with correct certificate JSON."
+}

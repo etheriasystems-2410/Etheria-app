@@ -778,6 +778,9 @@ app.include_router(companion_router, prefix="/api")
 from routes.reprogramming import router as reprogramming_router
 app.include_router(reprogramming_router, prefix="/api")
 
+from routes.training_workbook import router as training_workbook_router
+app.include_router(training_workbook_router, prefix="/api")
+
 # Profiles, Direct Mail, Email-forward, Circles — user-to-user features
 # (refactored 2026-06: split from the old monolithic routes/profiles.py)
 from routes.profile import router as profile_router

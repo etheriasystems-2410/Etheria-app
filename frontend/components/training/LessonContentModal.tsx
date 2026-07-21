@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import MeditationPlayer from './MeditationPlayer';
+import LessonWorkbook from './LessonWorkbook';
 import type { Lesson } from './types';
 
 interface Props {
@@ -23,6 +24,11 @@ interface Props {
   lesson: Lesson | null;
   lessons: Lesson[];
   onComplete: () => void;
+  /** Needed for the workbook (notes/quiz) so we can persist per module+lesson. */
+  moduleId?: string;
+  /** Fired whenever the certificate progress changes so the parent screen
+   *  can refresh its own indicators. */
+  onCertificateChange?: (cert: any) => void;
 
   isPlayingMeditation: boolean;
   isGeneratingTTS: boolean;
@@ -37,6 +43,8 @@ export default function LessonContentModal({
   lesson,
   lessons,
   onComplete,
+  moduleId,
+  onCertificateChange,
   isPlayingMeditation,
   isGeneratingTTS,
   ttsProgress,
@@ -74,6 +82,14 @@ export default function LessonContentModal({
               onStop={onStopMeditation}
             />
           )}
+
+          {moduleId && lesson ? (
+            <LessonWorkbook
+              moduleId={moduleId}
+              lessonId={lesson.id}
+              onCertificateChange={onCertificateChange}
+            />
+          ) : null}
         </ScrollView>
 
         <View style={styles.lessonFooter}>
