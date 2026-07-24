@@ -3,7 +3,7 @@
  * currently selected module. Tapping a lesson hands control back to the
  * parent (which then opens the LessonContentModal).
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -14,10 +14,16 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CosmicBackdrop } from '../ui';
 import LessonHeroBanner from './LessonHeroBanner';
+import CertificateProgressRing, { CertificateData } from './CertificateProgressRing';
+import CertificateModal from './CertificateModal';
+import { useAuth } from '../../contexts/AuthContext';
 import type { Lesson, Module } from './types';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface Props {
   visible: boolean;
@@ -38,6 +44,43 @@ export default function LessonListModal({
   isLessonCompleted,
   onLessonPress,
 }: Props) {
+  const { user } = useAuth();
+  const [cert, setCert] = useState<CertificateData | null>(null);
+  const [showCert, setShowCert] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!visible || !module?.id) {
+        setCert(null);
+        return;
+      }
+      try {
+        const token = await AsyncStorage.getItem('session_token');
+        const r = await fetch(
+          `${BACKEND_URL}/api/training-workbook/certificate/${module.id}`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+        );
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled) setCert(data);
+      } catch {
+        /* silent */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, module?.id]);
+
+  const lessonTitles: Record<string, string> = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    lessons.forEach((l) => {
+      map[String(l.id)] = l.title;
+    });
+    return map;
+  }, [lessons]);
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
@@ -57,6 +100,16 @@ export default function LessonListModal({
             />
             <View style={styles.innerPad}>
               <Text style={styles.moduleDescHeader}>{module?.description}</Text>
+
+              {cert && cert.lessons_total > 0 && (
+                <View style={{ marginBottom: 14 }}>
+                  <CertificateProgressRing
+                    cert={cert}
+                    variant="compact"
+                    onPress={() => setShowCert(true)}
+                  />
+                </View>
+              )}
 
               {lessons.map((lesson, index) => {
               const completed = module
@@ -104,6 +157,15 @@ export default function LessonListModal({
           </Text>
           <View style={{ width: 40 }} />
         </View>
+
+        <CertificateModal
+          visible={showCert}
+          onClose={() => setShowCert(false)}
+          cert={cert}
+          learnerName={user?.display_name || user?.name}
+          perLessonPct={cert?.per_lesson_pct}
+          lessonTitles={lessonTitles}
+        />
       </View>
     </Modal>
   );

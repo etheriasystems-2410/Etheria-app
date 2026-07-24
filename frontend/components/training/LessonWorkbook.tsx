@@ -22,6 +22,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CertificateProgressRing from './CertificateProgressRing';
+import CertificateModal from './CertificateModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -38,6 +41,7 @@ interface Certificate {
   average_pct: number;
   lessons_taken: number;
   lessons_total: number;
+  per_lesson_pct?: Record<string, number>;
 }
 
 interface Workbook {
@@ -76,8 +80,10 @@ export default function LessonWorkbook({
   lessonId,
   onCertificateChange,
 }: Props) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [workbook, setWorkbook] = useState<Workbook | null>(null);
+  const [showCertificate, setShowCertificate] = useState(false);
 
   const [notesDraft, setNotesDraft] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
@@ -300,50 +306,23 @@ export default function LessonWorkbook({
   if (!workbook) return null;
 
   const cert = workbook.certificate;
-  const progressPct = Math.max(
-    0,
-    Math.min(100, cert.lessons_total ? (cert.lessons_taken / cert.lessons_total) * 100 : 0),
-  );
 
   return (
     <View style={styles.wrap}>
-      {/* Certificate progress ring */}
-      <View style={styles.certBox}>
-        <View style={styles.certLeft}>
-          <View
-            style={[
-              styles.certRing,
-              cert.earned && { borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.1)' },
-            ]}
-          >
-            <Ionicons
-              name={cert.earned ? 'ribbon' : 'school'}
-              size={22}
-              color={cert.earned ? '#fbbf24' : '#a855f7'}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.certTitle}>
-              {cert.earned ? 'Certificate earned' : 'Certificate progress'}
-            </Text>
-            <Text style={styles.certSub}>
-              {cert.lessons_taken}/{cert.lessons_total} lessons quizzed · avg{' '}
-              {cert.average_pct}% · need {cert.threshold_pct}%
-            </Text>
-            <View style={styles.certBar}>
-              <View
-                style={[
-                  styles.certBarFill,
-                  {
-                    width: `${progressPct}%`,
-                    backgroundColor: cert.earned ? '#fbbf24' : '#a855f7',
-                  },
-                ]}
-              />
-            </View>
-          </View>
-        </View>
-      </View>
+      {/* Certificate progress ring — tap to view certificate */}
+      <CertificateProgressRing
+        cert={cert}
+        variant="full"
+        onPress={() => setShowCertificate(true)}
+      />
+
+      <CertificateModal
+        visible={showCertificate}
+        onClose={() => setShowCertificate(false)}
+        cert={cert}
+        learnerName={user?.display_name || user?.name}
+        perLessonPct={cert.per_lesson_pct}
+      />
 
       {/* ---- Notes ---- */}
       <SectionHeader icon="create-outline" title="My Notes" />
