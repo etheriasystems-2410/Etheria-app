@@ -18,6 +18,8 @@ import { Paywall } from '../components/Paywall';
 import { CosmicBackdrop } from '../components/ui';
 import LessonWorkbook from '../components/training/LessonWorkbook';
 import LessonHeroBanner from '../components/training/LessonHeroBanner';
+import CertificateProgressRing, { CertificateData } from '../components/training/CertificateProgressRing';
+import CertificateModal from '../components/training/CertificateModal';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const ASTRAL_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/36730.jpg';
@@ -63,12 +65,39 @@ const levels: AstralLevel[] = [
 
 export default function AstralTravel() {
   const router = useRouter();
-  const { isPremium } = useAuth();
+  const { isPremium, user } = useAuth();
   const [selectedLevel, setSelectedLevel] = useState<AstralLevel | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [completedLevels, setCompletedLevels] = useState<string[]>([]);
   const [workbookLevel, setWorkbookLevel] = useState<AstralLevel | null>(null);
+  const [cert, setCert] = useState<CertificateData | null>(null);
+  const [showCert, setShowCert] = useState(false);
+
+  const fetchCertificate = React.useCallback(async () => {
+    try {
+      const sessionToken = await AsyncStorage.getItem('session_token');
+      if (!sessionToken) return;
+      const r = await fetch(
+        `${BACKEND_URL}/api/training-workbook/certificate/astral-training`,
+        { headers: { Authorization: `Bearer ${sessionToken}` } },
+      );
+      if (r.ok) setCert(await r.json());
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCertificate();
+  }, [fetchCertificate]);
+
+  // Refresh certificate whenever the workbook modal closes (a quiz may have been taken)
+  useEffect(() => {
+    if (workbookLevel === null) {
+      fetchCertificate();
+    }
+  }, [workbookLevel, fetchCertificate]);
 
   // Load completed levels from storage
   useEffect(() => {
@@ -248,6 +277,16 @@ export default function AstralTravel() {
 
         <Text style={styles.sectionTitle}>Choose Your Level</Text>
 
+        {cert && cert.lessons_total > 0 && (
+          <View style={{ marginBottom: 14 }}>
+            <CertificateProgressRing
+              cert={cert}
+              variant="full"
+              onPress={() => setShowCert(true)}
+            />
+          </View>
+        )}
+
         {levels.map((level) => (
           <TouchableOpacity
             key={level.id}
@@ -329,6 +368,18 @@ export default function AstralTravel() {
         feature="Astral Travel Practice"
       />
 
+      <CertificateModal
+        visible={showCert}
+        onClose={() => setShowCert(false)}
+        cert={cert}
+        learnerName={user?.display_name || user?.name}
+        perLessonPct={cert?.per_lesson_pct}
+        lessonTitles={levels.reduce<Record<string, string>>((acc, l) => {
+          acc[l.id] = l.name;
+          return acc;
+        }, {})}
+      />
+
       {/* Astral workbook modal — notes / practice log / quiz per level */}
       <Modal
         visible={!!workbookLevel}
@@ -356,6 +407,7 @@ export default function AstralTravel() {
               <LessonWorkbook
                 moduleId="astral-training"
                 lessonId={workbookLevel.id}
+                onCertificateChange={(c) => setCert(c as CertificateData)}
               />
             ) : null}
           </ScrollView>

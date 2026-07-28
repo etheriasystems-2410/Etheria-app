@@ -1,0 +1,42 @@
+{
+  "summary": "Backend-only test pass for the Training-Workbook Certificate feature. Created /app/backend/tests/test_certificate_feature.py with 8 focused tests (initial cert shape for psychic + astral modules, quiz-attempt updates certificate + per_lesson_pct, workbook GET includes certificate block, auth guard on certificate endpoint). 8/8 passed on the public preview URL. IMPORTANT: The review-request refers to module id `opening-third-eye`, but the backend does NOT recognise that slug — the real module id is `beginner-1` (its TITLE is 'Opening Your Third Eye'). Frontend (`LessonListModal.tsx:61`) calls `/certificate/${module.id}` which resolves to `beginner-1`, so the feature works end-to-end via the real id. Calling `/certificate/opening-third-eye` returns 200 with `lessons_total=0` and `module_title` echoing the slug — meaning the review-request slug can never earn a certificate. This is either a task-description mismatch or a missing slug alias.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/training-workbook/certificate/{module_id}",
+        "issue": "Unknown module_id is silently treated as an empty module (returns 200 with lessons_total=0 and module_title equal to the raw slug). Consider either (a) returning 404 for unknown modules, or (b) mapping slug aliases like `opening-third-eye` → `beginner-1` if that is the intended UX referenced in the review-request."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_certificate_feature.py",
+    "/app/test_reports/pytest/certificate_feature_results.xml"
+  ],
+  "action_items": [
+    "Confirm intended module id: review-request says `opening-third-eye`, but backend/frontend use `beginner-1`. If the slug is the desired public id, add an alias (or migrate the id) in TRAINING_MODULES so `/certificate/opening-third-eye` returns lessons_total=5.",
+    "Optional hardening: have `GET /api/training-workbook/certificate/{module_id}` return 404 for unknown module ids instead of silently returning a zero-lesson certificate — that would surface the slug mismatch immediately in the UI."
+  ],
+  "critical_code_review_comments": [
+    "routes/training_workbook.py::_certificate_status returns lessons_total=0 for unknown modules with the slug echoed as `module_title`. This makes typos/slug mismatches invisible to the client.",
+    "routes/training_workbook.py::get_certificate correctly declared BEFORE the `/{module_id}/{lesson_id}` catch-all — good (comment on line 364 makes this explicit)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_certificate_feature.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 passed on the four Certificate-related endpoints)",
+    "frontend": "not tested (per review-request testing_type: backend only)"
+  },
+  "seed_data_creation": "Uses the shared `fresh_user` fixture from conftest.py — a brand-new signup per test session. Quiz attempts written to `training_quiz_attempts` for that throw-away user; no impact on production data or the admin account.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Certificate feature tests live in `/app/backend/tests/test_certificate_feature.py`. They rely on `conftest.py::fresh_user_headers`. The `test_unknown_module_slug_documents_behaviour` test asserts current behaviour (200 + lessons_total=0) for `opening-third-eye`; if main agent adds a slug alias for `opening-third-eye` → `beginner-1`, that test must be updated to expect lessons_total=5 and module_title='Opening Your Third Eye'.",
+  "rca_of_issue": "The review-request repeatedly names the module `opening-third-eye`, but grep across `/app/backend` and `/app/frontend` shows the id is `beginner-1` in `TRAINING_MODULES` (backend/data/training_content.py:9) and the UI passes that id verbatim to `/api/training-workbook/certificate/${module.id}`. The endpoint accepts any string and short-circuits to `lessons_total=0` when the id is not in TRAINING_MODULES/_ASTRAL_LEVELS, which is why the slug currently 'works' (HTTP 200) but does nothing useful. Fix: either rename the module id or add an alias mapping in `_module_lesson_ids`, `_module_title`, and `_find_lesson`."
+}

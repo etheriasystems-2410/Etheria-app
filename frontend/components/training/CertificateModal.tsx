@@ -68,7 +68,7 @@ export default function CertificateModal({
         return;
       }
       await Share.share({ message: shareText });
-    } catch (e) {
+    } catch {
       // ignore
     }
   };
