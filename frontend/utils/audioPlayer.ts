@@ -4,13 +4,26 @@
  */
 
 import { Platform } from 'react-native';
-import { createAudioPlayer } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 
-// Setup audio mode - no-op for SDK 55 as it handles this automatically
+// Global audio-session setup — MUST be called before any audio (including
+// video audio) plays on iOS, otherwise the device's silent switch mutes
+// everything. Safe to call multiple times.
+let _audioModeConfigured = false;
 export const setupAudioMode = async (): Promise<void> => {
-  // expo-audio SDK 55 handles audio mode automatically
-  // This function exists for backward compatibility
-  console.log('Audio mode setup (SDK 55 handles automatically)');
+  if (_audioModeConfigured) return;
+  try {
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      allowsRecording: false,
+      shouldPlayInBackground: true, // meditation audio needs to keep playing
+      interruptionMode: 'mixWithOthers',
+    } as any);
+    _audioModeConfigured = true;
+  } catch (e) {
+    // Web / older SDK — silent fail is fine
+    console.warn('[Audio] setAudioModeAsync failed:', e);
+  }
 };
 
 // Audio player manager class for SDK 55

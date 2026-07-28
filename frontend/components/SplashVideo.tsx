@@ -12,6 +12,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Animated, Easing, Platform } from 'react-native';
+import { setAudioModeAsync } from 'expo-audio';
 
 const SPLASH_VIDEO = require('../assets/video/splash-video.mp4');
 
@@ -45,6 +46,24 @@ export const SplashVideo: React.FC<Props> = ({ onDone }) => {
   const opacity = useState(new Animated.Value(1))[0];
   const [hidden, setHidden] = useState(false);
   const videoAvailable = !!(expoVideo.useVideoPlayer && expoVideo.VideoView);
+
+  // Configure the audio session so the splash video's audio track actually
+  // plays — iOS mutes video audio by default when the device's silent switch
+  // is on unless we explicitly set `playsInSilentMode: true`.
+  useEffect(() => {
+    (async () => {
+      try {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          allowsRecording: false,
+          shouldPlayInBackground: false,
+          interruptionMode: 'mixWithOthers',
+        } as any);
+      } catch (e) {
+        console.warn('[Splash] setAudioModeAsync failed:', e);
+      }
+    })();
+  }, []);
 
   // Hook must be called unconditionally — but we swallow any error inside so a
   // codec / native-module failure doesn't hard-crash the app.

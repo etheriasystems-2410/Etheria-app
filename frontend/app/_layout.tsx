@@ -15,6 +15,7 @@ import CustomDrawerContent from '../components/drawer/CustomDrawerContent';
 import CompanionBubble from '../components/CompanionBubble';
 import CompanionHeaderButton from '../components/CompanionHeaderButton';
 import SplashVideo from '../components/SplashVideo';
+import { setupAudioMode } from '../utils/audioPlayer';
 
 
 function ProtectedLayout() {  const { isAuthenticated, loading, user } = useAuth();
@@ -365,6 +366,14 @@ function ProtectedLayout() {  const { isAuthenticated, loading, user } = useAuth
 
 export default function RootLayout() {
   const [splashDone, setSplashDone] = React.useState(false);
+
+  // Configure the iOS/Android audio session as early as possible so the
+  // splash video's audio track — and every meditation clip after it — can
+  // play through the physical silent switch. Safe no-op on web.
+  React.useEffect(() => {
+    setupAudioMode().catch(() => {});
+  }, []);
+
   return (
     <ThemeProvider>
       <LanguageProvider>
