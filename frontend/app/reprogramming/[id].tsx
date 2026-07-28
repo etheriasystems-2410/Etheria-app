@@ -27,6 +27,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CosmicBackdrop } from '../../components/ui';
 import { AudioPlayerManager } from '../../utils/audioPlayer';
+import AmbientMusicMixer from '../../components/AmbientMusicMixer';
+import LightTherapyController from '../../components/LightTherapyController';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -566,6 +568,19 @@ export default function ReprogrammingSession() {
                 ? '✨ Close your eyes and let the words wash over you.'
                 : 'Paused'}
             </Text>
+
+            <AmbientMusicMixer
+              active={sessionActive}
+              paused={!playing}
+              accentColor="#a855f7"
+            />
+
+            <LightTherapyController
+              active={sessionActive}
+              paused={!playing}
+              accentColor="#fbbf24"
+              autoFrequencyHz={6}
+            />
 
             <TouchableOpacity style={styles.endBtn} onPress={endSession}>
               <Ionicons name="stop" size={16} color="#e9d5ff" />

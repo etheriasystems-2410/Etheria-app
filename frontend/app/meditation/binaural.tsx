@@ -16,6 +16,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import SubscriptionOnlyBanner from '../../components/SubscriptionOnlyBanner';
 import { Paywall } from '../../components/Paywall';
 import { AudioPlayerManager, setupAudioMode } from '../../utils/audioPlayer';
+import AmbientMusicMixer from '../../components/AmbientMusicMixer';
+import LightTherapyController from '../../components/LightTherapyController';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -351,6 +353,21 @@ export default function BinauralMeditation() {
                 <Text style={styles.freqLabel}>Right Ear</Text>
                 <Text style={styles.freqValue}>{selectedProgram.base_frequency + selectedProgram.beat_frequency} Hz</Text>
               </View>
+            </View>
+
+            {/* Ambient music blend — plays UNDER the binaural tone */}
+            <View style={{ alignSelf: 'stretch', marginTop: 12 }}>
+              <AmbientMusicMixer
+                active={isPlaying}
+                paused={isPaused}
+                accentColor={selectedProgram.color}
+              />
+              <LightTherapyController
+                active={isPlaying}
+                paused={isPaused}
+                accentColor={selectedProgram.color}
+                autoFrequencyHz={selectedProgram.beat_frequency || undefined}
+              />
             </View>
 
             <TouchableOpacity style={styles.stopButton} onPress={stopSession}>

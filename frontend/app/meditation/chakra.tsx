@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { AudioPlayerManager } from '../../utils/audioPlayer';
+import AmbientMusicMixer from '../../components/AmbientMusicMixer';
+import LightTherapyController from '../../components/LightTherapyController';
 import { useAuth } from '../../contexts/AuthContext';
 import SubscriptionOnlyBanner from '../../components/SubscriptionOnlyBanner';
 
@@ -635,6 +637,17 @@ export default function ChakraMeditation() {
                           : `Playing ${selectedChakra?.frequency} Hz (${selectedDuration} min)`}
                       </Text>
                     </View>
+                    <AmbientMusicMixer
+                      active={isPlaying}
+                      paused={false}
+                      accentColor={selectedChakra?.color || '#a855f7'}
+                    />
+                    <LightTherapyController
+                      active={isPlaying}
+                      paused={false}
+                      accentColor={selectedChakra?.color || '#fbbf24'}
+                      autoFrequencyHz={10}
+                    />
                     <TouchableOpacity style={styles.stopButton} onPress={stopAllAudio}>
                       <Ionicons name="stop" size={24} color="#fff" />
                       <Text style={styles.stopText}>Stop</Text>

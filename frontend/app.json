@@ -19,7 +19,7 @@
       "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Record voice memos for your spiritual journal",
-        "NSCameraUsageDescription": "Capture moments for your spiritual journey",
+        "NSCameraUsageDescription": "Enable flashlight for meditation light therapy",
         "NSPhotoLibraryUsageDescription": "Save oracle readings and choose your profile photo",
         "UIBackgroundModes": [
           "audio"
@@ -37,8 +37,10 @@
       "versionCode": 1,
       "permissions": [
         "INTERNET",
+        "CAMERA",
         "RECORD_AUDIO",
         "VIBRATE",
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
@@ -77,6 +79,14 @@
         {
           "photosPermission": "Choose photos for your profile and readings",
           "cameraPermission": "Capture moments for your spiritual journey"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Enable flashlight for meditation light therapy",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ]
     ],
