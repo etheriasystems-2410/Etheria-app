@@ -27,6 +27,7 @@ import { Mist } from '../components/ui';
 import { AudioPlayerManager } from '../utils/audioPlayer';
 import QuantumWaveform from '../components/QuantumWaveform';
 import { palette, radii, spacing } from '../theme/tokens';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');
@@ -122,6 +123,7 @@ export default function Oracle() {
   const { isPremium } = useAuth();
   const { t, languageCode } = useLanguage();
   const { theme } = useTheme();
+  const bottomPad = useBottomSafePad();
   const [selectedSpread, setSelectedSpread] = useState<SpreadType | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentReading, setCurrentReading] = useState<Reading | null>(null);
@@ -637,7 +639,7 @@ export default function Oracle() {
         <LinearGradient colors={['#1a0033', '#0d0015', '#000000']} style={StyleSheet.absoluteFill} />
         <Mist count={6} intensity="soft" />
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}>
           {/* Hero Section with Image Background */}
           <View style={styles.heroSection}>
             <Image source={{ uri: ORACLE_HERO_IMAGE }} style={styles.heroImage} contentFit="cover" />
@@ -829,7 +831,7 @@ export default function Oracle() {
   // Card Drawing View
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => setSelectedSpread(null)}>
           <Ionicons name="arrow-back" size={24} color="#b794f6" />
           <Text style={styles.backButtonText}>Back to Spreads</Text>

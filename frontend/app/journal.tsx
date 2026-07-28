@@ -22,6 +22,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import HeaderBanner from '../components/HeaderBanner';
 import { CosmicBackdrop } from '../components/ui';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 // Import modular journal components
 import { 

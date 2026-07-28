@@ -34,12 +34,14 @@ import type { Lesson, Module } from '../components/training/types';
 
 import { useTrainingProgress } from '../hooks/useTrainingProgress';
 import { useTrainingMeditation } from '../hooks/useTrainingMeditation';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function Training() {
   const { isPremium } = useAuth();
   const { t } = useLanguage();
+  const bottomPad = useBottomSafePad();
 
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,7 +177,7 @@ export default function Training() {
   return (
     <View style={styles.container}>
       <CosmicBackdrop />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}>
         <TrainingHero
           title={t('psychicTraining')}
           subtitle={t('developAbilities')}

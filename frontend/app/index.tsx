@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlassCard, GlowButton, Mist, SectionTitle } from '../components/ui';
 import DailyCardWidget from '../components/DailyCardWidget';
 import { palette, spacing, radii, typography, shadows, gradients } from '../theme/tokens';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/88c8k78q_8227.jpg';
 const HEADER_BANNER_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/oz3admmj_47815.jpg';
@@ -21,6 +22,7 @@ export default function Home() {
   const { isAuthenticated, user, isPremium } = useAuth();
   const { t, languageCode } = useLanguage();
   const { theme } = useTheme();
+  const bottomPad = useBottomSafePad();
   
   // Prize Drawing State
   const [prizeDrawingStatus, setPrizeDrawingStatus] = React.useState<{
@@ -300,7 +302,7 @@ export default function Home() {
       />
       <Mist count={8} intensity="medium" />
 
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing['4xl'] }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: bottomPad }}>
         {/* Hero Banner — slim mystical strip */}
         <View style={styles.heroBanner}>
           <Image source={{ uri: HEADER_BANNER_IMAGE }} style={styles.heroBannerImage} contentFit="cover" />

@@ -8,6 +8,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Mist } from '../components/ui';
 import { palette, spacing, radii } from '../theme/tokens';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 interface MeditationType {
   id: string;
@@ -27,6 +28,7 @@ export default function Meditation() {
   const router = useRouter();
   const { t, languageCode } = useLanguage();
   const { theme } = useTheme();
+  const bottomPad = useBottomSafePad();
 
   // Translated meditation types
   const getMeditationTitle = (id: string): string => {
@@ -76,7 +78,7 @@ export default function Meditation() {
       <LinearGradient colors={['#1a0033', '#0d0015', '#000000']} style={StyleSheet.absoluteFill} />
       <Mist count={6} intensity="soft" />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}>
         {/* Hero Section with Image Background */}
         <View style={styles.heroSection}>
           <Image

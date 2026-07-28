@@ -20,6 +20,7 @@ import LessonWorkbook from '../components/training/LessonWorkbook';
 import LessonHeroBanner from '../components/training/LessonHeroBanner';
 import CertificateProgressRing, { CertificateData } from '../components/training/CertificateProgressRing';
 import CertificateModal from '../components/training/CertificateModal';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const ASTRAL_HERO_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/36730.jpg';
@@ -66,6 +67,7 @@ const levels: AstralLevel[] = [
 export default function AstralTravel() {
   const router = useRouter();
   const { isPremium, user } = useAuth();
+  const bottomPad = useBottomSafePad();
   const [selectedLevel, setSelectedLevel] = useState<AstralLevel | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -243,7 +245,7 @@ export default function AstralTravel() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}>
         {/* Hero Section with Image Background */}
         <View style={styles.heroSection}>
           <Image

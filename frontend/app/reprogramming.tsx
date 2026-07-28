@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CosmicBackdrop } from '../components/ui';
 import { SubscriptionOnlyBanner } from '../components/SubscriptionOnlyBanner';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -44,6 +45,7 @@ export default function Reprogramming() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const bottomPad = useBottomSafePad();
 
   const load = useCallback(async () => {
     try {
@@ -84,7 +86,7 @@ export default function Reprogramming() {
     <CosmicBackdrop>
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#a855f7" />
           }
