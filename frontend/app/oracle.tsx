@@ -25,6 +25,7 @@ import { Paywall } from '../components/Paywall';
 import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
 import { Mist } from '../components/ui';
 import { AudioPlayerManager } from '../utils/audioPlayer';
+import QuantumWaveform from '../components/QuantumWaveform';
 import { palette, radii, spacing } from '../theme/tokens';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -140,8 +141,35 @@ export default function Oracle() {
   const [savedReadingId, setSavedReadingId] = useState<string | null>(null);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [loadingAudioIdx, setLoadingAudioIdx] = useState<number | null>(null);
+  const [audioProgress, setAudioProgress] = useState<{ currentTime: number; duration: number }>({
+    currentTime: 0,
+    duration: 0,
+  });
+  const [autoPlayVoice, setAutoPlayVoice] = useState(false);
   const chatScrollRef = React.useRef<ScrollView | null>(null);
   const quantumPlayerRef = React.useRef<AudioPlayerManager | null>(null);
+  const speakQuantumReplyRef = React.useRef<
+    ((text: string, idx: number) => Promise<void>) | null
+  >(null);
+  const progressPollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Load persisted auto-play preference on mount.
+  useEffect(() => {
+    (async () => {
+      try {
+        const v = await AsyncStorage.getItem('quantum_autoplay_voice');
+        if (v === '1') setAutoPlayVoice(true);
+      } catch {}
+    })();
+  }, []);
+
+  const toggleAutoPlay = async () => {
+    setAutoPlayVoice((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem('quantum_autoplay_voice', next ? '1' : '0').catch(() => {});
+      return next;
+    });
+  };
 
   const sendChat = async () => {
     const q = chatInput.trim();
@@ -186,6 +214,14 @@ export default function Oracle() {
         ...nextMessages,
         { role: 'assistant', text: assistantText },
       ]);
+      // Auto-play the new Quantum reply if user has enabled it.
+      if (r.ok && assistantText && autoPlayVoice) {
+        const newIdx = nextMessages.length; // assistant bubble index
+        // Small delay so the bubble is rendered before playback + polling starts.
+        setTimeout(() => {
+          speakQuantumReplyRef.current?.(assistantText, newIdx).catch(() => {});
+        }, 150);
+      }
       // Persist to the saved reading if it has been saved.
       if (r.ok && savedReadingId) {
         try {
@@ -234,6 +270,11 @@ export default function Oracle() {
       } catch {}
       quantumPlayerRef.current = null;
       setPlayingIdx(null);
+      if (progressPollRef.current) {
+        clearInterval(progressPollRef.current);
+        progressPollRef.current = null;
+      }
+      setAudioProgress({ currentTime: 0, duration: 0 });
       return;
     }
     // Stop any previously playing bubble first.
@@ -241,6 +282,11 @@ export default function Oracle() {
       await quantumPlayerRef.current?.unload();
     } catch {}
     quantumPlayerRef.current = null;
+    if (progressPollRef.current) {
+      clearInterval(progressPollRef.current);
+      progressPollRef.current = null;
+    }
+    setAudioProgress({ currentTime: 0, duration: 0 });
 
     setLoadingAudioIdx(idx);
     try {
@@ -276,19 +322,24 @@ export default function Oracle() {
       });
       quantumPlayerRef.current = player;
       setPlayingIdx(idx);
-      // Auto-clear when finished (best-effort poll — status API isn't public)
-      const check = setInterval(async () => {
+      // Poll for progress + completion.
+      progressPollRef.current = setInterval(async () => {
         const cur = quantumPlayerRef.current?.getCurrentTime() ?? 0;
         const dur = quantumPlayerRef.current?.getDuration() ?? 0;
+        setAudioProgress({ currentTime: cur, duration: dur });
         if (dur > 0 && cur >= dur - 0.3) {
-          clearInterval(check);
+          if (progressPollRef.current) {
+            clearInterval(progressPollRef.current);
+            progressPollRef.current = null;
+          }
           try {
             await quantumPlayerRef.current?.unload();
           } catch {}
           quantumPlayerRef.current = null;
           setPlayingIdx((p) => (p === idx ? null : p));
+          setAudioProgress({ currentTime: 0, duration: 0 });
         }
-      }, 500);
+      }, 250);
     } catch (e: any) {
       Alert.alert('Voice error', e?.message || 'Please try again.');
     } finally {
@@ -296,10 +347,19 @@ export default function Oracle() {
     }
   };
 
+  // Keep a stable ref for auto-play from sendChat (avoids stale closures).
+  useEffect(() => {
+    speakQuantumReplyRef.current = speakQuantumReply;
+  });
+
   // Cleanup audio on unmount / modal close
   React.useEffect(() => {
     return () => {
       quantumPlayerRef.current?.unload().catch(() => {});
+      if (progressPollRef.current) {
+        clearInterval(progressPollRef.current);
+        progressPollRef.current = null;
+      }
     };
   }, []);
 
@@ -1005,12 +1065,41 @@ export default function Oracle() {
                             <Ionicons name="planet" size={18} color="#a855f7" />
                             <Text style={styles.quantumChatTitle}>Quantum</Text>
                           </View>
-                          <TouchableOpacity
-                            onPress={() => setChatOpen(false)}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                          >
-                            <Ionicons name="close" size={18} color="#c4b5fd" />
-                          </TouchableOpacity>
+                          <View style={styles.quantumHeaderActions}>
+                            <TouchableOpacity
+                              onPress={toggleAutoPlay}
+                              style={[
+                                styles.autoPlayPill,
+                                autoPlayVoice && styles.autoPlayPillOn,
+                              ]}
+                              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                              accessibilityLabel={
+                                autoPlayVoice
+                                  ? 'Disable auto-play voice'
+                                  : 'Enable auto-play voice'
+                              }
+                            >
+                              <Ionicons
+                                name={autoPlayVoice ? 'volume-high' : 'volume-mute'}
+                                size={11}
+                                color={autoPlayVoice ? '#0f0321' : '#c4b5fd'}
+                              />
+                              <Text
+                                style={[
+                                  styles.autoPlayPillText,
+                                  autoPlayVoice && styles.autoPlayPillTextOn,
+                                ]}
+                              >
+                                Auto-play {autoPlayVoice ? 'on' : 'off'}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => setChatOpen(false)}
+                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                              <Ionicons name="close" size={18} color="#c4b5fd" />
+                            </TouchableOpacity>
+                          </View>
                         </View>
                         <ScrollView
                           ref={chatScrollRef}
@@ -1068,6 +1157,13 @@ export default function Oracle() {
                                         />
                                       )}
                                     </TouchableOpacity>
+                                    {playingIdx === idx ? (
+                                      <QuantumWaveform
+                                        active
+                                        currentTime={audioProgress.currentTime}
+                                        duration={audioProgress.duration}
+                                      />
+                                    ) : null}
                                   </View>
                                 ) : null}
                                 <Text
@@ -1738,6 +1834,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  quantumHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  autoPlayPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.5)',
+    backgroundColor: 'rgba(30,14,58,0.65)',
+  },
+  autoPlayPillOn: {
+    backgroundColor: '#fbbf24',
+    borderColor: '#fde68a',
+  },
+  autoPlayPillText: {
+    color: '#c4b5fd',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  autoPlayPillTextOn: {
+    color: '#0f0321',
   },
   quantumChatTitle: {
     color: '#e9d5ff',
