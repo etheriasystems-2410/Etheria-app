@@ -361,6 +361,7 @@ export default function BinauralMeditation() {
                 active={isPlaying}
                 paused={isPaused}
                 accentColor={selectedProgram.color}
+                context="binaural"
               />
               <LightTherapyController
                 active={isPlaying}

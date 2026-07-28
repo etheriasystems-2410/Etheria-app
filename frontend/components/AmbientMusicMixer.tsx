@@ -34,6 +34,10 @@ export interface AmbientTrack {
   description?: string;
   category?: string;
   icon?: string;
+  url?: string;
+  default_for?: string[];
+  default_volume?: number;
+  loop?: boolean;
 }
 
 interface Props {
@@ -41,6 +45,12 @@ interface Props {
   paused?: boolean;
   accentColor?: string;
   defaultTrackId?: string | null;
+  /**
+   * When set, on first mount (with no user-persisted selection) the mixer
+   * randomly picks one of the tracks flagged `default_for: [context]` on
+   * the backend and auto-plays it beneath the primary tone.
+   */
+  context?: 'binaural' | 'chakra' | 'reprogramming';
   /** Optional callback so the parent can persist the chosen track. */
   onTrackChange?: (trackId: string | null) => void;
 }
@@ -53,6 +63,7 @@ export default function AmbientMusicMixer({
   paused = false,
   accentColor = '#a855f7',
   defaultTrackId = null,
+  context,
   onTrackChange,
 }: Props) {
   const [tracks, setTracks] = useState<AmbientTrack[]>([]);
@@ -60,6 +71,7 @@ export default function AmbientMusicMixer({
   const [trackId, setTrackId] = useState<string | null>(defaultTrackId);
   const [musicVolume, setMusicVolume] = useState(0.3);
   const [busy, setBusy] = useState(false);
+  const [userSelected, setUserSelected] = useState(false);
 
   const playerRef = useRef<AudioPlayerManager | null>(null);
   const currentPlayingTrackRef = useRef<string | null>(null);
@@ -72,7 +84,12 @@ export default function AmbientMusicMixer({
           AsyncStorage.getItem(STORAGE_KEY_TRACK),
           AsyncStorage.getItem(STORAGE_KEY_VOLUME),
         ]);
-        if (t) setTrackId(t);
+        if (t !== null) {
+          setTrackId(t || null);
+          // Any persisted value (including empty string for "None") counts as
+          // a user selection — don't override with auto-pick.
+          setUserSelected(true);
+        }
         if (v) {
           const parsed = Number(v);
           if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 1) {
@@ -102,6 +119,23 @@ export default function AmbientMusicMixer({
     };
   }, []);
 
+  // Auto-pick a random default track for the given context if the user
+  // hasn't made an explicit selection yet.
+  useEffect(() => {
+    if (!context || userSelected || loadingTracks || tracks.length === 0) return;
+    if (trackId) return; // already have a track (from storage)
+    const candidates = tracks.filter((t) => (t.default_for || []).includes(context));
+    if (candidates.length === 0) return;
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    setTrackId(pick.id);
+    if (typeof pick.default_volume === 'number') {
+      setMusicVolume(pick.default_volume);
+    }
+    // Do NOT persist — auto-picks stay ephemeral so a new random pick can
+    // happen next session unless the user overrides.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context, userSelected, loadingTracks, tracks]);
+
   // Stop + unload the music player. Safe to call at any time.
   const stopMusic = useCallback(async () => {
     try {
@@ -118,11 +152,15 @@ export default function AmbientMusicMixer({
       await stopMusic();
       setBusy(true);
       try {
+        const meta = tracks.find((t) => t.id === id);
+        const src = meta?.url
+          ? meta.url
+          : `${BACKEND_URL}/api/meditation/ambient/stream/${id}?duration=30`;
         const player = new AudioPlayerManager();
-        await player.loadAndPlay(
-          `${BACKEND_URL}/api/meditation/ambient/stream/${id}?duration=30`,
-          { loop: true, volume: musicVolume },
-        );
+        await player.loadAndPlay(src, {
+          loop: meta?.loop !== false, // default true unless explicitly false
+          volume: musicVolume,
+        });
         playerRef.current = player;
         currentPlayingTrackRef.current = id;
       } catch {
@@ -131,7 +169,7 @@ export default function AmbientMusicMixer({
         setBusy(false);
       }
     },
-    [musicVolume, stopMusic],
+    [musicVolume, stopMusic, tracks],
   );
 
   // React to lifecycle changes coming from the parent session.
@@ -183,6 +221,7 @@ export default function AmbientMusicMixer({
 
   const handleSelect = (id: string | null) => {
     setTrackId(id);
+    setUserSelected(true);
     onTrackChange?.(id);
     AsyncStorage.setItem(STORAGE_KEY_TRACK, id ?? '').catch(() => {});
   };

@@ -43,7 +43,39 @@ MAX_LOOP_SECONDS = 60
 # ---------------------------------------------------------------------------
 # Track catalogue
 # ---------------------------------------------------------------------------
+# Some tracks are *synthesized* on the fly (no `url`); others are *external*
+# and stream directly from a CDN. The frontend prefers `url` when present.
 TRACKS: Dict[str, Dict] = {
+    # ── External MP3 tracks (used as the random default under binaural) ──
+    "deep-meditation": {
+        "name": "Deep Meditation",
+        "description": "Warm, spacious meditation soundscape.",
+        "category": "meditation",
+        "icon": "moon",
+        "url": (
+            "https://customer-assets-gfyr7b9c.emergentagent.net/"
+            "job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/"
+            "829hjrmw_leberch-deep-meditation-375362_1.MP3"
+        ),
+        "default_for": ["binaural"],
+        "default_volume": 0.22,
+        "loop": True,
+    },
+    "cosmic-meditation": {
+        "name": "Cosmic Meditation",
+        "description": "Expansive cosmic pad — perfect binaural bed.",
+        "category": "meditation",
+        "icon": "sparkles",
+        "url": (
+            "https://customer-assets-gfyr7b9c.emergentagent.net/"
+            "job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/"
+            "91pozu6x_miromaxmusic-cosmic-meditation-4.MP3"
+        ),
+        "default_for": ["binaural"],
+        "default_volume": 0.22,
+        "loop": True,
+    },
+    # ── Synthesized on-the-fly loops ──
     "deep-space": {
         "name": "Deep Space",
         "description": "Low C-minor drone pad — grounding cosmic depth.",
@@ -281,9 +313,33 @@ async def list_tracks() -> List[Dict]:
     ]
 
 
+@router.get("/defaults/{context}")
+async def get_defaults(context: str) -> List[Dict]:
+    """Return the ambient tracks flagged as defaults for a given context
+    (e.g. `binaural`, `chakra`, `reprogramming`). The frontend picks one
+    at random from this list on session start when the user has no manual
+    selection persisted."""
+    context = (context or "").strip().lower()
+    return [
+        {"id": tid, **meta}
+        for tid, meta in TRACKS.items()
+        if context in (meta.get("default_for") or [])
+    ]
+
+
 @router.get("/stream/{track_id}")
 async def stream_track(track_id: str, duration: int = DEFAULT_LOOP_SECONDS):
-    """Stream a curated ambient track as a seamlessly-looped WAV."""
+    """Stream a curated ambient track. URL-backed tracks 302-redirect to
+    the external CDN; synthesized tracks return a rendered WAV inline."""
+    meta = TRACKS.get(track_id)
+    if not meta:
+        raise HTTPException(status_code=404, detail="Unknown ambient track")
+
+    # URL-backed track: redirect the audio client to the CDN URL directly.
+    if meta.get("url"):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=meta["url"], status_code=302)
+
     if track_id not in SYNTHESIZERS:
         raise HTTPException(status_code=404, detail="Unknown ambient track")
 
