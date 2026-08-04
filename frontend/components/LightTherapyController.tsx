@@ -4,8 +4,9 @@
  * therapy on top of any Etheria meditation.
  *
  * ── Safety
- *   • A photosensitive-seizure warning is shown before the first use per
- *     device. Acknowledgement is persisted in AsyncStorage.
+ *   • Photosensitive-seizure / light-therapy risks are covered by the
+ *     app-wide General Disclaimer shown on first use of the Reprogramming
+ *     visual layer, so no per-component warning modal is shown here.
  *   • Automatic hard-cutoff after 20 min (adjustable) to prevent LED
  *     over-heating.
  *
@@ -68,7 +69,6 @@ const PRESETS: PresetFreq[] = [
   { id: 'gamma', name: 'Gamma 40 Hz', hz: 40, color: '#ef4444' },
 ];
 
-const STORAGE_WARNING_ACK = 'light_therapy_warning_ack';
 const STORAGE_FREQ = 'light_therapy_freq_hz';
 const STORAGE_MODE = 'light_therapy_mode';
 const AUTO_STOP_MS = 20 * 60 * 1000; // 20 minutes
@@ -90,8 +90,6 @@ export default function LightTherapyController({
   musicBpm,
 }: Props) {
   const [enabled, setEnabled] = useState(false);
-  const [warningOpen, setWarningOpen] = useState(false);
-  const [warningAcked, setWarningAcked] = useState(false);
   const [freq, setFreq] = useState<PresetFreq>(matchPreset(autoFrequencyHz));
   const [mode, setMode] = useState<PulseMode>('random');
   const [torchOn, setTorchOn] = useState(false);
@@ -110,12 +108,10 @@ export default function LightTherapyController({
   useEffect(() => {
     (async () => {
       try {
-        const [ack, savedHz, savedMode] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_WARNING_ACK),
+        const [savedHz, savedMode] = await Promise.all([
           AsyncStorage.getItem(STORAGE_FREQ),
           AsyncStorage.getItem(STORAGE_MODE),
         ]);
-        if (ack === '1') setWarningAcked(true);
         if (savedHz) {
           const parsed = Number(savedHz);
           if (!Number.isNaN(parsed) && parsed > 0) setFreq(matchPreset(parsed));
@@ -206,10 +202,6 @@ export default function LightTherapyController({
   };
 
   const requestEnable = async () => {
-    if (!warningAcked) {
-      setWarningOpen(true);
-      return;
-    }
     await ensurePermissionAndEnable();
   };
 
@@ -251,13 +243,6 @@ export default function LightTherapyController({
         ],
       );
     }
-  };
-
-  const handleAckWarning = async () => {
-    await AsyncStorage.setItem(STORAGE_WARNING_ACK, '1');
-    setWarningAcked(true);
-    setWarningOpen(false);
-    await ensurePermissionAndEnable();
   };
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -422,44 +407,8 @@ export default function LightTherapyController({
         </Modal>
       ) : null}
 
-      {/* Photosensitive warning modal */}
-      <Modal
-        visible={warningOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setWarningOpen(false)}
-      >
-        <View style={styles.warnBackdrop}>
-          <View style={styles.warnCard}>
-            <Ionicons name="warning" size={38} color="#f59e0b" />
-            <Text style={styles.warnTitle}>Photosensitive Warning</Text>
-            <Text style={styles.warnBody}>
-              Flashing lights at these frequencies can trigger seizures in people with
-              photosensitive epilepsy or a history of seizures.
-            </Text>
-            <Text style={styles.warnBullets}>
-              {'• Do not use if you have epilepsy or a seizure disorder.\n'}
-              {'• Discontinue immediately if you feel dizzy, disoriented, or nauseated.\n'}
-              {'• Consult a physician if you are unsure.\n'}
-              {'• Place the phone face-down for best results and to protect your eyes.'}
-            </Text>
-            <View style={styles.warnActions}>
-              <TouchableOpacity
-                onPress={() => setWarningOpen(false)}
-                style={styles.warnCancel}
-              >
-                <Text style={styles.warnCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleAckWarning}
-                style={styles.warnAgree}
-              >
-                <Text style={styles.warnAgreeText}>I understand · Enable</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Photosensitive warning removed — now covered by the General Disclaimer
+          shown by ReprogrammingVisuals. */}
     </View>
   );
 }
@@ -593,67 +542,4 @@ const styles = StyleSheet.create({
     width: 1,
     height: 1,
   },
-  // Warning modal
-  warnBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  warnCard: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: '#1a0033',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.5)',
-    alignItems: 'center',
-  },
-  warnTitle: {
-    marginTop: 10,
-    color: '#fbbf24',
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    textAlign: 'center',
-  },
-  warnBody: {
-    marginTop: 10,
-    color: '#e9d5ff',
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
-  },
-  warnBullets: {
-    marginTop: 12,
-    color: '#c4b5fd',
-    fontSize: 12,
-    lineHeight: 18,
-    alignSelf: 'stretch',
-  },
-  warnActions: {
-    marginTop: 18,
-    flexDirection: 'row',
-    gap: 10,
-    alignSelf: 'stretch',
-  },
-  warnCancel: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(168,85,247,0.45)',
-    alignItems: 'center',
-  },
-  warnCancelText: { color: '#e9d5ff', fontSize: 13, fontWeight: '800' },
-  warnAgree: {
-    flex: 2,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#fbbf24',
-    alignItems: 'center',
-  },
-  warnAgreeText: { color: '#0f0321', fontSize: 13, fontWeight: '900' },
 });
