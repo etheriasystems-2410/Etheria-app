@@ -27,7 +27,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CosmicBackdrop } from '../../components/ui';
 import { AudioPlayerManager } from '../../utils/audioPlayer';
-import AmbientMusicMixer from '../../components/AmbientMusicMixer';
 import LightTherapyController from '../../components/LightTherapyController';
 import ReprogrammingVisuals, {
   type ReprogrammingTheme,
@@ -92,6 +91,10 @@ export default function ReprogrammingSession() {
   const [progressWidth, setProgressWidth] = useState(0);
 
   const playerRef = useRef<AudioPlayerManager | null>(null);
+  // Dedicated hypnotic session-audio player — randomly assigned per
+  // session, loops under the voice, fades out with the script.
+  const sessionAudioRef = useRef<AudioPlayerManager | null>(null);
+  const [sessionAudioBpm, setSessionAudioBpm] = useState<number | null>(null);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -132,6 +135,9 @@ export default function ReprogrammingSession() {
       try {
         playerRef.current?.unload();
       } catch {}
+      try {
+        sessionAudioRef.current?.unload();
+      } catch {}
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
       if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
     };
@@ -160,15 +166,23 @@ export default function ReprogrammingSession() {
     fadeTimerRef.current = setTimeout(async () => {
       try {
         const steps = 30;
+        // Snapshot current session-audio volume (was 0.30 at start)
+        const sessionAudioStartVol = 0.30;
         for (let i = steps; i >= 0; i -= 1) {
-          const v = (PLAY_VOLUME * i) / steps;
+          const fraction = i / steps;
+          const v = PLAY_VOLUME * fraction;
+          const sv = sessionAudioStartVol * fraction;
           await playerRef.current?.setVolume(Math.max(0, v));
+          await sessionAudioRef.current?.setVolume(Math.max(0, sv));
           await new Promise((r) => setTimeout(r, 1000));
         }
         await playerRef.current?.unload();
+        await sessionAudioRef.current?.unload();
+        sessionAudioRef.current = null;
       } catch {}
       setPlaying(false);
       setSessionActive(false);
+      setSessionAudioBpm(null);
     }, fadeStartAt);
 
     tickIntervalRef.current = setInterval(() => {
@@ -194,8 +208,13 @@ export default function ReprogrammingSession() {
         try {
           await playerRef.current?.unload();
         } catch {}
+        try {
+          await sessionAudioRef.current?.unload();
+        } catch {}
+        sessionAudioRef.current = null;
         setPlaying(false);
         setSessionActive(false);
+        setSessionAudioBpm(null);
       })();
     }
   };
@@ -246,6 +265,28 @@ export default function ReprogrammingSession() {
       await player.loadAndPlay(uri, { loop: true, volume: PLAY_VOLUME });
       playerRef.current = player;
 
+      // Fetch + start the hypnotic session-audio bed (random of 5 tracks).
+      // Plays looped underneath the voice at 30 % so voice stays dominant.
+      try {
+        const sr = await fetch(`${BACKEND_URL}/api/reprogramming/session-audio`);
+        if (sr.ok) {
+          const sdata = await sr.json();
+          if (sdata?.url) {
+            const sPlayer = new AudioPlayerManager();
+            await sPlayer.loadAndPlay(sdata.url, {
+              loop: true,
+              volume: 0.30,
+            });
+            sessionAudioRef.current = sPlayer;
+            setSessionAudioBpm(
+              typeof sdata.bpm === 'number' ? sdata.bpm : null,
+            );
+          }
+        }
+      } catch {
+        /* silent — voice still plays without the bed */
+      }
+
       setElapsedSeconds(0);
       setPlaying(true);
       setSessionActive(true);
@@ -265,9 +306,11 @@ export default function ReprogrammingSession() {
     try {
       if (playing) {
         await playerRef.current.pause();
+        await sessionAudioRef.current?.pause();
         setPlaying(false);
       } else {
         await playerRef.current.play();
+        await sessionAudioRef.current?.play();
         setPlaying(true);
       }
     } catch (e: any) {
@@ -300,6 +343,11 @@ export default function ReprogrammingSession() {
     try {
       await playerRef.current?.unload();
     } catch {}
+    try {
+      await sessionAudioRef.current?.unload();
+    } catch {}
+    sessionAudioRef.current = null;
+    setSessionAudioBpm(null);
     setPlaying(false);
     setSessionActive(false);
     router.back();
@@ -464,6 +512,7 @@ export default function ReprogrammingSession() {
               active={sessionActive}
               paused={!playing}
               theme={inferVisualTheme(meta)}
+              audioBpm={sessionAudioBpm}
             />
 
             <View style={styles.playerHaloWrap}>
@@ -593,17 +642,12 @@ export default function ReprogrammingSession() {
                 : 'Paused'}
             </Text>
 
-            <AmbientMusicMixer
-              active={sessionActive}
-              paused={!playing}
-              accentColor="#a855f7"
-            />
-
             <LightTherapyController
               active={sessionActive}
               paused={!playing}
               accentColor="#fbbf24"
               autoFrequencyHz={6}
+              musicBpm={sessionAudioBpm}
             />
 
             <TouchableOpacity style={styles.endBtn} onPress={endSession}>

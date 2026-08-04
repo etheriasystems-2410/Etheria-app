@@ -21,6 +21,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -187,6 +188,12 @@ interface Props {
   extraSubliminals?: string[];
   /** Optional royalty-free video URL that loops behind the mandala. */
   videoUri?: string | null;
+  /**
+   * BPM of the current session bed. When provided, the mandala glow-pulse
+   * and subliminal flash cadence lock to the audio's tempo so the whole
+   * visual layer breathes with the music.
+   */
+  audioBpm?: number | null;
 }
 
 export default function ReprogrammingVisuals({
@@ -195,6 +202,7 @@ export default function ReprogrammingVisuals({
   theme = 'default',
   extraSubliminals,
   videoUri = null,
+  audioBpm = null,
 }: Props) {
   const th = THEMES[theme] || THEMES.default;
   const [acked, setAcked] = useState<boolean | null>(null);
@@ -282,10 +290,18 @@ export default function ReprogrammingVisuals({
           ) : null}
 
           {/* Mandala */}
-          <MandalaBackground ringColor={th.ringColor} glowColor={th.glowColor} />
+          <MandalaBackground
+            ringColor={th.ringColor}
+            glowColor={th.glowColor}
+            audioBpm={audioBpm}
+          />
 
           {/* Subliminal text flashes */}
-          <SubliminalTextFlash words={subliminals} accent={th.ringColor} />
+          <SubliminalTextFlash
+            words={subliminals}
+            accent={th.ringColor}
+            audioBpm={audioBpm}
+          />
 
           {/* Attribution — bottom-right, tiny */}
           {attribution ? (
@@ -294,7 +310,7 @@ export default function ReprogrammingVisuals({
         </View>
       ) : null}
 
-      {/* First-use disclaimer */}
+      {/* First-use General Disclaimer */}
       <Modal
         transparent
         visible={showDisclaimer}
@@ -303,25 +319,65 @@ export default function ReprogrammingVisuals({
       >
         <View style={styles.dBackdrop}>
           <View style={styles.dCard}>
-            <Ionicons name="eye" size={38} color="#fbbf24" />
-            <Text style={styles.dTitle}>Subliminal Visuals</Text>
-            <Text style={styles.dBody}>
-              This session pairs the audio with a mystical animated background and
-              briefly-flashed affirmations (below conscious perception) that align
-              with the reprogramming script you selected.
+            <Ionicons name="shield-checkmark" size={38} color="#fbbf24" />
+            <Text style={styles.dTitle}>General Disclaimer</Text>
+            <Text style={styles.dSubtitle}>
+              Subliminal Visuals · Light Therapy · Wellness Content
             </Text>
-            <Text style={styles.dBullets}>
-              {'• Flashing content — pause immediately if you feel dizzy or unwell.\n'}
-              {'• Do not use if you have a history of photosensitive seizures.\n'}
-              {'• Best experienced with headphones in a dim, quiet space.\n'}
-              {'• You can disable visuals any time in Settings.'}
-            </Text>
+
+            <ScrollView
+              style={styles.dScroll}
+              contentContainerStyle={styles.dScrollContent}
+              showsVerticalScrollIndicator
+            >
+              <Text style={styles.dSectionTitle}>Subliminal Visuals</Text>
+              <Text style={styles.dBody}>
+                This session pairs the audio with a mystical animated
+                background and briefly-flashed affirmations (below conscious
+                perception) that align with the reprogramming script you
+                selected.
+              </Text>
+              <Text style={styles.dBullets}>
+                {'• Flashing content — pause immediately if you feel dizzy or unwell.\n'}
+                {'• Do not use if you have a history of photosensitive seizures.\n'}
+                {'• Best experienced with headphones in a dim, quiet space.\n'}
+                {'• You can disable visuals any time in Settings.'}
+              </Text>
+
+              <Text style={styles.dSectionTitle}>Light Therapy</Text>
+              <Text style={styles.dBody}>
+                Some sessions may activate your device flash or screen light at
+                pulsed frequencies (beat-sync, random, or fixed Hz) to enhance
+                the entrainment experience.
+              </Text>
+              <Text style={styles.dBullets}>
+                {'• Do not use if you have epilepsy or any seizure disorder.\n'}
+                {'• Discontinue immediately if you feel dizzy, disoriented, or nauseated.\n'}
+                {'• Consult a physician if you are unsure whether this is safe for you.\n'}
+                {'• Place the phone face-down or at a distance to protect your eyes.'}
+              </Text>
+
+              <Text style={styles.dSectionTitle}>User Agreement</Text>
+              <Text style={styles.dBody}>
+                Etheria is a spiritual, meditative, and self-development
+                platform. By continuing, you acknowledge and agree that:
+              </Text>
+              <Text style={styles.dBullets}>
+                {'• The content is provided for personal, entertainment, and self-reflection purposes only.\n'}
+                {'• It is NOT intended to diagnose, treat, cure, or prevent any medical, psychological, or psychiatric condition.\n'}
+                {'• It is NOT a substitute for professional medical, mental-health, or therapeutic advice.\n'}
+                {'• You will consult a licensed professional for any health concern and will not rely on this app for medical decisions.\n'}
+                {'• You use all sessions (audio, visuals, light, and hypnosis) voluntarily and at your own risk.\n'}
+                {'• You are 18+ or have parental/guardian consent, and you are not operating a vehicle or heavy machinery during a session.'}
+              </Text>
+            </ScrollView>
+
             <View style={styles.dActions}>
               <TouchableOpacity onPress={() => handleAck(false)} style={styles.dCancel}>
                 <Text style={styles.dCancelText}>Not now</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleAck(true)} style={styles.dAgree}>
-                <Text style={styles.dAgreeText}>I understand · Enable</Text>
+                <Text style={styles.dAgreeText}>I agree · Enable</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -333,17 +389,26 @@ export default function ReprogrammingVisuals({
 
 // ───────────────────────────────────────────────────────────────────────
 // Mandala — a rotating layered SVG with a slow-pulsing radial glow.
+// If an audio BPM is provided the glow-pulse locks onto the beat so the
+// whole visual layer breathes with the assigned track.
 // ───────────────────────────────────────────────────────────────────────
 function MandalaBackground({
   ringColor,
   glowColor,
+  audioBpm,
 }: {
   ringColor: string;
   glowColor: string;
+  audioBpm?: number | null;
 }) {
   const rot = useSharedValue(0);
   const rotRev = useSharedValue(0);
   const pulse = useSharedValue(0);
+
+  // Beat-locked pulse period. Fall back to 6 s when no BPM.
+  // Every 2 beats = one breath cycle (feels natural at 100–140 BPM).
+  const pulsePeriodMs =
+    audioBpm && audioBpm > 0 ? (60_000 / audioBpm) * 2 : 6_000;
 
   useEffect(() => {
     rot.value = withRepeat(
@@ -356,8 +421,12 @@ function MandalaBackground({
       -1,
       false,
     );
+    pulse.value = 0;
     pulse.value = withRepeat(
-      withTiming(1, { duration: 6_000, easing: Easing.inOut(Easing.ease) }),
+      withTiming(1, {
+        duration: pulsePeriodMs,
+        easing: Easing.inOut(Easing.ease),
+      }),
       -1,
       true,
     );
@@ -366,7 +435,7 @@ function MandalaBackground({
       cancelAnimation(rotRev);
       cancelAnimation(pulse);
     };
-  }, [rot, rotRev, pulse]);
+  }, [rot, rotRev, pulse, pulsePeriodMs]);
 
   const outerStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rot.value}deg` }],
@@ -436,14 +505,17 @@ function MandalaBackground({
 
 // ───────────────────────────────────────────────────────────────────────
 // Subliminal text flasher — shows a random affirmation for ~90 ms every
-// 3-5 s. Fast enough to be sub-conscious, slow enough to be received.
+// 3-5 s (or every 8 beats if we know the audio BPM, so the flash pattern
+// flows with the music).
 // ───────────────────────────────────────────────────────────────────────
 function SubliminalTextFlash({
   words,
   accent,
+  audioBpm,
 }: {
   words: string[];
   accent: string;
+  audioBpm?: number | null;
 }) {
   const [text, setText] = useState('');
   const opacity = useSharedValue(0);
@@ -452,6 +524,9 @@ function SubliminalTextFlash({
     if (!words || words.length === 0) return;
     let mounted = true;
     let idx = 0;
+    // If we know the BPM, flash once every 8 beats (feels natural at
+    // 110-140 BPM — roughly 3.4-4.4 s). Otherwise fall back to random.
+    const beatMs = audioBpm && audioBpm > 0 ? 60_000 / audioBpm : null;
     const flashOnce = () => {
       if (!mounted) return;
       idx = (idx + Math.floor(Math.random() * words.length + 1)) % words.length;
@@ -460,9 +535,12 @@ function SubliminalTextFlash({
         opacity.value = withTiming(0, { duration: 240, easing: Easing.in(Easing.quad) });
       });
     };
-    // Kick off a flash every 3.5-5 s, randomised.
     const schedule = () => {
-      const wait = 3500 + Math.random() * 1500;
+      // Beat-locked: 8 beats between flashes (± tiny jitter).
+      // No BPM: random 3.5–5 s window.
+      const wait = beatMs
+        ? beatMs * 8 + (Math.random() * 200 - 100)
+        : 3500 + Math.random() * 1500;
       const t = setTimeout(() => {
         flashOnce();
         if (mounted) schedule();
@@ -477,7 +555,7 @@ function SubliminalTextFlash({
       clearTimeout(tid);
       cancelAnimation(opacity);
     };
-  }, [words, opacity]);
+  }, [words, opacity, audioBpm]);
 
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
@@ -560,6 +638,7 @@ const styles = StyleSheet.create({
   dCard: {
     width: '100%',
     maxWidth: 380,
+    maxHeight: '86%',
     backgroundColor: '#1a0033',
     borderRadius: 16,
     padding: 20,
@@ -574,15 +653,43 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0.5,
   },
-  dBody: {
-    marginTop: 10,
-    color: '#e9d5ff',
-    fontSize: 13,
-    lineHeight: 19,
+  dSubtitle: {
+    marginTop: 4,
+    color: '#c4b5fd',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
     textAlign: 'center',
   },
-  dBullets: {
+  dScroll: {
+    alignSelf: 'stretch',
     marginTop: 12,
+    maxHeight: 420,
+  },
+  dScrollContent: {
+    paddingRight: 4,
+    paddingBottom: 4,
+  },
+  dSectionTitle: {
+    marginTop: 12,
+    marginBottom: 4,
+    color: '#fbbf24',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+    alignSelf: 'stretch',
+  },
+  dBody: {
+    marginTop: 4,
+    color: '#e9d5ff',
+    fontSize: 12.5,
+    lineHeight: 19,
+    textAlign: 'left',
+    alignSelf: 'stretch',
+  },
+  dBullets: {
+    marginTop: 6,
     color: '#c4b5fd',
     fontSize: 12,
     lineHeight: 18,
