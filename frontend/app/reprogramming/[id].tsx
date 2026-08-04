@@ -29,6 +29,9 @@ import { CosmicBackdrop } from '../../components/ui';
 import { AudioPlayerManager } from '../../utils/audioPlayer';
 import AmbientMusicMixer from '../../components/AmbientMusicMixer';
 import LightTherapyController from '../../components/LightTherapyController';
+import ReprogrammingVisuals, {
+  type ReprogrammingTheme,
+} from '../../components/ReprogrammingVisuals';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -46,6 +49,20 @@ interface SessionMeta {
   is_free: boolean;
   locked: boolean;
   duration_presets?: number[];
+}
+
+/** Rough keyword-based mapping from script metadata → visual theme. */
+function inferVisualTheme(meta?: SessionMeta | null): ReprogrammingTheme {
+  if (!meta) return 'default';
+  const hay = `${meta.title} ${meta.subtitle} ${meta.id}`.toLowerCase();
+  if (/(sleep|insomnia|rest|dream|deep\s*sleep)/.test(hay)) return 'sleep';
+  if (/(confidence|self[-\s]*worth|assert|power|leader)/.test(hay)) return 'confidence';
+  if (/(anxiety|calm|stress|panic|worry|fear)/.test(hay)) return 'anxiety';
+  if (/(abundance|wealth|prosperity|money|success)/.test(hay)) return 'abundance';
+  if (/(love|relationship|heart|romance|self[-\s]*love)/.test(hay)) return 'love';
+  if (/(focus|productivity|study|concentration|attention)/.test(hay)) return 'focus';
+  if (/(health|healing|body|energy|vital)/.test(hay)) return 'health';
+  return 'default';
 }
 
 /** Convert a hex like "#a855f7" to an rgba() string with the given alpha. */
@@ -442,6 +459,13 @@ export default function ReprogrammingSession() {
         ) : (
           // ---- Active player ----
           <View style={styles.playerContainer}>
+            {/* Mystical animated visual layer + subliminal affirmations */}
+            <ReprogrammingVisuals
+              active={sessionActive}
+              paused={!playing}
+              theme={inferVisualTheme(meta)}
+            />
+
             <View style={styles.playerHaloWrap}>
               <LinearGradient
                 colors={[hexToRgba(themeColor, 0.55), hexToRgba(themeColor, 0)]}

@@ -38,6 +38,7 @@ export interface AmbientTrack {
   default_for?: string[];
   default_volume?: number;
   loop?: boolean;
+  bpm?: number;
 }
 
 interface Props {
@@ -51,8 +52,11 @@ interface Props {
    * the backend and auto-plays it beneath the primary tone.
    */
   context?: 'binaural' | 'chakra' | 'reprogramming';
-  /** Optional callback so the parent can persist the chosen track. */
-  onTrackChange?: (trackId: string | null) => void;
+  /**
+   * Called whenever the selected ambient track changes. Receives the id and
+   * (when known) the full track object so parents can read BPM, loop, etc.
+   */
+  onTrackChange?: (trackId: string | null, track?: AmbientTrack | null) => void;
 }
 
 const STORAGE_KEY_TRACK = 'ambient_music_track_id';
@@ -131,6 +135,9 @@ export default function AmbientMusicMixer({
     if (typeof pick.default_volume === 'number') {
       setMusicVolume(pick.default_volume);
     }
+    // Let the parent know a track is now selected so it can rebalance the
+    // primary tone. Auto-pick still stays ephemeral (no persistence).
+    onTrackChange?.(pick.id, pick);
     // Do NOT persist — auto-picks stay ephemeral so a new random pick can
     // happen next session unless the user overrides.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -222,7 +229,8 @@ export default function AmbientMusicMixer({
   const handleSelect = (id: string | null) => {
     setTrackId(id);
     setUserSelected(true);
-    onTrackChange?.(id);
+    const meta = id ? tracks.find((t) => t.id === id) : null;
+    onTrackChange?.(id, meta);
     AsyncStorage.setItem(STORAGE_KEY_TRACK, id ?? '').catch(() => {});
   };
 

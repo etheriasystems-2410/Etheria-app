@@ -48,6 +48,11 @@ export default function BinauralMeditation() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [isPaused, setIsPaused] = useState(false);
   const [volume, setVolume] = useState(0.8);
+  // 20 : 80 blend — when a music track is picked, drop the binaural tone to
+  // ~20 % so it stays sub-consciously effective without masking the music.
+  const [musicActive, setMusicActive] = useState(false);
+  const [currentBpm, setCurrentBpm] = useState<number | null>(null);
+  const BINAURAL_BLEND_FACTOR = 0.25; // volume * 0.25 → 0.8 * 0.25 = 0.20
 
   useEffect(() => {
     loadPrograms();
@@ -221,10 +226,29 @@ export default function BinauralMeditation() {
     setVolume(newVolume);
     if (audioPlayerRef.current) {
       try {
-        await audioPlayerRef.current.setVolume(newVolume);
-        console.log('Volume changed to:', newVolume);
+        const target = musicActive ? newVolume * BINAURAL_BLEND_FACTOR : newVolume;
+        await audioPlayerRef.current.setVolume(target);
       } catch (e) {
         console.error('Error changing volume:', e);
+      }
+    }
+  };
+
+  // When a music track is picked (or cleared), rebalance the binaural tone
+  // so the two mix cleanly: binaural drops to ~20 % when music is present.
+  const handleMusicTrackChange = async (
+    trackId: string | null,
+    track?: { bpm?: number } | null,
+  ) => {
+    const active = !!trackId;
+    setMusicActive(active);
+    setCurrentBpm(active && track?.bpm ? track.bpm : null);
+    if (audioPlayerRef.current) {
+      const target = active ? volume * BINAURAL_BLEND_FACTOR : volume;
+      try {
+        await audioPlayerRef.current.setVolume(target);
+      } catch (e) {
+        console.warn('Rebalance failed:', e);
       }
     }
   };
@@ -362,12 +386,14 @@ export default function BinauralMeditation() {
                 paused={isPaused}
                 accentColor={selectedProgram.color}
                 context="binaural"
+                onTrackChange={handleMusicTrackChange}
               />
               <LightTherapyController
                 active={isPlaying}
                 paused={isPaused}
                 accentColor={selectedProgram.color}
                 autoFrequencyHz={selectedProgram.beat_frequency || undefined}
+                musicBpm={currentBpm}
               />
             </View>
 

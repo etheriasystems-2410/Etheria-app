@@ -58,8 +58,9 @@ TRACKS: Dict[str, Dict] = {
             "829hjrmw_leberch-deep-meditation-375362_1.MP3"
         ),
         "default_for": ["binaural"],
-        "default_volume": 0.22,
+        "default_volume": 0.80,  # 20:80 blend — music is louder than tone
         "loop": True,
+        "bpm": 60,
     },
     "cosmic-meditation": {
         "name": "Cosmic Meditation",
@@ -72,8 +73,9 @@ TRACKS: Dict[str, Dict] = {
             "91pozu6x_miromaxmusic-cosmic-meditation-4.MP3"
         ),
         "default_for": ["binaural"],
-        "default_volume": 0.22,
+        "default_volume": 0.80,
         "loop": True,
+        "bpm": 56,
     },
     # ── Synthesized on-the-fly loops ──
     "deep-space": {

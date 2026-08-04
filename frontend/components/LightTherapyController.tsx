@@ -47,7 +47,11 @@ interface Props {
   accentColor?: string;
   /** If provided (in Hz), used as initial frequency selection. */
   autoFrequencyHz?: number;
+  /** BPM of the currently playing music track (drives Beat-sync mode). */
+  musicBpm?: number | null;
 }
+
+type PulseMode = 'frequency' | 'beat' | 'random';
 
 interface PresetFreq {
   id: string;
@@ -66,7 +70,9 @@ const PRESETS: PresetFreq[] = [
 
 const STORAGE_WARNING_ACK = 'light_therapy_warning_ack';
 const STORAGE_FREQ = 'light_therapy_freq_hz';
+const STORAGE_MODE = 'light_therapy_mode';
 const AUTO_STOP_MS = 20 * 60 * 1000; // 20 minutes
+const RANDOM_SWAP_MS = 25 * 1000; // Random mode alternates every 25 s
 
 function matchPreset(hz: number | undefined | null): PresetFreq {
   if (!hz || hz <= 0) return PRESETS[2]; // default Alpha
@@ -81,16 +87,22 @@ export default function LightTherapyController({
   paused = false,
   accentColor = '#fbbf24',
   autoFrequencyHz,
+  musicBpm,
 }: Props) {
   const [enabled, setEnabled] = useState(false);
   const [warningOpen, setWarningOpen] = useState(false);
   const [warningAcked, setWarningAcked] = useState(false);
   const [freq, setFreq] = useState<PresetFreq>(matchPreset(autoFrequencyHz));
+  const [mode, setMode] = useState<PulseMode>('random');
   const [torchOn, setTorchOn] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
 
   const pulseTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Random mode alternates every RANDOM_SWAP_MS between frequency + beat.
+  const randomSwapTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [randomActiveMode, setRandomActiveMode] =
+    useState<'frequency' | 'beat'>('frequency');
 
   const isNativeTorchSupported = Platform.OS !== 'web';
 
@@ -98,14 +110,18 @@ export default function LightTherapyController({
   useEffect(() => {
     (async () => {
       try {
-        const [ack, savedHz] = await Promise.all([
+        const [ack, savedHz, savedMode] = await Promise.all([
           AsyncStorage.getItem(STORAGE_WARNING_ACK),
           AsyncStorage.getItem(STORAGE_FREQ),
+          AsyncStorage.getItem(STORAGE_MODE),
         ]);
         if (ack === '1') setWarningAcked(true);
         if (savedHz) {
           const parsed = Number(savedHz);
           if (!Number.isNaN(parsed) && parsed > 0) setFreq(matchPreset(parsed));
+        }
+        if (savedMode === 'frequency' || savedMode === 'beat' || savedMode === 'random') {
+          setMode(savedMode);
         }
       } catch {}
     })();
@@ -127,12 +143,26 @@ export default function LightTherapyController({
       clearTimeout(autoStopTimer.current);
       autoStopTimer.current = null;
     }
+    if (randomSwapTimer.current) {
+      clearInterval(randomSwapTimer.current);
+      randomSwapTimer.current = null;
+    }
     setTorchOn(false);
   }, []);
 
+  // Derive the effective pulse Hz given the current mode.
+  const beatHz = musicBpm && musicBpm > 0 ? musicBpm / 60 : null;
+  const effectiveMode: 'frequency' | 'beat' =
+    mode === 'random'
+      ? randomActiveMode
+      : (mode as 'frequency' | 'beat');
+  const canBeat = beatHz != null;
+  const activeHz =
+    effectiveMode === 'beat' && canBeat ? (beatHz as number) : freq.hz;
+
   const startPulsing = useCallback(() => {
     stopPulsing();
-    const halfPeriodMs = Math.max(6, 1000 / (freq.hz * 2)); // toggle every half cycle
+    const halfPeriodMs = Math.max(6, 1000 / (activeHz * 2)); // toggle every half cycle
     pulseTimer.current = setInterval(() => {
       setTorchOn((prev) => !prev);
     }, halfPeriodMs);
@@ -143,7 +173,13 @@ export default function LightTherapyController({
         'Auto-stopped after 20 minutes to prevent device overheating. Tap Enable to continue.',
       );
     }, AUTO_STOP_MS);
-  }, [freq.hz, stopPulsing]);
+    // Random-mode swapper — flip between frequency + beat sub-modes.
+    if (mode === 'random' && canBeat) {
+      randomSwapTimer.current = setInterval(() => {
+        setRandomActiveMode((cur) => (cur === 'frequency' ? 'beat' : 'frequency'));
+      }, RANDOM_SWAP_MS);
+    }
+  }, [activeHz, canBeat, mode, stopPulsing]);
 
   // React to enable/active/paused lifecycle.
   useEffect(() => {
@@ -153,11 +189,20 @@ export default function LightTherapyController({
     }
     startPulsing();
     return stopPulsing;
-  }, [enabled, active, paused, freq.hz, startPulsing, stopPulsing]);
+  }, [enabled, active, paused, activeHz, startPulsing, stopPulsing]);
 
   const persistFreq = (p: PresetFreq) => {
     setFreq(p);
     AsyncStorage.setItem(STORAGE_FREQ, String(p.hz)).catch(() => {});
+  };
+
+  const persistMode = (m: PulseMode) => {
+    setMode(m);
+    // When switching *into* random, kick off with beat if we have BPM, else frequency.
+    if (m === 'random') {
+      setRandomActiveMode(canBeat ? 'beat' : 'frequency');
+    }
+    AsyncStorage.setItem(STORAGE_MODE, m).catch(() => {});
   };
 
   const requestEnable = async () => {
@@ -252,36 +297,89 @@ export default function LightTherapyController({
           : 'Preview mode — the on-screen glow simulates the flash. Build to a real device to use the LED.'}
       </Text>
 
-      {/* Preset row */}
-      <View style={styles.presets}>
-        {PRESETS.map((p) => {
-          const selected = freq.id === p.id;
+      {/* Mode selector — Frequency / Beat / Random */}
+      <View style={styles.modeRow}>
+        {(['frequency', 'beat', 'random'] as PulseMode[]).map((m) => {
+          const label =
+            m === 'frequency' ? 'Frequency' : m === 'beat' ? 'Beat-sync' : 'Random';
+          const disabled = m === 'beat' && !canBeat;
+          const selected = mode === m;
           return (
             <TouchableOpacity
-              key={p.id}
-              onPress={() => persistFreq(p)}
-              activeOpacity={0.85}
+              key={m}
+              onPress={() => !disabled && persistMode(m)}
+              activeOpacity={disabled ? 1 : 0.85}
               style={[
-                styles.presetPill,
+                styles.modePill,
                 selected && {
-                  borderColor: p.color,
-                  backgroundColor: `${p.color}22`,
+                  borderColor: accentColor,
+                  backgroundColor: `${accentColor}22`,
                 },
+                disabled && { opacity: 0.4 },
               ]}
             >
-              <View style={[styles.presetDot, { backgroundColor: p.color }]} />
+              <Ionicons
+                name={
+                  m === 'frequency'
+                    ? 'pulse'
+                    : m === 'beat'
+                    ? 'musical-notes'
+                    : 'shuffle'
+                }
+                size={11}
+                color={selected ? accentColor : '#c4b5fd'}
+              />
               <Text
                 style={[
-                  styles.presetText,
-                  selected && { color: p.color, fontWeight: '900' },
+                  styles.modePillText,
+                  selected && { color: accentColor, fontWeight: '900' },
                 ]}
               >
-                {p.name}
+                {label}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
+
+      {!canBeat && (mode === 'beat' || mode === 'random') ? (
+        <Text style={styles.beatHint}>
+          Pick a music track above to enable Beat-sync {mode === 'random' && '/ Random'}.
+        </Text>
+      ) : null}
+
+      {/* Preset row — only meaningful in Frequency mode or when random is on frequency */}
+      {(mode === 'frequency' || mode === 'random') ? (
+        <View style={styles.presets}>
+          {PRESETS.map((p) => {
+            const selected = freq.id === p.id;
+            return (
+              <TouchableOpacity
+                key={p.id}
+                onPress={() => persistFreq(p)}
+                activeOpacity={0.85}
+                style={[
+                  styles.presetPill,
+                  selected && {
+                    borderColor: p.color,
+                    backgroundColor: `${p.color}22`,
+                  },
+                ]}
+              >
+                <View style={[styles.presetDot, { backgroundColor: p.color }]} />
+                <Text
+                  style={[
+                    styles.presetText,
+                    selected && { color: p.color, fontWeight: '900' },
+                  ]}
+                >
+                  {p.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
 
       {/* Live pulse indicator */}
       {enabled && active && !paused ? (
@@ -293,7 +391,11 @@ export default function LightTherapyController({
             ]}
           />
           <Text style={styles.liveText}>
-            {isNativeTorchSupported ? 'Flashing' : 'Previewing'} at {freq.hz} Hz · auto-stops in 20 min
+            {isNativeTorchSupported ? 'Flashing' : 'Previewing'} at{' '}
+            {activeHz.toFixed(activeHz < 5 ? 1 : 0)} Hz
+            {effectiveMode === 'beat' ? ' (beat)' : ''}
+            {mode === 'random' ? ' · random' : ''}
+            {' · '}auto-stops in 20 min
           </Text>
         </View>
       ) : null}
@@ -406,6 +508,34 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 15,
     marginBottom: 8,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 8,
+  },
+  modePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(159,122,234,0.35)',
+    backgroundColor: 'rgba(30,14,58,0.65)',
+  },
+  modePillText: {
+    color: '#e9d5ff',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  beatHint: {
+    color: '#7c6ba0',
+    fontSize: 10,
+    fontStyle: 'italic',
+    marginBottom: 6,
   },
   presets: {
     flexDirection: 'row',
