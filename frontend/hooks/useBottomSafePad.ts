@@ -7,12 +7,17 @@
  *   const pad = useBottomSafePad();
  *   <ScrollView contentContainerStyle={{ paddingBottom: pad }}>
  *
- * Optional `extra` (default 40) lets a screen add more breathing room —
- * useful when a floating "Save" button sits above the fold.
+ * Optional `extra` (default 96) lets a screen add more breathing room —
+ * useful when a floating "Save" button sits above the fold. The default
+ * is intentionally generous so content clears iOS home indicators,
+ * Android gesture bars, and any floating tab / action UI.
  */
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export function useBottomSafePad(extra: number = 40): number {
+export function useBottomSafePad(extra: number = 96): number {
   const insets = useSafeAreaInsets();
-  return insets.bottom + extra;
+  // Guarantee a minimum inset of 16 for devices that report 0
+  // (older Android or web preview) so content still clears the edge.
+  const bottomInset = Math.max(insets.bottom, 16);
+  return bottomInset + extra;
 }
