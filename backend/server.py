@@ -834,6 +834,10 @@ app.include_router(meditation_router, prefix="/api")
 from routes.meditation_ambient import router as meditation_ambient_router
 app.include_router(meditation_ambient_router, prefix="/api")
 
+# Pexels themed video loops for the Reprogramming visual layer.
+from routes.pexels_videos import router as pexels_videos_router
+app.include_router(pexels_videos_router, prefix="/api")
+
 # Import and register admin/tts/gift-code/prize-drawing/usage/feedback routers (extracted from server.py).
 # NOTE: We deliberately do NOT register admin.notifications_router because it conflicts with the new
 # push-notification routes already mounted at /api/notifications/* in routes/notifications.py.

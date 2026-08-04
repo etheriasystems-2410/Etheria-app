@@ -52,6 +52,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const STORAGE_KEY_ACK = 'reprogramming_visuals_ack';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 // Theme keyed by common Reprogramming script categories.
 export type ReprogrammingTheme =
@@ -198,6 +199,8 @@ export default function ReprogrammingVisuals({
   const th = THEMES[theme] || THEMES.default;
   const [acked, setAcked] = useState<boolean | null>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [fetchedVideoUri, setFetchedVideoUri] = useState<string | null>(null);
+  const [attribution, setAttribution] = useState<string | null>(null);
 
   // Load ack state.
   useEffect(() => {
@@ -210,6 +213,32 @@ export default function ReprogrammingVisuals({
       }
     })();
   }, []);
+
+  // Fetch a themed Pexels video whenever theme changes and visuals are
+  // acknowledged. New random pick every session, cached server-side.
+  useEffect(() => {
+    if (videoUri || !BACKEND_URL || acked !== true) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(
+          `${BACKEND_URL}/api/reprogramming/theme-video/${theme}`,
+        );
+        if (!r.ok) return;
+        const data = await r.json();
+        if (cancelled) return;
+        if (data?.video_url) {
+          setFetchedVideoUri(data.video_url);
+          setAttribution(data.attribution || null);
+        }
+      } catch {
+        /* silent — mandala + subliminals still render */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [theme, videoUri, acked]);
 
   // Show disclaimer the first time the session becomes active.
   useEffect(() => {
@@ -242,9 +271,14 @@ export default function ReprogrammingVisuals({
           {/* Backdrop gradient */}
           <LinearGradient colors={th.bg} style={StyleSheet.absoluteFill} />
 
-          {/* Optional video loop */}
-          {videoUri ? (
-            <VideoLoop uri={videoUri} />
+          {/* Themed royalty-free video loop (Pexels) */}
+          {(videoUri || fetchedVideoUri) ? (
+            <VideoLoop uri={(videoUri || fetchedVideoUri) as string} />
+          ) : null}
+
+          {/* Semi-transparent tint over the video so mandala stays visible */}
+          {(videoUri || fetchedVideoUri) ? (
+            <View style={styles.videoTint} />
           ) : null}
 
           {/* Mandala */}
@@ -252,6 +286,11 @@ export default function ReprogrammingVisuals({
 
           {/* Subliminal text flashes */}
           <SubliminalTextFlash words={subliminals} accent={th.ringColor} />
+
+          {/* Attribution — bottom-right, tiny */}
+          {attribution ? (
+            <Text style={styles.attribution}>{attribution}</Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -477,6 +516,19 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  videoTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,3,33,0.45)',
+  },
+  attribution: {
+    position: 'absolute',
+    bottom: 6,
+    right: 10,
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 9,
+    fontStyle: 'italic',
+    letterSpacing: 0.3,
   },
   mandalaLayer: {
     position: 'absolute',
