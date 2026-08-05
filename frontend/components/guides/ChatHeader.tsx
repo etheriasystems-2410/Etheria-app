@@ -1,7 +1,3 @@
-/**
- * ChatHeader — animated avatar (pulsating rings while talking), guide name,
- * subtitle, and right-side actions (save-to-journal + mute toggle).
- */
 import React from 'react';
 import { Animated, Image, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,8 +9,6 @@ interface ChatHeaderProps {
   divinePairMode: boolean;
   isTalking: boolean;
   isMuted: boolean;
-  pulseAnim: Animated.Value;
-  glowAnim: Animated.Value;
   onBack: () => void;
   onToggleMute: () => void;
   onSaveJournal: () => void;
@@ -25,8 +19,6 @@ export default function ChatHeader({
   divinePairMode,
   isTalking,
   isMuted,
-  pulseAnim,
-  glowAnim,
   onBack,
   onToggleMute,
   onSaveJournal,
@@ -37,54 +29,12 @@ export default function ChatHeader({
         <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
       </TouchableOpacity>
 
-      {/* Avatar with pulsating ring(s) */}
+      {/* Simplified avatar: remove animated rings and small hero image per request */}
       <View style={styles.chatHeaderImageWrapper}>
-        {isTalking && selectedGuide.ringColors && selectedGuide.ringColors.length > 0 ? (
-          selectedGuide.ringColors.map((c, idx) => {
-            const sizeBoost = idx * 6;
-            return (
-              <Animated.View
-                key={`ring-${idx}`}
-                style={[
-                  styles.pulseRing,
-                  {
-                    width: 56 + sizeBoost,
-                    height: 56 + sizeBoost,
-                    borderRadius: (56 + sizeBoost) / 2,
-                    borderColor: c,
-                    transform: [{ scale: pulseAnim }],
-                    opacity: glowAnim,
-                  },
-                ]}
-              />
-            );
-          })
-        ) : isTalking ? (
-          <Animated.View
-            style={[
-              styles.pulseRing,
-              {
-                borderColor: selectedGuide.color,
-                transform: [{ scale: pulseAnim }],
-                opacity: glowAnim,
-              },
-            ]}
-          />
-        ) : null}
-        {selectedGuide.image ? (
-          <View
-            style={[
-              styles.chatHeaderImageContainer,
-              isTalking && { borderColor: selectedGuide.color },
-            ]}
-          >
-            <Image source={selectedGuide.image} style={styles.chatHeaderImage} resizeMode="cover" />
-          </View>
-        ) : (
-          <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
-            <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
-          </View>
-        )}
+        {/* Render a colored circle (icon) instead of the hero image */}
+        <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
+          <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
+        </View>
       </View>
 
       <View style={styles.chatHeaderInfo}>
