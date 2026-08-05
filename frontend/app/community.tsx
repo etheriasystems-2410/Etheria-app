@@ -25,6 +25,7 @@ import CollectiveCardBanner from '../components/CollectiveCardBanner';
 import HeaderBanner from '../components/HeaderBanner';
 import { Image } from 'expo-image';
 import { CosmicBackdrop } from '../components/ui';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -76,6 +77,7 @@ export default function Community() {
   const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const bottomPad = useBottomSafePad();
   
   const [viewMode, setViewMode] = useState<ViewMode>('categories');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -477,7 +479,7 @@ export default function Community() {
 
   // Render Categories View
   const renderCategories = () => (
-    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: bottomPad }} showsVerticalScrollIndicator={false}>
       <View style={styles.headerSection}>
         {/* Hero Section with Image - mystical header */}
         <View style={styles.heroImageContainer}>
@@ -631,6 +633,7 @@ export default function Community() {
         </View>
       ) : (
         <ScrollView
+          contentContainerStyle={{ paddingBottom: bottomPad }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

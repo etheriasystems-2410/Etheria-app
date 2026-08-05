@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 import { useLanguage } from '../contexts/LanguageContext';
 import { CosmicBackdrop } from '../components/ui';
 
@@ -58,6 +59,7 @@ export default function DreamsScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
+  const bottomPad = useBottomSafePad();
   
   const [dreamDescription, setDreamDescription] = useState('');
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
@@ -238,7 +240,7 @@ export default function DreamsScreen() {
         <ScrollView 
           ref={scrollViewRef}
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Hero Section with Image Background - mystical header */}

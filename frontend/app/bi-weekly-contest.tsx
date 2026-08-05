@@ -25,6 +25,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -53,6 +54,7 @@ const authHeaders = async () => {
 
 export default function BiWeeklyContest() {
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
   const [status, setStatus] = useState<PrizeStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [winners, setWinners] = useState<Winner[]>([]);
@@ -137,7 +139,7 @@ export default function BiWeeklyContest() {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#a855f7" />
           }

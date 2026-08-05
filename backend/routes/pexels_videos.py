@@ -30,55 +30,68 @@ PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 PEXELS_SEARCH_URL = "https://api.pexels.com/videos/search"
 
 
-# Theme → curated search terms. Each theme picks ONE at random per fetch.
+# Theme → curated search terms. Every query is intentionally biased toward
+# **dynamic, motion-heavy** footage (starfields, nebulae, particle flows,
+# auroras, warp-through visuals) so the visual layer feels alive — like a
+# pink starfield flying past — instead of a static backdrop. Each theme
+# picks ONE at random per fetch.
 THEME_QUERIES: Dict[str, List[str]] = {
     "confidence": [
-        "golden sunrise",
-        "sun rays forest",
-        "mountain summit sunrise",
-        "aerial golden sunset",
+        "gold particles flowing",
+        "warp speed stars",
+        "golden nebula",
+        "shooting stars sky",
+        "sparkles particles motion",
     ],
     "sleep": [
-        "night sky stars",
-        "milky way slow",
-        "dark forest moonlight",
-        "aurora borealis slow",
+        "starfield space travel",
+        "milky way time lapse",
+        "aurora borealis motion",
+        "purple nebula",
+        "deep space stars moving",
     ],
     "anxiety": [
-        "gentle waves calm ocean",
-        "slow clouds sky",
-        "peaceful lake reflection",
-        "misty morning forest",
+        "blue nebula motion",
+        "flowing particles calm",
+        "underwater bubbles slow motion",
+        "soft aurora sky",
+        "cyan light particles",
     ],
     "abundance": [
-        "sunlit forest",
-        "gold particles light",
-        "field of flowers wind",
-        "cascade waterfall slow",
+        "gold particles falling",
+        "golden bokeh moving",
+        "confetti gold slow motion",
+        "sparkling glitter motion",
+        "magic particles gold",
     ],
     "love": [
-        "pink flowers slow motion",
-        "sunset heart clouds",
-        "rose petals falling",
-        "warm bokeh lights",
+        "pink starfield space",
+        "pink nebula galaxy",
+        "rose petals falling slow motion",
+        "pink particles floating",
+        "pink bokeh lights motion",
     ],
     "focus": [
-        "flowing water minimalist",
-        "geometric lights",
-        "slow zen sand",
-        "candle flame steady",
+        "geometric particles motion",
+        "neon lines flowing",
+        "digital particles blue",
+        "abstract light streaks",
+        "energy waves motion",
     ],
     "health": [
-        "green forest sun",
-        "mountain river flowing",
-        "sunrise nature",
-        "leaf droplet macro",
+        "green particles flowing",
+        "emerald nebula",
+        "green aurora borealis",
+        "glowing forest particles",
+        "flowing energy green",
     ],
     "default": [
-        "cosmic nebula",
-        "aurora sky",
-        "purple particles",
-        "night sky galaxy",
+        "cosmic nebula moving",
+        "pink starfield",
+        "purple galaxy time lapse",
+        "warp stars space",
+        "colorful nebula motion",
+        "aurora sky time lapse",
     ],
 }
 
@@ -89,15 +102,15 @@ _CACHE_TTL_SEC = 12 * 60 * 60  # 12 hours
 
 
 def _pick_file_url(files: List[Dict]) -> Optional[str]:
-    """Prefer HD-but-not-huge MP4 files (≤ 1280 wide) so we don't blow the
+    """Prefer HD-but-not-huge MP4 files (≤ 1920 wide) so we don't blow the
     user's data plan mid-meditation."""
     if not files:
         return None
     candidates = [
         f for f in files
         if f.get("file_type") == "video/mp4"
-        and (f.get("width") or 0) <= 1280
-        and (f.get("height") or 0) <= 1280
+        and (f.get("width") or 0) <= 1920
+        and (f.get("height") or 0) <= 1920
     ]
     if not candidates:
         candidates = [f for f in files if f.get("file_type") == "video/mp4"]

@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CosmicBackdrop, GlassCard } from '../../components/ui';
 import { palette } from '../../theme/tokens';
 import useDMSocket from '../../hooks/useDMSocket';
+import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 
 interface Thread {
   thread_id: string;
@@ -28,6 +29,7 @@ interface Thread {
 
 export default function MessagesScreen() {
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -129,7 +131,7 @@ export default function MessagesScreen() {
           data={threads}
           keyExtractor={(t) => t.thread_id}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

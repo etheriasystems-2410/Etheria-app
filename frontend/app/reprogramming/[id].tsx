@@ -31,6 +31,7 @@ import LightTherapyController from '../../components/LightTherapyController';
 import ReprogrammingVisuals, {
   type ReprogrammingTheme,
 } from '../../components/ReprogrammingVisuals';
+import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -77,6 +78,7 @@ function hexToRgba(hex: string, alpha: number): string {
 export default function ReprogrammingSession() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
 
   const [meta, setMeta] = useState<SessionMeta | null>(null);
   const [metaLoading, setMetaLoading] = useState(true);
@@ -408,7 +410,7 @@ export default function ReprogrammingSession() {
           </View>
         ) : !sessionActive ? (
           // ---- Pre-flight: pick length, then Begin ----
-          <ScrollView contentContainerStyle={styles.setupScroll}>
+          <ScrollView contentContainerStyle={[styles.setupScroll, { paddingBottom: bottomPad }]}>
             <View style={styles.heroWrap}>
               {/* Radial-ish colored halo using two stacked gradients */}
               <LinearGradient

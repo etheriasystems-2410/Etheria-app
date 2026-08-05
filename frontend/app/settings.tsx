@@ -26,6 +26,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
 
 import { useAuth } from '../contexts/AuthContext';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Paywall } from '../components/Paywall';
@@ -47,6 +48,7 @@ const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function Settings() {
   const { user, logout, isPremium, subscription, refreshSubscription } = useAuth();
+  const bottomPad = useBottomSafePad();
   const { theme, themeName, setTheme, availableThemes } = useTheme();
   const { language, languageCode, setLanguage, t, availableLanguages } = useLanguage();
   const router = useRouter();
@@ -370,7 +372,7 @@ export default function Settings() {
   // Render
   // ────────────────────────────────────────────────────────────────────────────
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: bottomPad }}>
       {checkingPayment && (
         <View style={styles.processingOverlay}>
           <ActivityIndicator size="large" color="#b794f6" />

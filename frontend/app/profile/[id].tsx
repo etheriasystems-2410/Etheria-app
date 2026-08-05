@@ -32,6 +32,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 import { CosmicBackdrop } from '../../components/ui';
 import {
   Chip,
@@ -54,6 +55,7 @@ export default function ProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { authToken, user: me, isPremium } = useAuth();
+  const bottomPad = useBottomSafePad();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -322,7 +324,7 @@ export default function ProfileScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView
-            contentContainerStyle={styles.scroll}
+            contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
             keyboardShouldPersistTaps="handled"
           >
             {/* Top row: back + (Edit/Save) */}

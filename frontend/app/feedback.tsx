@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CosmicBackdrop } from '../components/ui';
 
@@ -24,6 +25,7 @@ type FeedbackType = 'bug' | 'suggestion' | 'question' | 'other';
 export default function Feedback() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
+  const bottomPad = useBottomSafePad();
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('suggestion');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -106,7 +108,7 @@ export default function Feedback() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.content} contentContainerStyle={[styles.contentContainer, { paddingBottom: bottomPad }]}>
         <View style={styles.introCard}>
           <Ionicons name="heart" size={32} color="#ec4899" />
           <Text style={styles.introTitle}>We Value Your Feedback</Text>

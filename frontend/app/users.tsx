@@ -22,6 +22,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { CosmicBackdrop } from '../components/ui';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 interface UserBrief {
   user_id: string;
@@ -37,6 +38,7 @@ const API = process.env.EXPO_PUBLIC_BACKEND_URL;
 export default function UsersScreen() {
   const router = useRouter();
   const { authToken, isPremium } = useAuth();
+  const bottomPad = useBottomSafePad();
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -240,7 +242,7 @@ export default function UsersScreen() {
             keyExtractor={(item) => item.user_id}
             renderItem={renderRow}
             ItemSeparatorComponent={() => <View style={styles.sep} />}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
             ListHeaderComponent={
               <Text style={styles.countLabel}>
                 {filtered.length} {filtered.length === 1 ? 'member' : 'members'}

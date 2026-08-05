@@ -26,6 +26,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { useAuth } from '../contexts/AuthContext';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 import { CosmicBackdrop } from '../components/ui';
 
 const API = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -47,6 +48,7 @@ interface Member {
 export default function MyCircleScreen() {
   const router = useRouter();
   const { authToken } = useAuth();
+  const bottomPad = useBottomSafePad();
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +101,7 @@ export default function MyCircleScreen() {
     <CosmicBackdrop>
       <SafeAreaView style={styles.flex} edges={['bottom']}>
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fbbf24" />}
         >
           <Text style={styles.title}>My Circle</Text>
