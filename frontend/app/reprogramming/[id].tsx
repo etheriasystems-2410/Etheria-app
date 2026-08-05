@@ -241,7 +241,7 @@ export default function ReprogrammingSession() {
     try {
       const token = await AsyncStorage.getItem('session_token');
       const r = await fetch(
-        `${BACKEND_URL}/api/reprogramming/audio-base64/${meta.id}`,
+        `${BACKEND_URL}/api/reprogramming/audio-base64/${meta.id}?duration=${selectedDuration}`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         },
@@ -264,7 +264,8 @@ export default function ReprogrammingSession() {
 
       const uri = `data:audio/mp3;base64,${data.audio_base64}`;
       const player = new AudioPlayerManager();
-      await player.loadAndPlay(uri, { loop: true, volume: PLAY_VOLUME });
+      // Voice is duration-tailored server-side — do NOT loop the vocals.
+      await player.loadAndPlay(uri, { loop: false, volume: PLAY_VOLUME });
       playerRef.current = player;
 
       // Fetch + start the hypnotic session-audio bed (random of 5 tracks).

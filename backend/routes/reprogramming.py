@@ -8,13 +8,14 @@ Design
 • Scripts are hand-written (see /app/backend/data/reprogramming_scripts.py)
   and never LLM-generated at request time.
 • Narration is synthesised with ElevenLabs (rich emotional inflection) and
-  cached to disk at /app/backend/data/reprogramming_audio/{session_id}.mp3
-  so we only pay the TTS cost once per topic.
-• Audio is a base ~10-minute narration; the frontend loops it and uses a
-  gentle fade-out sleep timer to reach the user's chosen duration (10, 20,
-  30, or 60 minutes).
-• Delivery: /api/reprogramming/audio/{session_id} returns the cached MP3
-  with a correct Content-Length header so native expo-audio can seek/loop.
+  cached to disk at /app/backend/data/reprogramming_audio/{session_id}_dNN_*.mp3
+  — one file per (session, duration_minutes) combination.
+• Script length adapts to the user's chosen duration (10 / 20 / 30 / 45 /
+  60 min) via appended affirmation "deepener" blocks, so the voice ends
+  naturally at the chosen length — no client-side looping.
+• Delivery: /api/reprogramming/audio/{session_id}?duration=N returns the
+  cached MP3 with a correct Content-Length header so native expo-audio can
+  stream/seek reliably.
 """
 from __future__ import annotations
 
@@ -155,7 +156,7 @@ SESSIONS = [
 for _s in SESSIONS:
     _s["is_free"] = _s["id"] in FREE_SESSIONS
     _s["is_premium"] = _s["id"] not in FREE_SESSIONS
-    _s["duration_minutes"] = 10  # base narration length (frontend loops for longer)
+    _s["duration_minutes"] = 10  # legacy base narration length (frontend now requests any preset)
 
 SESSIONS_BY_ID = {s["id"]: s for s in SESSIONS}
 
@@ -174,32 +175,36 @@ DEFAULT_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"
 DEFAULT_VOICE_CFG = {
     "voice": DEFAULT_VOICE_ID,
     "openai_voice": "nova",   # fallback if ElevenLabs is unavailable
-    "stability": 0.65,        # higher = more consistent, less dynamic (good for hypnosis)
-    "style": 0.30,            # low style = less expressive, more calming
-    "speed": 0.85,            # slower cadence
+    "stability": 0.78,        # higher = more consistent, less dynamic (smoother for hypnosis)
+    "style": 0.22,            # very low style = flatter, calmer, less "performed"
+    "speed": 0.78,            # slower cadence — unhurried, deeply relaxed
+    "similarity_boost": 0.85, # preserve the voice character across a long take
 }
 
 
-def _cache_path_for(session_id: str) -> Path:
-    """Return the on-disk cache path for a session's base narration MP3."""
-    safe = hashlib.sha1(f"{session_id}|{DEFAULT_VOICE_ID}".encode()).hexdigest()[:16]
-    return AUDIO_CACHE_DIR / f"{session_id}_{safe}.mp3"
+def _cache_path_for(session_id: str, duration_minutes: int = 10) -> Path:
+    """Return the on-disk cache path for a session's narration MP3 at the
+    requested duration. Different durations get separate cache files."""
+    key = f"{session_id}|{DEFAULT_VOICE_ID}|d{int(duration_minutes)}"
+    safe = hashlib.sha1(key.encode()).hexdigest()[:16]
+    return AUDIO_CACHE_DIR / f"{session_id}_d{int(duration_minutes)}_{safe}.mp3"
 
 
-async def _synthesise_and_cache(session_id: str) -> bytes:
-    """Synthesise the full narration for `session_id` and cache to disk.
-    Returns raw MP3 bytes."""
+async def _synthesise_and_cache(session_id: str, duration_minutes: int = 10) -> bytes:
+    """Synthesise the full narration for `session_id` at the requested
+    duration and cache to disk. Returns raw MP3 bytes."""
     if session_id not in TOPIC_BODIES:
         raise HTTPException(status_code=404, detail=f"Unknown session '{session_id}'")
 
-    cache_path = _cache_path_for(session_id)
+    cache_path = _cache_path_for(session_id, duration_minutes)
     if cache_path.exists() and cache_path.stat().st_size > 4096:
         return cache_path.read_bytes()
 
-    script = build_full_script(session_id)
+    script = build_full_script(session_id, duration_minutes)
     logger.info(
-        "[Reprogramming] Synthesising narration for '%s' (%d chars) via ElevenLabs…",
+        "[Reprogramming] Synthesising narration for '%s' at %d min (%d chars) via ElevenLabs…",
         session_id,
+        duration_minutes,
         len(script),
     )
 
@@ -294,24 +299,27 @@ def _ensure_access(session: dict, user_doc: dict) -> None:
 @router.get("/audio/{session_id}")
 async def stream_audio(
     session_id: str,
+    duration: int = 10,
     user: dict = Depends(get_current_user),
 ):
-    """Return the cached narration MP3 for a session, with Content-Length so
-    native expo-audio can seek and loop. Generates + caches on first hit."""
+    """Return the cached narration MP3 for a session at the requested
+    duration (in minutes). The script length adapts so the voice ends
+    naturally at the chosen duration — no client-side looping needed."""
     session = SESSIONS_BY_ID.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Unknown session")
 
     _ensure_access(session, user)
 
-    audio_bytes = await _synthesise_and_cache(session_id)
+    duration_minutes = _clamp_duration(duration)
+    audio_bytes = await _synthesise_and_cache(session_id, duration_minutes)
 
     return Response(
         content=audio_bytes,
         media_type="audio/mpeg",
         headers={
             "Content-Length": str(len(audio_bytes)),
-            "Content-Disposition": f'inline; filename="reprogramming_{session_id}.mp3"',
+            "Content-Disposition": f'inline; filename="reprogramming_{session_id}_{duration_minutes}min.mp3"',
             "Cache-Control": "public, max-age=86400",
         },
     )
@@ -320,6 +328,7 @@ async def stream_audio(
 @router.get("/audio-base64/{session_id}")
 async def audio_base64(
     session_id: str,
+    duration: int = 10,
     user: dict = Depends(get_current_user),
 ):
     """Return the cached narration MP3 as base64 (for clients that cannot
@@ -330,7 +339,8 @@ async def audio_base64(
 
     _ensure_access(session, user)
 
-    audio_bytes = await _synthesise_and_cache(session_id)
+    duration_minutes = _clamp_duration(duration)
+    audio_bytes = await _synthesise_and_cache(session_id, duration_minutes)
 
     return {
         "session_id": session_id,
@@ -339,8 +349,21 @@ async def audio_base64(
         "audio_base64": base64.b64encode(audio_bytes).decode(),
         "format": "mp3",
         "byte_length": len(audio_bytes),
+        "duration_minutes": duration_minutes,
         "duration_presets": DURATION_PRESETS,
     }
+
+
+def _clamp_duration(duration: int) -> int:
+    """Coerce arbitrary user input to one of the allowed DURATION_PRESETS."""
+    try:
+        d = int(duration)
+    except (TypeError, ValueError):
+        d = 10
+    if d in DURATION_PRESETS:
+        return d
+    # Snap to the nearest allowed preset.
+    return min(DURATION_PRESETS, key=lambda p: abs(p - d))
 
 
 @router.get("/cache-stats")
@@ -354,15 +377,16 @@ async def cache_stats(user: dict = Depends(get_current_user)):
     total_chars = 0
     per_session_chars: dict[str, int] = {}
     for sid in TOPIC_BODIES:
-        script = build_full_script(sid)
+        # Use the 10-minute variant as the baseline character count.
+        script = build_full_script(sid, 10)
         per_session_chars[sid] = len(script)
         total_chars += len(script)
 
     cached_bytes = 0
     cached_count = 0
-    for s in SESSIONS:
-        p = _cache_path_for(s["id"])
-        if p.exists() and p.stat().st_size > 4096:
+    # Enumerate all *.mp3 files in the cache dir — one per (session, duration).
+    for p in AUDIO_CACHE_DIR.glob("*.mp3"):
+        if p.stat().st_size > 4096:
             cached_count += 1
             cached_bytes += p.stat().st_size
 
@@ -380,25 +404,28 @@ async def cache_stats(user: dict = Depends(get_current_user)):
         "cached_count": cached_count,
         "cached_bytes": cached_bytes,
         "cached_mb": round(cached_bytes / (1024 * 1024), 1),
+        "duration_presets": DURATION_PRESETS,
     }
 
 
 @router.post("/warm-cache")
 async def warm_cache(user: dict = Depends(get_current_user)):
-    """Admin-only: pre-synthesise every session so first-user latency is zero.
-    Handy after deploying a new script."""
+    """Admin-only: pre-synthesise every session at every duration preset so
+    first-user latency is zero. Handy after deploying a new script."""
     if not user.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admin only")
 
-    results = {}
+    results: dict[str, dict] = {}
     for s in SESSIONS:
         sid = s["id"]
-        try:
-            data = await _synthesise_and_cache(sid)
-            results[sid] = {"ok": True, "bytes": len(data)}
-        except HTTPException as e:
-            results[sid] = {"ok": False, "error": str(e.detail)}
-        except Exception as e:
-            results[sid] = {"ok": False, "error": str(e)}
+        results[sid] = {}
+        for d in DURATION_PRESETS:
+            try:
+                data = await _synthesise_and_cache(sid, d)
+                results[sid][f"{d}min"] = {"ok": True, "bytes": len(data)}
+            except HTTPException as e:
+                results[sid][f"{d}min"] = {"ok": False, "error": str(e.detail)}
+            except Exception as e:
+                results[sid][f"{d}min"] = {"ok": False, "error": str(e)}
 
     return {"results": results, "cache_dir": str(AUDIO_CACHE_DIR)}

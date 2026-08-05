@@ -1,44 +1,48 @@
 """
 Pre-written hypnosis scripts for the Reprogramming section.
 
-Each session is assembled as:  INDUCTION  +  <topic body>  +  CLOSING
+Each session is assembled as:  INDUCTION  +  <topic body>  +  N × DEEPENER  +  CLOSING
 
-The base narration targets ~10 minutes at a slow (~90 wpm) cadence — the
-frontend loops the audio and uses a sleep-timer + gentle fade-out to reach
-the user's chosen duration (10 / 20 / 30 / 60 min).
+The script length adapts to the user's chosen duration. The base script
+(induction + body + closing) narrates in ~9–11 min at a slow (~85 wpm) cadence;
+each additional DEEPENER block (roughly 2 min of mostly-silence with softly
+repeated affirmations) is appended until the total narration approximately
+matches the requested duration. This lets the frontend stop the voice cleanly
+at the end instead of looping it.
 
 The `<break time="Xs" />` tags are honoured by ElevenLabs eleven_multilingual_v2
-and give the narration a natural, hypnotic pace.
+and give the narration a natural, hypnotic pace. Chained `<break>` tags are
+used to simulate longer silences that the tag itself doesn't natively support.
 """
 
 # Shared induction — welcome, breath work, body relaxation, staircase deepener.
-INDUCTION = """Welcome. <break time="1s" /> Find a place where you can lie down… <break time="1s" /> somewhere warm… <break time="1s" /> somewhere safe. When you are ready… <break time="1s" /> let your eyes gently close.
+INDUCTION = """Welcome. <break time="2s" /> Find a place where you can lie down… <break time="1s" /> somewhere warm… <break time="1s" /> somewhere safe. When you are ready… <break time="1s" /> let your eyes gently close. <break time="2s" />
 
-Take a slow, deep breath in through your nose… <break time="2s" /> hold it for a moment… <break time="1s" /> and release it softly through your mouth. <break time="2s" />
+Take a slow, deep breath in through your nose… <break time="3s" /> hold it for a moment… <break time="2s" /> and release it softly through your mouth. <break time="3s" />
 
-Again. <break time="1s" /> Breathe in… <break time="2s" /> feel the cool air enter your body… <break time="1s" /> and exhale everything from the day. <break time="2s" />
+Again. <break time="1s" /> Breathe in… <break time="3s" /> feel the cool air enter your body… <break time="2s" /> and exhale everything from the day. <break time="3s" />
 
-One more slow breath in… <break time="2s" /> and a long, gentle exhale out. <break time="2s" />
+One more slow breath in… <break time="3s" /> and a long, gentle exhale out. <break time="3s" />
 
-With each breath, you become softer. <break time="1s" /> Heavier. <break time="1s" /> More at peace.
+With each breath, you become softer. <break time="2s" /> Heavier. <break time="2s" /> More at peace. <break time="2s" />
 
-Bring your attention to the crown of your head. <break time="1s" /> Feel a soft, warm light begin to glow there. <break time="1s" /> Warm as sunlight on your skin.
+Bring your attention to the crown of your head. <break time="1s" /> Feel a soft, warm light begin to glow there. <break time="2s" /> Warm as sunlight on your skin. <break time="2s" />
 
-Let that light flow into your forehead… <break time="1s" /> smoothing every thought. <break time="1s" /> Your eyes soften. <break time="1s" /> Your jaw releases. <break time="1s" /> Your tongue rests behind your teeth.
+Let that light flow into your forehead… <break time="1s" /> smoothing every thought. <break time="1s" /> Your eyes soften. <break time="1s" /> Your jaw releases. <break time="1s" /> Your tongue rests behind your teeth. <break time="2s" />
 
-The warm light drifts into your neck… <break time="1s" /> your shoulders… <break time="1s" /> melting the weight you have carried today. <break time="1s" /> It flows down your arms, <break time="1s" /> into your hands, <break time="1s" /> all the way to your fingertips… <break time="1s" /> which now feel warm… <break time="1s" /> and heavy… <break time="1s" /> and still.
+The warm light drifts into your neck… <break time="1s" /> your shoulders… <break time="1s" /> melting the weight you have carried today. <break time="1s" /> It flows down your arms, <break time="1s" /> into your hands, <break time="1s" /> all the way to your fingertips… <break time="1s" /> which now feel warm… <break time="1s" /> and heavy… <break time="1s" /> and still. <break time="2s" />
 
-The light spreads across your chest… <break time="1s" /> into your heart… <break time="1s" /> slower now. <break time="1s" /> Softer. <break time="1s" /> It moves into your belly, <break time="1s" /> into your hips, <break time="1s" /> down through your legs, <break time="1s" /> and into your feet.
+The light spreads across your chest… <break time="1s" /> into your heart… <break time="1s" /> slower now. <break time="1s" /> Softer. <break time="1s" /> It moves into your belly, <break time="1s" /> into your hips, <break time="1s" /> down through your legs, <break time="1s" /> and into your feet. <break time="2s" />
 
-Every cell of you is now bathed in warm, golden light. <break time="2s" />
+Every cell of you is now bathed in warm, golden light. <break time="3s" />
 
-Imagine standing at the top of a beautiful staircase made of moonstone. <break time="1s" /> Ten steps lead down into a soft, silver mist below.
+Imagine standing at the top of a beautiful staircase made of moonstone. <break time="2s" /> Ten steps lead down into a soft, silver mist below. <break time="2s" />
 
-I will count. <break time="1s" /> With each step, you drift twice as deep. <break time="1s" />
+I will count. <break time="1s" /> With each step, you drift twice as deep. <break time="2s" />
 
-Ten… <break time="1s" /> stepping down. <break time="1s" /> Nine… <break time="1s" /> deeper. <break time="1s" /> Eight… <break time="1s" /> softer. <break time="1s" /> Seven… <break time="1s" /> every muscle letting go. <break time="1s" /> Six… <break time="1s" /> deeper still. <break time="1s" /> Five… <break time="1s" /> halfway now. <break time="1s" /> Four… <break time="1s" /> twice as deep. <break time="1s" /> Three… <break time="1s" /> deeper. <break time="1s" /> Two… <break time="1s" /> almost there. <break time="1s" /> One… <break time="1s" /> and zero. <break time="2s" />
+Ten… <break time="2s" /> stepping down. <break time="2s" /> Nine… <break time="2s" /> deeper. <break time="2s" /> Eight… <break time="2s" /> softer. <break time="2s" /> Seven… <break time="2s" /> every muscle letting go. <break time="2s" /> Six… <break time="2s" /> deeper still. <break time="2s" /> Five… <break time="2s" /> halfway now. <break time="2s" /> Four… <break time="2s" /> twice as deep. <break time="2s" /> Three… <break time="2s" /> deeper. <break time="2s" /> Two… <break time="2s" /> almost there. <break time="2s" /> One… <break time="2s" /> and zero. <break time="3s" />
 
-You have arrived. <break time="1s" /> In this place, you are completely safe. <break time="1s" /> Completely open. <break time="1s" /> Completely at peace. <break time="2s" />"""
+You have arrived. <break time="2s" /> In this place, you are completely safe. <break time="1s" /> Completely open. <break time="1s" /> Completely at peace. <break time="3s" />"""
 
 
 # Shared closing / emergence — sealed, safe, drift into sleep or gentle return.
@@ -413,9 +417,151 @@ I release the past. <break time="2s" /> I welcome my future. <break time="2s" />
 }
 
 
-def build_full_script(session_id: str) -> str:
-    """Assemble the full narration for a session: induction + body + closing."""
+def build_full_script(session_id: str, duration_minutes: int = 10) -> str:
+    """Assemble the full narration for a session with a length that
+    approximately matches ``duration_minutes``.
+
+    Structure:  INDUCTION  +  BODY  +  N × DEEPENER  +  CLOSING
+
+    The base (induction + body + closing) narrates in roughly 9–11 min at
+    ~85 wpm. For durations longer than that we append integer multiples of
+    a session-specific DEEPENER block (~2 min of mostly-silence with softly
+    repeated affirmations) so the narration ends naturally on the last word
+    right around the chosen duration.
+    """
     body = TOPIC_BODIES.get(session_id)
     if not body:
         raise KeyError(f"No script defined for session '{session_id}'")
-    return f"{INDUCTION}\n\n{body}\n\n{CLOSING}"
+
+    base_min = 10  # induction+body+closing narrates in about 10 min at slow cadence
+    per_deepener_min = 2
+    extra = max(0, int(duration_minutes) - base_min)
+    n_deepeners = max(0, extra // per_deepener_min)
+
+    deepener_block = build_deepener_block(session_id) if n_deepeners > 0 else ""
+    middle = ("\n\n" + deepener_block) * n_deepeners
+
+    return f"{INDUCTION}\n\n{body}\n\n{middle}\n\n{CLOSING}"
+
+
+# ---------------------------------------------------------------------------
+# Per-session anchor affirmations used inside DEEPENER blocks. These are
+# short, present-tense declarations — the same style that appears in each
+# TOPIC_BODIES entry — chosen so users hear the core reprogramming message
+# echo softly through longer sessions.
+# ---------------------------------------------------------------------------
+SESSION_AFFIRMATIONS = {
+    "quit-smoking": [
+        "I am free from cigarettes.",
+        "I breathe clean, healing air.",
+        "My lungs are strong and light.",
+        "I choose breath. I choose life.",
+        "I am a non-smoker.",
+    ],
+    "weight-loss": [
+        "I honour my body.",
+        "I eat what nourishes me.",
+        "I am at peace with food.",
+        "My body finds its natural weight.",
+        "I move with ease and joy.",
+    ],
+    "release-anxiety": [
+        "I am safe.",
+        "I am calm.",
+        "My breath is steady.",
+        "I release what I cannot control.",
+        "Peace flows through every cell.",
+    ],
+    "abundance": [
+        "I am open to abundance.",
+        "Prosperity flows to me.",
+        "I am worthy of wealth.",
+        "Money moves through me with ease.",
+        "The universe supports me fully.",
+    ],
+    "self-love": [
+        "I love myself deeply.",
+        "I am worthy exactly as I am.",
+        "I speak to myself with kindness.",
+        "I come home to my own heart.",
+        "I am enough.",
+    ],
+    "focus": [
+        "My mind is clear.",
+        "I focus with ease.",
+        "Every distraction fades away.",
+        "I am present. I am here.",
+        "My attention is a laser.",
+    ],
+    "release-fear": [
+        "I am safe.",
+        "I move forward with courage.",
+        "Fear no longer decides for me.",
+        "I trust myself.",
+        "I am powerful. I am free.",
+    ],
+    "manifest-love": [
+        "I am worthy of love.",
+        "My heart is open.",
+        "Soulful love flows to me.",
+        "I attract love with ease.",
+        "I am love. I am loved.",
+    ],
+    "healing-body": [
+        "My body is healing now.",
+        "Every cell is restoring itself.",
+        "I trust my body's wisdom.",
+        "I am whole. I am well.",
+        "Health flows through me.",
+    ],
+    "release-past": [
+        "The past no longer holds me.",
+        "I forgive myself.",
+        "I forgive others.",
+        "I am new. I am becoming.",
+        "I move forward with grace.",
+    ],
+    "deep-sleep": [
+        "My body is heavy and safe.",
+        "My mind grows quiet.",
+        "I drift into deep rest.",
+        "Sleep comes to me easily.",
+        "I sleep. I heal. I restore.",
+    ],
+    "confidence": [
+        "I am confident.",
+        "I trust myself completely.",
+        "I belong here.",
+        "My voice matters.",
+        "I am unshakable.",
+    ],
+}
+
+
+# A run of chained <break> tags → ElevenLabs caps individual pauses so we
+# stack multiple short breaks to create longer, hypnotic silences without
+# spending characters on filler words.
+_LONG_PAUSE = ('<break time="3s" />' * 4)   # ≈ 12 s
+_SHORT_PAUSE = ('<break time="3s" />' * 2)  # ≈ 6 s
+
+
+def build_deepener_block(session_id: str) -> str:
+    """Return a ~2-minute affirmation deepener for ``session_id``.
+
+    The block interleaves five short affirmations with long, chained
+    ``<break>`` silences so the user drifts even deeper between each
+    reminder. Character cost is intentionally low so extended sessions
+    (up to 60 min) stay affordable at ElevenLabs' per-character pricing.
+    """
+    affirmations = SESSION_AFFIRMATIONS.get(session_id, [
+        "You are safe.",
+        "You are calm.",
+        "You are becoming.",
+        "You are enough.",
+        "You are loved.",
+    ])
+    parts = [_LONG_PAUSE]
+    for line in affirmations:
+        parts.append(f'{line} {_SHORT_PAUSE}')
+        parts.append(_LONG_PAUSE)
+    return " ".join(parts)
