@@ -9,6 +9,7 @@ import {
 import { BackgroundImage } from '../../components/BackgroundImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 import { useAuth } from '../../contexts/AuthContext';
 import { Paywall } from '../../components/Paywall';
 
@@ -53,6 +54,7 @@ const levels: AstralLevel[] = [
 
 export default function AstralTravel() {
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
   const { isPremium } = useAuth();
   const [selectedLevel, setSelectedLevel] = useState<AstralLevel | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
@@ -132,7 +134,7 @@ export default function AstralTravel() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}>
         <View style={styles.warningCard}>
           <Ionicons name="warning" size={32} color="#f59e0b" />
           <Text style={styles.warningTitle}>Important Guidelines</Text>

@@ -41,6 +41,7 @@ import BirthdayPicker from '../components/guides/BirthdayPicker';
 import GuideCard from '../components/guides/GuideCard';
 import ChatHeader from '../components/guides/ChatHeader';
 import { useSpiritGuideAudio } from '../hooks/useSpiritGuideAudio';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 import { useLocalSearchParams } from 'expo-router';
 import CompanionGuideSection from '../components/CompanionGuideSection';
 
@@ -49,6 +50,7 @@ const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function SpiritGuides() {
   const { isPremium, previewAsFree, checkFeatureAccess } = useAuth();
+  const bottomPad = useBottomSafePad();
   const { languageCode, t } = useLanguage();
   const router = useRouter();
   const params = useLocalSearchParams<{ guide?: string }>();
@@ -610,7 +612,7 @@ export default function SpiritGuides() {
         <LinearGradient colors={['#1a0033', '#0d0015', '#000000']} style={StyleSheet.absoluteFill} />
         <Mist count={6} intensity="soft" />
 
-        <ScrollView contentContainerStyle={styles.selectionContainer}>
+        <ScrollView contentContainerStyle={[styles.selectionContainer, { paddingBottom: bottomPad }]}>
           {/* Hero Section */}
           <View style={styles.heroSection}>
             <ExpoImage source={{ uri: SPIRIT_GUIDES_HERO_IMAGE }} style={styles.heroImage} contentFit="cover" />
@@ -891,7 +893,7 @@ export default function SpiritGuides() {
       <ScrollView
         ref={scrollViewRef}
         style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
+        contentContainerStyle={[styles.messagesContent, { paddingBottom: bottomPad }]}
         onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
       >
         {messages.map((message, index) => (

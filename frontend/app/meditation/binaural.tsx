@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import SubscriptionOnlyBanner from '../../components/SubscriptionOnlyBanner';
@@ -34,6 +35,7 @@ interface BinauralProgram {
 
 export default function BinauralMeditation() {
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
   const { isPremium } = useAuth();
   const [programs, setPrograms] = useState<BinauralProgram[]>([]);
   const [selectedProgram, setSelectedProgram] = useState<BinauralProgram | null>(null);
@@ -417,7 +419,7 @@ export default function BinauralMeditation() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}>
         <View style={styles.infoCard}>
           <Ionicons name="headset" size={40} color="#b794f6" />
           <Text style={styles.infoTitle}>Real Binaural Beats</Text>

@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CosmicBackdrop } from '../../components/ui';
 import { palette } from '../../theme/tokens';
 import useDMSocket from '../../hooks/useDMSocket';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Message {
   id: string;
@@ -40,6 +41,8 @@ export default function ConversationScreen() {
   const [sending, setSending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const listRef = useRef<FlatList>(null);
+  const insets = useSafeAreaInsets();
+  const inputBarPaddingBottom = Math.max(insets.bottom, 14) + 20;
 
   const apiBase = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
@@ -225,7 +228,7 @@ export default function ConversationScreen() {
         />
       )}
 
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { paddingBottom: inputBarPaddingBottom }]}>
         <TextInput
           style={styles.input}
           value={text}

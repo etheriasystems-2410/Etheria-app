@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { useBottomSafePad } from '../hooks/useBottomSafePad';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import HeaderBanner from '../components/HeaderBanner';
 import { adminStyles as styles } from '../components/admin/styles';
@@ -43,6 +44,7 @@ const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 export default function AdminPanel() {
   const { user, authToken, previewAsFree, setPreviewAsFree, refreshAuth } = useAuth();
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
   const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] = useState<TabType>('users');
@@ -794,6 +796,7 @@ export default function AdminPanel() {
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={{ paddingBottom: bottomPad }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

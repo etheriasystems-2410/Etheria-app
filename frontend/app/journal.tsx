@@ -49,6 +49,7 @@ export default function Journal() {
   const { t, languageCode } = useLanguage();
   const { theme } = useTheme();
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -588,7 +589,7 @@ export default function Journal() {
       ) : (
         <ScrollView
           style={styles.entriesContainer}
-          contentContainerStyle={styles.entriesContent}
+          contentContainerStyle={[styles.entriesContent, { paddingBottom: bottomPad }]}
         >
           {/* Entry Limit Status Banner */}
           {isAuthenticated && journalStatus && !journalStatus.unlimited && (

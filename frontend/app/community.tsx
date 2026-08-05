@@ -712,7 +712,7 @@ export default function Community() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={100}
     >
-      <ScrollView style={styles.postDetailScroll}>
+      <ScrollView style={styles.postDetailScroll} contentContainerStyle={{ paddingBottom: bottomPad }}>
         <View style={styles.postDetailHeader}>
           <Text style={styles.postDetailTitle}>{selectedPost?.title}</Text>
           <View style={styles.postMeta}>
@@ -775,7 +775,7 @@ export default function Community() {
         <View style={{ height: 100 }} />
       </ScrollView>
       
-      <View style={styles.commentInputContainer}>
+      <View style={[styles.commentInputContainer, { paddingBottom: 12 + Math.max(insets.bottom - 4, 0) }]}>
         {error && (
           <Text style={styles.inputError}>{error}</Text>
         )}
@@ -869,7 +869,7 @@ export default function Community() {
         }
       />
       
-      <View style={styles.chatInputContainer}>
+      <View style={[styles.chatInputContainer, { paddingBottom: 12 + Math.max(insets.bottom - 4, 0) }]}>
         {error && (
           <Text style={styles.inputError}>{error}</Text>
         )}

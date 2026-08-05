@@ -14,6 +14,7 @@ import {
 import { BackgroundImage } from '../../components/BackgroundImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 import Constants from 'expo-constants';
 import { AudioPlayerManager } from '../../utils/audioPlayer';
 import AmbientMusicMixer from '../../components/AmbientMusicMixer';
@@ -45,6 +46,7 @@ const DURATION_OPTIONS = [
 
 export default function ChakraMeditation() {
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
   const { isPremium } = useAuth();
   const [chakras, setChakras] = useState<Chakra[]>([]);
   const [selectedChakra, setSelectedChakra] = useState<Chakra | null>(null);
@@ -461,7 +463,7 @@ export default function ChakraMeditation() {
       </Modal>
 
       {!showSession ? (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}>
           {/* Realign All Card */}
           <TouchableOpacity
             style={styles.realignCard}
@@ -495,7 +497,7 @@ export default function ChakraMeditation() {
           {chakras.map(renderChakraCard)}
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.sessionContent}>
+        <ScrollView contentContainerStyle={[styles.sessionContent, { paddingBottom: bottomPad }]}>
           {isGenerating ? (
             <View style={styles.generatingContainer}>
               <ActivityIndicator size="large" color="#a855f7" />

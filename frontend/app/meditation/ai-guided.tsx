@@ -13,6 +13,7 @@ import {
 import { BackgroundImage } from '../../components/BackgroundImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 import { useAuth } from '../../contexts/AuthContext';
 import { Paywall } from '../../components/Paywall';
 import { AudioPlayerManager, setupAudioMode } from '../../utils/audioPlayer';
@@ -55,6 +56,7 @@ const focuses: MeditationFocus[] = [
 
 export default function AIGuidedMeditation() {
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
   const { isPremium } = useAuth();
   const [selectedFocus, setSelectedFocus] = useState<string>('stress-relief');
   const [duration, setDuration] = useState(10);
@@ -893,7 +895,7 @@ export default function AIGuidedMeditation() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Focus Area</Text>
           <View style={styles.focusGrid}>

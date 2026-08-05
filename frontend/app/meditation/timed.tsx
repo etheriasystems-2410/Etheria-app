@@ -11,6 +11,7 @@ import {
 import { BackgroundImage } from '../../components/BackgroundImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 import Constants from 'expo-constants';
 import { AudioPlayerManager } from '../../utils/audioPlayer';
 
@@ -42,6 +43,7 @@ const ambientSounds = [
 
 export default function TimedMeditation() {
   const router = useRouter();
+  const bottomPad = useBottomSafePad();
   const [selectedMinutes, setSelectedMinutes] = useState(10);
   const [selectedSound, setSelectedSound] = useState('ocean');
   const [isActive, setIsActive] = useState(false);
@@ -199,7 +201,7 @@ export default function TimedMeditation() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}>
         {!isActive ? (
           <>
             <View style={styles.section}>
