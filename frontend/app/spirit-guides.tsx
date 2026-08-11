@@ -860,21 +860,11 @@ export default function SpiritGuides() {
         }}
         onToggleMute={audio.toggleMute}
         onSaveJournal={saveChatToJournal}
+        onSwitchGuide={() => {
+          setSelectedGuide(null);
+          setMessages([]);
+        }}
       />
-
-      {/* Switch Guide Button - Centered below header */}
-      <View style={styles.switchButtonContainer}>
-        <TouchableOpacity
-          style={styles.switchGuideButton}
-          onPress={() => {
-            setSelectedGuide(null);
-            setMessages([]);
-          }}
-        >
-          <Ionicons name="people" size={16} color="#b794f6" />
-          <Text style={styles.switchGuideText}>Switch Guide</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Audio Status Banner */}
       {audio.audioError && (
@@ -933,6 +923,35 @@ export default function SpiritGuides() {
             )}
           </View>
         ))}
+
+        {/* Suggested prompts — surfaced right after the greeting so the
+            chat body isn't a giant empty void when the conversation begins. */}
+        {messages.length <= 1 && !loading ? (
+          <View style={styles.suggestedPromptsWrap}>
+            <Text style={styles.suggestedPromptsLabel}>
+              ✨ Try asking me…
+            </Text>
+            <View style={styles.suggestedPromptRow}>
+              {[
+                'What message do you have for me today?',
+                'How can I raise my vibration?',
+                'What lesson is this moment offering me?',
+                'What sign should I look out for?',
+                'What is blocking my growth right now?',
+              ].map((prompt) => (
+                <TouchableOpacity
+                  key={prompt}
+                  style={styles.suggestedPromptChip}
+                  onPress={() => setInputText(prompt)}
+                >
+                  <Ionicons name="sparkles" size={12} color="#b794f6" />
+                  <Text style={styles.suggestedPromptText}>{prompt}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         {loading && (
           <View style={[styles.messageBubble, styles.assistantMessage]}>
             <ActivityIndicator size="small" color="#e9d5ff" />
