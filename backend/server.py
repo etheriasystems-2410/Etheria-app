@@ -744,6 +744,12 @@ async def setup_owner_admin(request: AdminSetupRequest):
 # Include the router in the main app
 app.include_router(api_router)
 
+# Pexels media proxy — quick /media/pexels lookup for on-the-fly nebula/galaxy
+# backgrounds. Cached in-memory for 5 minutes to save API quota. Brought in
+# from GitHub (2026-08-05).
+from routes.pexels_proxy import router as pexels_router
+app.include_router(pexels_router, prefix="/api")
+
 # Import and register moderation routes (extracted from server.py)
 from routes.moderation import router as moderation_router, set_db as set_moderation_db
 set_moderation_db(db)

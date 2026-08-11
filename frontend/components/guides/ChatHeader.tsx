@@ -1,9 +1,15 @@
 /**
- * ChatHeader — animated avatar (pulsating rings while talking), guide name,
- * subtitle, and right-side actions (save-to-journal + mute toggle).
+ * ChatHeader — guide name, subtitle, and right-side actions
+ * (save-to-journal + mute toggle). The animated pulse rings and hero
+ * image were removed per user request (2026-08-05, brought in from GitHub);
+ * we now show a simple colored icon-circle avatar instead.
+ *
+ * `pulseAnim` and `glowAnim` remain accepted as optional props for
+ * backwards compatibility with the spirit-guides screen — they are
+ * currently unused inside this component.
  */
 import React from 'react';
-import { Animated, Image, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Guide } from '../../constants/guides';
 import { styles } from './styles';
@@ -13,20 +19,19 @@ interface ChatHeaderProps {
   divinePairMode: boolean;
   isTalking: boolean;
   isMuted: boolean;
-  pulseAnim: Animated.Value;
-  glowAnim: Animated.Value;
   onBack: () => void;
   onToggleMute: () => void;
   onSaveJournal: () => void;
+  /** No longer used; retained so callers do not need to change. */
+  pulseAnim?: Animated.Value;
+  /** No longer used; retained so callers do not need to change. */
+  glowAnim?: Animated.Value;
 }
 
 export default function ChatHeader({
   selectedGuide,
   divinePairMode,
-  isTalking,
   isMuted,
-  pulseAnim,
-  glowAnim,
   onBack,
   onToggleMute,
   onSaveJournal,
@@ -37,54 +42,11 @@ export default function ChatHeader({
         <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
       </TouchableOpacity>
 
-      {/* Avatar with pulsating ring(s) */}
+      {/* Simplified avatar: colored icon-circle (no animated rings, no hero image) */}
       <View style={styles.chatHeaderImageWrapper}>
-        {isTalking && selectedGuide.ringColors && selectedGuide.ringColors.length > 0 ? (
-          selectedGuide.ringColors.map((c, idx) => {
-            const sizeBoost = idx * 6;
-            return (
-              <Animated.View
-                key={`ring-${idx}`}
-                style={[
-                  styles.pulseRing,
-                  {
-                    width: 56 + sizeBoost,
-                    height: 56 + sizeBoost,
-                    borderRadius: (56 + sizeBoost) / 2,
-                    borderColor: c,
-                    transform: [{ scale: pulseAnim }],
-                    opacity: glowAnim,
-                  },
-                ]}
-              />
-            );
-          })
-        ) : isTalking ? (
-          <Animated.View
-            style={[
-              styles.pulseRing,
-              {
-                borderColor: selectedGuide.color,
-                transform: [{ scale: pulseAnim }],
-                opacity: glowAnim,
-              },
-            ]}
-          />
-        ) : null}
-        {selectedGuide.image ? (
-          <View
-            style={[
-              styles.chatHeaderImageContainer,
-              isTalking && { borderColor: selectedGuide.color },
-            ]}
-          >
-            <Image source={selectedGuide.image} style={styles.chatHeaderImage} resizeMode="cover" />
-          </View>
-        ) : (
-          <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
-            <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
-          </View>
-        )}
+        <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
+          <Ionicons name={selectedGuide.icon as any} size={24} color="#fff" />
+        </View>
       </View>
 
       <View style={styles.chatHeaderInfo}>
