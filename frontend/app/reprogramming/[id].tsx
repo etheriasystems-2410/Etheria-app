@@ -8,7 +8,7 @@
  *  • Persists the user's preferred duration per session in AsyncStorage
  *    so the next visit defaults to their last choice.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +31,9 @@ import LightTherapyController from '../../components/LightTherapyController';
 import ReprogrammingVisuals, {
   type ReprogrammingTheme,
 } from '../../components/ReprogrammingVisuals';
+import SessionDrawer, {
+  SessionDrawerSection,
+} from '../../components/SessionDrawer';
 import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -39,6 +42,8 @@ const DEFAULT_DURATIONS = [10, 20, 30, 45, 60];
 const PLAY_VOLUME = 0.9;
 const SKIP_SECONDS = 15;
 const STORAGE_KEY = (id: string) => `reprogramming:duration:${id}`;
+const STORAGE_KEY_VOICE_VOL = 'reprogramming:voice_volume';
+const STORAGE_KEY_BED_VOL = 'reprogramming:bed_volume';
 
 interface SessionMeta {
   id: string;
@@ -79,12 +84,17 @@ export default function ReprogrammingSession() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const bottomPad = useBottomSafePad();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [meta, setMeta] = useState<SessionMeta | null>(null);
   const [metaLoading, setMetaLoading] = useState(true);
   const [metaError, setMetaError] = useState<string | null>(null);
 
   const [selectedDuration, setSelectedDuration] = useState<number>(20);
+
+  // Volume presets — persisted per user across sessions.
+  const [voiceVolume, setVoiceVolumeState] = useState<number>(PLAY_VOLUME);
+  const [bedVolume, setBedVolumeState] = useState<number>(0.30);
 
   const [starting, setStarting] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -131,6 +141,44 @@ export default function ReprogrammingSession() {
     })();
   }, [id]);
 
+  // ---------------- Load persisted volumes ----------------
+  useEffect(() => {
+    (async () => {
+      try {
+        const [vv, bv] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY_VOICE_VOL),
+          AsyncStorage.getItem(STORAGE_KEY_BED_VOL),
+        ]);
+        if (vv) {
+          const n = Number(vv);
+          if (Number.isFinite(n) && n >= 0 && n <= 1) setVoiceVolumeState(n);
+        }
+        if (bv) {
+          const n = Number(bv);
+          if (Number.isFinite(n) && n >= 0 && n <= 1) setBedVolumeState(n);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const setVoiceVolume = useCallback(async (v: number) => {
+    const clamped = Math.max(0, Math.min(1, v));
+    setVoiceVolumeState(clamped);
+    AsyncStorage.setItem(STORAGE_KEY_VOICE_VOL, String(clamped)).catch(() => {});
+    try {
+      await playerRef.current?.setVolume(clamped);
+    } catch {}
+  }, []);
+
+  const setBedVolume = useCallback(async (v: number) => {
+    const clamped = Math.max(0, Math.min(1, v));
+    setBedVolumeState(clamped);
+    AsyncStorage.setItem(STORAGE_KEY_BED_VOL, String(clamped)).catch(() => {});
+    try {
+      await sessionAudioRef.current?.setVolume(clamped);
+    } catch {}
+  }, []);
+
   // ---------------- Cleanup on unmount ----------------
   useEffect(() => {
     return () => {
@@ -168,11 +216,11 @@ export default function ReprogrammingSession() {
     fadeTimerRef.current = setTimeout(async () => {
       try {
         const steps = 30;
-        // Snapshot current session-audio volume (was 0.30 at start)
-        const sessionAudioStartVol = 0.30;
+        // Snapshot current session-audio volume (user-configurable via drawer)
+        const sessionAudioStartVol = bedVolume;
         for (let i = steps; i >= 0; i -= 1) {
           const fraction = i / steps;
-          const v = PLAY_VOLUME * fraction;
+          const v = voiceVolume * fraction;
           const sv = sessionAudioStartVol * fraction;
           await playerRef.current?.setVolume(Math.max(0, v));
           await sessionAudioRef.current?.setVolume(Math.max(0, sv));
@@ -265,11 +313,12 @@ export default function ReprogrammingSession() {
       const uri = `data:audio/mp3;base64,${data.audio_base64}`;
       const player = new AudioPlayerManager();
       // Voice is duration-tailored server-side — do NOT loop the vocals.
-      await player.loadAndPlay(uri, { loop: false, volume: PLAY_VOLUME });
+      await player.loadAndPlay(uri, { loop: false, volume: voiceVolume });
       playerRef.current = player;
 
       // Fetch + start the hypnotic session-audio bed (random of 5 tracks).
-      // Plays looped underneath the voice at 30 % so voice stays dominant.
+      // Plays looped underneath the voice at the persisted bed volume so
+      // voice stays dominant.
       try {
         const sr = await fetch(`${BACKEND_URL}/api/reprogramming/session-audio`);
         if (sr.ok) {
@@ -278,7 +327,7 @@ export default function ReprogrammingSession() {
             const sPlayer = new AudioPlayerManager();
             await sPlayer.loadAndPlay(sdata.url, {
               loop: true,
-              volume: 0.30,
+              volume: bedVolume,
             });
             sessionAudioRef.current = sPlayer;
             setSessionAudioBpm(
@@ -373,13 +422,23 @@ export default function ReprogrammingSession() {
     <CosmicBackdrop>
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={endSession} accessibilityLabel="Close">
-            <Ionicons name="close" size={26} color="#e9d5ff" />
+          <TouchableOpacity
+            onPress={() => setDrawerOpen(true)}
+            accessibilityLabel="Session options"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="menu" size={26} color="#e9d5ff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {meta?.title || 'Session'}
           </Text>
-          <View style={{ width: 26 }} />
+          <TouchableOpacity
+            onPress={endSession}
+            accessibilityLabel="Close"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close" size={26} color="#e9d5ff" />
+          </TouchableOpacity>
         </View>
 
         {metaLoading ? (
@@ -645,13 +704,12 @@ export default function ReprogrammingSession() {
                 : 'Paused'}
             </Text>
 
-            <LightTherapyController
-              active={sessionActive}
-              paused={!playing}
-              accentColor="#fbbf24"
-              autoFrequencyHz={6}
-              musicBpm={sessionAudioBpm}
-            />
+            <View style={styles.optionsHintRow}>
+              <Ionicons name="menu" size={13} color="#c4b5fd" />
+              <Text style={styles.optionsHintText}>
+                Tap the menu for Light Therapy, Session Length, and Audio
+              </Text>
+            </View>
 
             <TouchableOpacity style={styles.endBtn} onPress={endSession}>
               <Ionicons name="stop" size={16} color="#e9d5ff" />
@@ -660,7 +718,152 @@ export default function ReprogrammingSession() {
           </View>
         )}
       </SafeAreaView>
+
+      {/* Left slide-out drawer with all ancillary controls. Keeps the main
+          player uncluttered so the visual layer + timer stay dominant. */}
+      <SessionDrawer
+        visible={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        accentColor={themeColor}
+        title={meta ? `${meta.title} · Options` : 'Session Options'}
+      >
+        <SessionDrawerSection
+          title="Session Length"
+          icon="time"
+          accentColor={themeColor}
+        >
+          <View style={styles.drawerDurationRow}>
+            {durations.map((m) => {
+              const active = selectedDuration === m;
+              const disabled = sessionActive; // cannot change mid-session
+              return (
+                <TouchableOpacity
+                  key={m}
+                  onPress={() => pickDuration(m)}
+                  disabled={disabled}
+                  style={[
+                    styles.drawerDurationBtn,
+                    active && {
+                      backgroundColor: themeColor,
+                      borderColor: themeColor,
+                    },
+                    disabled && !active && { opacity: 0.4 },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.drawerDurationBtnText,
+                      active && styles.durationBtnTextActive,
+                    ]}
+                  >
+                    {m}m
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {sessionActive ? (
+            <Text style={styles.drawerHelperText}>
+              Length is locked once the session begins.
+            </Text>
+          ) : null}
+        </SessionDrawerSection>
+
+        <SessionDrawerSection title="Audio" icon="volume-high" accentColor={themeColor}>
+          <VolumeSelector
+            label="Voice"
+            value={voiceVolume}
+            onChange={setVoiceVolume}
+            accent={themeColor}
+            presets={[
+              { label: 'Soft', value: 0.55 },
+              { label: 'Normal', value: 0.9 },
+              { label: 'Loud', value: 1.0 },
+            ]}
+          />
+          <VolumeSelector
+            label="Music Bed"
+            value={bedVolume}
+            onChange={setBedVolume}
+            accent={themeColor}
+            presets={[
+              { label: 'Off', value: 0.0 },
+              { label: 'Soft', value: 0.15 },
+              { label: 'Normal', value: 0.3 },
+              { label: 'Full', value: 0.5 },
+            ]}
+          />
+        </SessionDrawerSection>
+
+        <SessionDrawerSection title="Light Therapy" icon="bulb" accentColor={themeColor}>
+          <LightTherapyController
+            active={sessionActive}
+            paused={!playing}
+            accentColor={themeColor}
+            autoFrequencyHz={6}
+            musicBpm={sessionAudioBpm}
+          />
+        </SessionDrawerSection>
+      </SessionDrawer>
     </CosmicBackdrop>
+  );
+}
+
+/**
+ * Compact volume picker — 3-4 discrete presets displayed as pills. Avoids
+ * needing a native slider dependency while still giving users a meaningful
+ * amount of control. The active preset is the one whose value is closest
+ * to the current volume.
+ */
+function VolumeSelector({
+  label,
+  value,
+  onChange,
+  presets,
+  accent,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  presets: { label: string; value: number }[];
+  accent: string;
+}) {
+  const activeIdx = presets.reduce(
+    (best, p, i) =>
+      Math.abs(p.value - value) <
+      Math.abs(presets[best].value - value)
+        ? i
+        : best,
+    0,
+  );
+  return (
+    <View style={styles.volumeWrap}>
+      <Text style={styles.volumeLabel}>{label}</Text>
+      <View style={styles.volumeRow}>
+        {presets.map((p, i) => {
+          const active = i === activeIdx;
+          return (
+            <TouchableOpacity
+              key={p.label}
+              onPress={() => onChange(p.value)}
+              style={[
+                styles.volumeBtn,
+                active && { backgroundColor: accent, borderColor: accent },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.volumeBtnText,
+                  active && styles.volumeBtnTextActive,
+                ]}
+              >
+                {p.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -962,5 +1165,80 @@ const styles = StyleSheet.create({
     color: '#e9d5ff',
     fontSize: 13,
     fontWeight: '600',
+  },
+  // Drawer-specific styles
+  optionsHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    opacity: 0.8,
+  },
+  optionsHintText: {
+    color: '#c4b5fd',
+    fontSize: 11,
+    fontStyle: 'italic',
+  },
+  drawerDurationRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  drawerDurationBtn: {
+    flexGrow: 1,
+    flexBasis: '18%',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.4)',
+    backgroundColor: 'rgba(15,3,33,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drawerDurationBtnText: {
+    color: '#e9d5ff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  drawerHelperText: {
+    color: '#9ca3af',
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 6,
+  },
+  volumeWrap: {
+    marginBottom: 4,
+  },
+  volumeLabel: {
+    color: '#e9d5ff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    marginBottom: 6,
+  },
+  volumeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  volumeBtn: {
+    flexGrow: 1,
+    flexBasis: '22%',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.35)',
+    backgroundColor: 'rgba(15,3,33,0.55)',
+    alignItems: 'center',
+  },
+  volumeBtnText: {
+    color: '#c4b5fd',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  volumeBtnTextActive: {
+    color: '#0f0321',
   },
 });

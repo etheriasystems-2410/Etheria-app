@@ -10,8 +10,8 @@ export interface CardReading {
     name: string;
     element: string;
     description: string;
-    image_url?: string;
-    image_base64?: string;
+    image_url?: string | null;
+    image_base64?: string | null;
   };
   position?: string;
   interpretation: string;

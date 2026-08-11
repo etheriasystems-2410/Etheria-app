@@ -33,6 +33,31 @@ import { oracleStyles as styles } from '../styles/oracle.styles';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
+/**
+ * Resolve an Oracle card's image to a full URI the <Image/> component can
+ * load. Prefers the server-hosted `image_url` (relative or absolute) so the
+ * /draw JSON response stays tiny — the previous behaviour of embedding a
+ * multi-MB base64 PNG per card reliably crashed the mobile client on
+ * multi-card spreads. Falls back to `image_base64` for older saved
+ * readings that still store the blob.
+ */
+function cardImageUri(card: {
+  image_url?: string | null;
+  image_base64?: string | null;
+} | undefined): string | undefined {
+  if (!card) return undefined;
+  const url = card.image_url;
+  if (url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // Server returns "/api/oracle/card-image/…" — prepend the backend host.
+    return `${BACKEND_URL || ''}${url}`;
+  }
+  if (card.image_base64) {
+    return `data:image/png;base64,${card.image_base64}`;
+  }
+  return undefined;
+}
+
 export default function Oracle() {
   const { isPremium } = useAuth();
   const bottomPad = useBottomSafePad();
