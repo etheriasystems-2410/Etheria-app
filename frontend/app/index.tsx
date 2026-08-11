@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -14,6 +15,30 @@ import { palette, spacing, radii, typography, shadows, gradients } from '../them
 import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/88c8k78q_8227.jpg';
+// Looping mystical hero video (muted). Falls back to ETHERIA_IMAGE if the
+// clip fails to load — Image is rendered underneath the VideoView.
+const ETHERIA_HERO_VIDEO = 'https://customer-assets-gfyr7b9c.emergentagent.net/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/gw387dij_gemini_generated_video_c157fd12.mp4';
+
+/**
+ * Muted, looping hero video for the home screen. Kept as a tiny component
+ * so `useVideoPlayer` (a hook) only mounts once per screen load.
+ */
+function HeroVideo() {
+  const player = useVideoPlayer(ETHERIA_HERO_VIDEO, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
+  return (
+    <VideoView
+      player={player}
+      style={StyleSheet.absoluteFill as any}
+      contentFit="cover"
+      allowsFullscreen={false}
+      nativeControls={false}
+    />
+  );
+}
 const HEADER_BANNER_IMAGE = 'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/oz3admmj_47815.jpg';
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -356,18 +381,15 @@ export default function Home() {
           </View>
         )}
 
-        {/* Hero Image — keeps the mystical eye with full descriptive tagline */}
+        {/* Hero video — mystical looping backdrop. Text overlay removed
+            per user request so the video stays the visual focus. */}
         <View style={styles.heroImageWrap}>
           <Image source={{ uri: ETHERIA_IMAGE }} style={styles.heroImageFull} contentFit="cover" />
+          <HeroVideo />
           <LinearGradient
             colors={['rgba(13,0,21,0)', 'rgba(13,0,21,0.55)', 'rgba(13,0,21,0.96)']}
             style={StyleSheet.absoluteFill}
           />
-          <View style={styles.heroImageContent}>
-            <Text style={styles.heroTagline}>
-              {getWelcomeText()}
-            </Text>
-          </View>
         </View>
 
         {/* Slim subscription pill (free users only) */}
