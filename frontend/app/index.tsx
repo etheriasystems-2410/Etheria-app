@@ -446,18 +446,8 @@ export default function Home() {
       <Mist count={8} intensity="medium" />
 
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: bottomPad }}>
-        {/* Hero Banner — slim mystical strip */}
-        <View style={styles.heroBanner}>
-          <Image source={{ uri: HEADER_BANNER_IMAGE }} style={styles.heroBannerImage} contentFit="cover" />
-          <LinearGradient
-            colors={['rgba(13,0,21,0.0)', 'rgba(13,0,21,0.55)', 'rgba(13,0,21,0.95)']}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.heroBannerContent}>
-            <Text style={styles.heroEyebrow}>✦ Mystical Realm ✦</Text>
-            <Text style={styles.heroBrand}>ETHERIA</Text>
-          </View>
-        </View>
+        {/* "Mystical Realm · ETHERIA" header strip removed per user request —
+            the looping hero video below now carries the top of the screen. */}
 
         {/* Auth or Welcome */}
         {!isAuthenticated ? (
