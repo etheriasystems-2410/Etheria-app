@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { Asset } from 'expo-asset';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -15,20 +16,137 @@ import { palette, spacing, radii, typography, shadows, gradients } from '../them
 import { useBottomSafePad } from '../hooks/useBottomSafePad';
 
 const ETHERIA_IMAGE = 'https://customer-assets.emergentagent.com/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/88c8k78q_8227.jpg';
-// Looping mystical hero video (muted). Falls back to ETHERIA_IMAGE if the
-// clip fails to load — Image is rendered underneath the VideoView.
-const ETHERIA_HERO_VIDEO = 'https://customer-assets-gfyr7b9c.emergentagent.net/job_a75d84fa-0948-4f28-9189-c803d31a5037/artifacts/gw387dij_gemini_generated_video_c157fd12.mp4';
+// Looping mystical hero video (muted). Bundled locally so Metro serves it
+// with proper HTTP 206 Range support — the CDN copy returns 200 for range
+// requests which some Chromium builds reject for <video> playback.
+const ETHERIA_HERO_VIDEO_ASSET = require('../assets/videos/hero.mp4');
+// Resolve to a URL string for the video player. On web this returns a
+// static path served by Metro; on native it stays a require handle that
+// expo-video accepts directly.
+const ETHERIA_HERO_VIDEO_URI =
+  Asset.fromModule(ETHERIA_HERO_VIDEO_ASSET).uri || '';
 
 /**
- * Muted, looping hero video for the home screen. Kept as a tiny component
- * so `useVideoPlayer` (a hook) only mounts once per screen load.
+ * Muted, looping hero video for the home screen.
+ *
+ * On native (iOS/Android) we use expo-video's `VideoView` — it plays the
+ * MP4 (including its C2PA metadata boxes) reliably.
+ *
+ * On web, some Chromium builds abort the fetch or reject the source when
+ * the MP4 carries the C2PA authenticity metadata block that Google's
+ * generator embeds. We render a plain HTML `<video>` with:
+ *   • explicit `<source type="video/mp4">` (helps Chromium accept it)
+ *   • `autoPlay muted playsInline loop` (all three required for autoplay
+ *     in modern browsers)
+ *   • a `ref` that force-loads and plays after mount, and re-triggers on
+ *     the `ended` event as a belt-and-braces guarantee that the loop
+ *     continues even if the browser's built-in `loop` attribute fails.
  */
 function HeroVideo() {
-  const player = useVideoPlayer(ETHERIA_HERO_VIDEO, (p) => {
-    p.loop = true;
-    p.muted = true;
-    p.play();
-  });
+  if (Platform.OS === 'web') {
+    return <WebHeroVideo />;
+  }
+  return <NativeHeroVideo />;
+}
+
+function WebHeroVideo() {
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  React.useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    // Force a load + play in case the browser skipped autoplay.
+    try {
+      v.load();
+    } catch {}
+    const tryPlay = () => {
+      const p = v.play();
+      if (p && typeof (p as any).catch === 'function') {
+        (p as Promise<void>).catch(() => {
+          /* autoplay might be blocked — will retry on first user gesture */
+        });
+      }
+    };
+    tryPlay();
+
+    // Belt-and-braces: some browsers do not honour the `loop` attribute
+    // when the file has trailing metadata. Manually rewind + replay.
+    const onEnded = () => {
+      v.currentTime = 0;
+      tryPlay();
+    };
+    const onPause = () => {
+      // If the browser paused us unexpectedly, kick it back into gear.
+      if (!v.ended && v.readyState >= 2) tryPlay();
+    };
+    v.addEventListener('ended', onEnded);
+    v.addEventListener('pause', onPause);
+
+    // First-tap fallback: unlock autoplay after any user interaction.
+    const onFirstGesture = () => {
+      tryPlay();
+      document.removeEventListener('click', onFirstGesture);
+      document.removeEventListener('touchstart', onFirstGesture);
+    };
+    document.addEventListener('click', onFirstGesture, { once: true });
+    document.addEventListener('touchstart', onFirstGesture, { once: true });
+
+    return () => {
+      v.removeEventListener('ended', onEnded);
+      v.removeEventListener('pause', onPause);
+      document.removeEventListener('click', onFirstGesture);
+      document.removeEventListener('touchstart', onFirstGesture);
+    };
+  }, []);
+
+  return React.createElement(
+    'video',
+    {
+      ref: videoRef,
+      autoPlay: true,
+      muted: true,
+      loop: true,
+      playsInline: true,
+      preload: 'auto',
+      // Both `src` on <video> AND a <source> child — Chromium is more
+      // forgiving when the MIME type is explicit.
+      style: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+      },
+    },
+    React.createElement('source', {
+      src: ETHERIA_HERO_VIDEO_URI,
+      type: 'video/mp4',
+    }),
+  );
+}
+
+function NativeHeroVideo() {
+  // On native, we can pass the required module directly — expo-video will
+  // resolve it. Falls back to the resolved URI for safety.
+  const player = useVideoPlayer(
+    ETHERIA_HERO_VIDEO_ASSET as any,
+    (p) => {
+      p.loop = true;
+      p.muted = true;
+      p.play();
+    },
+  );
+
+  React.useEffect(() => {
+    // Enforce forever-looping and keep playing.
+    try {
+      player.loop = true;
+      player.muted = true;
+      player.play();
+    } catch {}
+  }, [player]);
+
   return (
     <VideoView
       player={player}
