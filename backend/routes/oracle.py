@@ -270,6 +270,49 @@ async def get_or_generate_card_image(card_name: str, image_prompt: str) -> str:
     return None
 
 
+async def card_image_exists(card_name: str) -> bool:
+    """Return True if an image is already cached for this card. Used by the
+    /draw endpoint to include an `image_url` for cached cards (and omit it
+    for uncached ones so the frontend does not fire a 404 request while
+    the background job is still running)."""
+    cached = await db.oracle_card_images.find_one(
+        {"card_name": card_name}, {"_id": 1}
+    )
+    return cached is not None
+
+
+def _card_image_url(card_name: str) -> str:
+    """Public URL for a cached oracle card PNG. The frontend loads this via
+    ExpoImage instead of receiving a multi-MB base64 blob inside the /draw
+    JSON payload — this fixes the mobile app crash on multi-card spreads
+    where the response could exceed 15 MB."""
+    from urllib.parse import quote
+    return f"/api/oracle/card-image/{quote(card_name)}"
+
+
+@router.get("/card-image/{card_name}")
+async def get_card_image(card_name: str):
+    """Serve a cached oracle card PNG. Called by the frontend once per
+    rendered card so we do not have to embed multi-MB base64 blobs in
+    the /draw JSON response."""
+    cached = await db.oracle_card_images.find_one({"card_name": card_name})
+    if not cached or not cached.get("image_base64"):
+        raise HTTPException(status_code=404, detail="Card image not ready")
+    try:
+        png_bytes = base64.b64decode(cached["image_base64"])
+    except Exception:
+        raise HTTPException(status_code=500, detail="Corrupt cached image")
+    return Response(
+        content=png_bytes,
+        media_type="image/png",
+        headers={
+            # Card art is deterministic per name → aggressive caching is safe.
+            "Cache-Control": "public, max-age=604800, immutable",
+            "Content-Length": str(len(png_bytes)),
+        },
+    )
+
+
 # Models
 class OracleReading(BaseModel):
     card: dict
@@ -537,15 +580,23 @@ async def _multi_card_readings_bundle(
 
 @router.post("/draw")
 async def draw_oracle_card(request: MultiCardDrawRequest = None):
-    """Draw oracle cards and get AI interpretation with AI-generated images."""
+    """Draw oracle cards and get AI interpretation. Images are served from
+    a separate /card-image/{name} endpoint so a multi-card response stays
+    lightweight (a Celtic Cross used to ship >15 MB of base64 PNG data
+    which reliably crashed the mobile client)."""
 
     # ---------- Single-card draw ----------
     if request is None or request.card_count == 1:
         card = random.choice(ORACLE_CARDS)
-        image_base64 = await get_or_generate_card_image(
+        # Kick off gen if not cached; expose URL only when a PNG is ready.
+        _ = await get_or_generate_card_image(
             card["name"], card.get("image_prompt", "")
         )
-        card_with_image = {**card, "image_base64": image_base64}
+        has_image = await card_image_exists(card["name"])
+        card_with_image = {
+            **card,
+            "image_url": _card_image_url(card["name"]) if has_image else None,
+        }
 
         interpretation = await _single_card_reading(card)
         return {
@@ -569,10 +620,15 @@ async def draw_oracle_card(request: MultiCardDrawRequest = None):
     drawn_cards = random.sample(ORACLE_CARDS, min(card_count, len(ORACLE_CARDS)))
 
     async def get_card_with_image(card):
-        image_base64 = await get_or_generate_card_image(
+        # Trigger cache/gen but do not embed the base64 blob in the response.
+        _ = await get_or_generate_card_image(
             card["name"], card.get("image_prompt", "")
         )
-        return {**card, "image_base64": image_base64}
+        has_image = await card_image_exists(card["name"])
+        return {
+            **card,
+            "image_url": _card_image_url(card["name"]) if has_image else None,
+        }
 
     cards_with_images = await asyncio.gather(
         *[get_card_with_image(card) for card in drawn_cards]
