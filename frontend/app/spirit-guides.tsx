@@ -10,6 +10,9 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
+  Image as RNImage,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -88,6 +91,47 @@ export default function SpiritGuides() {
 
   // All audio + animation state lives in the dedicated hook.
   const audio = useSpiritGuideAudio({ chatLoading: loading, selectedGuide });
+
+  // ── Chat-background image animation ─────────────────────────────────
+  // The selected guide's portrait becomes the dimmed backdrop of the chat.
+  // While the guide is "thinking" (loading) or "speaking" (audio.isTalking)
+  // the image gently breathes (scale + opacity) so the user can feel the
+  // guide's presence.
+  const bgPulse = useRef(new Animated.Value(0)).current;
+  const guideIsActive = loading || audio.isTalking;
+
+  useEffect(() => {
+    if (!guideIsActive) {
+      bgPulse.stopAnimation();
+      Animated.timing(bgPulse, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bgPulse, {
+          toValue: 1,
+          duration: 1600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bgPulse, {
+          toValue: 0,
+          duration: 1600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [guideIsActive, bgPulse]);
+
+  const bgScale = bgPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
+  const bgOpacity = bgPulse.interpolate({ inputRange: [0, 1], outputRange: [0.22, 0.42] });
 
   useEffect(() => {
     if (hasAccess) {
@@ -846,6 +890,28 @@ export default function SpiritGuides() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={100}
     >
+      {/* Guide portrait as breathing background. Sits behind everything
+          else, gently scales + brightens while the guide is thinking or
+          speaking, and settles to a subtle dim glow when idle. */}
+      {selectedGuide?.image ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            chatBgStyles.bgLayer,
+            { opacity: bgOpacity, transform: [{ scale: bgScale }] },
+          ]}
+        >
+          <RNImage
+            source={selectedGuide.image}
+            style={chatBgStyles.bgImage}
+            resizeMode="cover"
+          />
+        </Animated.View>
+      ) : null}
+      {/* Dark scrim over the portrait so message text stays readable
+          regardless of the underlying colours. */}
+      <View pointerEvents="none" style={chatBgStyles.bgScrim} />
+
       <ChatHeader
         selectedGuide={selectedGuide}
         divinePairMode={divinePairMode}
@@ -980,3 +1046,23 @@ export default function SpiritGuides() {
     </KeyboardAvoidingView>
   );
 }
+
+// Chat-background image + scrim styles kept local so they don't leak into
+// the shared guides stylesheet.
+const chatBgStyles = StyleSheet.create({
+  bgLayer: {
+    ...StyleSheet.absoluteFillObject,
+    // Push slightly above the header for a soft "aura" reaching upward.
+    top: 0,
+    zIndex: -2,
+  },
+  bgImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bgScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,0,24,0.55)',
+    zIndex: -1,
+  },
+});

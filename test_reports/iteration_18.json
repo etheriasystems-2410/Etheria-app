@@ -1,0 +1,23 @@
+{
+  "summary": "Frontend-only verification of the Spirit Guides chat background enhancement (guide portrait as breathing background). Logged in as etheriasystems@gmail.com, opened Spirit Guides, selected Ignis. Verified via DOM inspection that (1) the chat now renders a full-cover Animated.View containing an RNImage of guide-ignis.jpg (390x780 rendered), (2) a dark scrim div with backgroundColor rgba(10,0,24,0.55) sits above it, and (3) the Animated.View's inline opacity/transform correctly interpolates between the idle values (opacity 0.22, scale 1.0) and the active values (measured opacity 0.400798, scale 1.07232 during greeting-audio playback — matching the spec targets of 0.42 and 1.08). After audio finished and no loading was active, the layer eased back to the exact idle values (opacity 0.22, matrix(1,0,0,1,0,0)). ChatHeader (Ignis + Guide of Fire subtitle + book/switch-guide/volume icons + back arrow) rendered correctly. Suggested prompts chips render on the empty state. No runtime/red-screen errors. Only benign web-preview warnings (useNativeDriver not supported on web, pre-existing shadow*/textShadow*/pointerEvents deprecations, unrelated 'files' route warning).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "spirit-guides.tsx now sits at 1069 lines — nearing the 700-line split threshold. Consider extracting the chat-view JSX + chatBgStyles into a dedicated ChatView component alongside ChatHeader for maintainability (not a functional bug, just size).",
+    "The bg pulse effect ties to `guideIsActive = loading || audio.isTalking`. During the greeting auto-play (right after selectGuide) the pulse also runs because isTalking is true — this is per-spec behaviour, just confirming the intent is 'thinking OR speaking' and not strictly 'user sent a message'."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "100% (all acceptance criteria met)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Verified values: idle opacity=0.22, idle scale=1.0; active peak observed at opacity=0.400798, scale=1.07232 (matches spec 0.22->0.42 and 1.0->1.08 interpolation). Selectors used: img[src*='guide-ignis'] with clientWidth>200 → parent → parent = Animated.View wrapper. Scrim confirmed via backgroundColor 'rgba(10, 0, 24, 0.55)' at position=absolute. Login flow: /auth/login, use nth(1) of get_by_text('Sign In', exact=True) — nth(0) is the header. Send button locator was fragile in headless (JS coordinate-based click failed); prefer selecting by parent-of-textarea nearest sibling.",
+  "rca_of_issue": "N/A — no bug. Feature verified working."
+}

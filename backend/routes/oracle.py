@@ -748,13 +748,28 @@ async def append_chat_to_reading(
 
 @router.get("/readings")
 async def get_saved_readings(request: Request, limit: int = 20):
-    """Get saved oracle readings for current user"""
+    """Get saved oracle readings for current user.
+
+    Legacy readings from before the /draw refactor may contain multi-MB
+    ``image_base64`` blobs per card that reliably crash the mobile client
+    when they are re-hydrated. We rewrite them here to use the same
+    lightweight ``image_url`` reference the new /draw endpoint returns."""
     try:
         # Get current user
         user = await get_current_user(request)
         readings = await db.oracle_readings.find(
             {"user_id": user['user_id']}
         ).sort("saved_at", -1).limit(limit).to_list(limit)
+        for reading in readings:
+            for entry in reading.get("cards", []) or []:
+                card = entry.get("card") if isinstance(entry, dict) else None
+                if not isinstance(card, dict):
+                    continue
+                name = card.get("name")
+                if name and card.get("image_base64"):
+                    # Drop the giant blob and replace with a URL ref.
+                    card.pop("image_base64", None)
+                    card.setdefault("image_url", _card_image_url(name))
         return readings
     except HTTPException:
         # If not authenticated, return empty array

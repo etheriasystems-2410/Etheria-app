@@ -1,0 +1,50 @@
+{
+  "summary": "Verified the three defensive fixes for the 'app crashes when selecting Oracle' bug. Backend: 4/4 pytest tests pass — /api/oracle/draw returns image_url (never image_base64), single-card payload <5KB, three-card payload <20KB, and /api/oracle/readings strips legacy image_base64 blobs from stored readings and replaces them with /api/oracle/card-image/{name} URLs. Frontend (web preview, mobile viewport 390x844): logged in as admin, navigated to /oracle, all 5 spread types render (Single Card, Three Card Spread, Relationship Spread, Celtic Cross, Spiritual Path). Selected Single Card, tapped Draw 1 Card, reading modal opened in ~8s with a real card image loaded from https://.../api/oracle/card-image/The%20Sky%20Dancer (URL path, not base64), Interpretation text, Save Reading button, and Chat with Quantum CTA all rendered. Card flip animation ran via JS driver (useNativeDriver: false) without any page.error, console.error, or red-screen. Note: the test user path was blocked by a hard 'Terms of Use' scroll-to-bottom gate that prevented the standard test@etheria.com E2E flow, so admin credentials were used instead. Potential native-only latent bug detected: oracle.tsx uses StyleSheet.absoluteFill on lines 579 & 588 but does NOT import StyleSheet from react-native — the web preview silently resolves this (react-native-web), but this is a strong candidate for the underlying native-only ReferenceError that could still crash iOS Expo Go even with the three defensive fixes in place.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "oracle.tsx",
+        "issue": "`StyleSheet.absoluteFill` referenced on lines 579 and 588 but `StyleSheet` is NOT in the `import { … } from 'react-native'` block (line 2-13). Web preview renders fine because react-native-web resolves it implicitly, but this is exactly the shape of a native-only ReferenceError that would crash Expo Go / iOS the moment the spread-selection view mounts. This is a very likely true root cause of the reported crash and should be fixed by adding `StyleSheet` to the react-native import.",
+        "testID": "n/a",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "oracle.tsx",
+        "issue": "Missing `StyleSheet` import from 'react-native' while StyleSheet.absoluteFill is used at lines 579 & 588 — likely native-only crash. Reference: /app/frontend/app/oracle.tsx:2-13, :579, :588"
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_oracle_crash_fix.py",
+    "/app/test_reports/pytest/oracle_crash_fix_results.xml"
+  ],
+  "action_items": [
+    "Add `StyleSheet` to the destructured react-native import in /app/frontend/app/oracle.tsx (line 2-13). This is very likely the true root cause of the native-only crash on Oracle selection; the three defensive fixes are correct but do not address this missing import.",
+    "Consider removing the terms-acceptance scroll-to-bottom gate for automated E2E accounts (test@etheria.com) OR pre-marking test accounts with terms_accepted_at during seeding so the standard test user can complete full oracle flow in CI."
+  ],
+  "critical_code_review_comments": [
+    "oracle.tsx (1262 lines) is well over the 700-line recommended module size — consider splitting the spread-selection view, the drawing view, the reading modal, and the Quantum chat section into separate components.",
+    "cardImageUri() correctly guards against undefined and the placeholder fallback is well implemented — matches the fix intent.",
+    "Backend /api/oracle/readings correctly walks every card and strips image_base64 (routes/oracle.py:763-772). Anonymous /readings path also returns [] on auth failure which is defensible."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_oracle_crash_fix.py (created)"
+  ],
+  "success_rate": {
+    "backend": "100% (4/4 pytest)",
+    "frontend": "100% (web preview end-to-end works; native path not testable here)"
+  },
+  "seed_data_creation": "Test created a saved oracle reading for test@etheria.com with a legacy image_base64 blob to verify the /readings stripping behaviour. Prefixed with TEST_ description/interpretation.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The three defensive backend/frontend fixes are all verified working on the web preview. Backend: /draw returns image_url only, /readings strips legacy image_base64 blobs. Frontend: Oracle screen mounts, spreads render, single-card draw + reading modal + card image via URL all work with no page/console errors and no red-screen; useNativeDriver:false is confirmed active (console warning 'Animated: useNativeDriver is not supported... Falling back to JS-based animation' is only for other components — the flip itself runs on JS driver by design). The remaining native crash suspect is the missing `StyleSheet` import in oracle.tsx — see action_items. To retest natively after that fix lands: open Expo Go, tap the Oracle Divination tile from home, confirm the spread list renders and Single Card → Draw completes without crash.",
+  "rca_of_issue": "Reported bug: 'Selecting the oracle selection from home crashes the app' (native/iOS Expo Go only, not web). The three defensive fixes applied by the main agent are correct and verified: (1) card Image no longer receives `{ uri: undefined }` (placeholder View with ActivityIndicator renders instead), (2) card flip animation forced to useNativeDriver:false (was crashing on 360° rotateY interpolation on native driver), (3) /api/oracle/readings strips multi-MB image_base64 blobs so re-hydrating history no longer overwhelms the mobile JSON parser. However, a fourth latent bug remains: oracle.tsx uses StyleSheet.absoluteFill on lines 579 and 588 but the identifier `StyleSheet` is not in its react-native import list. On web this silently works (react-native-web resolves StyleSheet), but on native Hermes this would throw a ReferenceError the moment the spread-selection view mounts — matching the reported symptom exactly. Recommend the main agent add StyleSheet to the react-native import and re-test on Expo Go."
+}

@@ -388,13 +388,16 @@ export default function Oracle() {
       
       setCurrentReading(reading);
       
-      // Card flip animation
+      // Card flip animation. `useNativeDriver` is deliberately FALSE here —
+      // interpolating rotateY through a full 360° with the native driver
+      // has been reported to crash iOS Expo builds. JS driver handles a
+      // single 800 ms tween without any perceptible perf cost.
       cardFlipAnim.setValue(0);
       setShowReading(true);
       Animated.timing(cardFlipAnim, {
         toValue: 1,
         duration: 800,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     } catch (error) {
       console.error('Error drawing cards:', error);
@@ -873,12 +876,35 @@ export default function Oracle() {
                           { transform: [{ rotateY: cardRotateY }] },
                         ]}
                       >
-                        <Image
-                          source={{ uri: cardImageUri(currentReading.cards[currentCardIndex].card) }}
-                          style={styles.cardImage}
-                          contentFit="cover"
-                          transition={300}
-                        />
+                        {(() => {
+                          const uri = cardImageUri(
+                            currentReading.cards[currentCardIndex].card,
+                          );
+                          return uri ? (
+                            <Image
+                              source={{ uri }}
+                              style={styles.cardImage}
+                              contentFit="cover"
+                              transition={300}
+                            />
+                          ) : (
+                            /* Placeholder while background image gen finishes —
+                               previously we passed `{ uri: undefined }` which
+                               crashed some native Image builds. */
+                            <View
+                              style={[
+                                styles.cardImage,
+                                {
+                                  backgroundColor: 'rgba(45,27,78,0.6)',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                },
+                              ]}
+                            >
+                              <ActivityIndicator size="large" color="#b794f6" />
+                            </View>
+                          );
+                        })()}
                         <View style={styles.cardImageOverlay}>
                           <View
                             style={[
