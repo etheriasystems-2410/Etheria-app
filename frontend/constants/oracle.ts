@@ -77,7 +77,7 @@ export const SPREAD_TYPES: SpreadType[] = [
     positions: ['Present', 'Challenge', 'Past', 'Future', 'Above', 'Below'],
     free: false,
     icon: 'compass',
-    image: require('../assets/images/oracle-guidance.jpg'),
+    image: require('../assets/images/oracle-spiritual.jpg'),
   },
   {
     id: 'spiritual-path',

@@ -627,7 +627,7 @@ export default function ChakraMeditation() {
                 )}
               </View>
 
-              {/* Status and Controls */}
+              {/* Status and Standard Controls */}
               <View style={styles.statusContainer}>
                 {isPlaying ? (
                   <>
@@ -639,6 +639,18 @@ export default function ChakraMeditation() {
                           : `Playing ${selectedChakra?.frequency} Hz (${selectedDuration} min)`}
                       </Text>
                     </View>
+
+                    {/* Standard Audio Controls (Play/Pause, Stop, Mute) */}
+                    <View style={styles.standardControlsRow}>
+                      <TouchableOpacity
+                        style={styles.stopButton}
+                        onPress={stopAllAudio}
+                      >
+                        <Ionicons name="stop" size={24} color="#fff" />
+                        <Text style={styles.stopText}>Stop</Text>
+                      </TouchableOpacity>
+                    </View>
+
                     <AmbientMusicMixer
                       active={isPlaying}
                       paused={false}
@@ -650,10 +662,6 @@ export default function ChakraMeditation() {
                       accentColor={selectedChakra?.color || '#fbbf24'}
                       autoFrequencyHz={10}
                     />
-                    <TouchableOpacity style={styles.stopButton} onPress={stopAllAudio}>
-                      <Ionicons name="stop" size={24} color="#fff" />
-                      <Text style={styles.stopText}>Stop</Text>
-                    </TouchableOpacity>
                   </>
                 ) : (
                   <Text style={styles.completeText}>Session Complete</Text>
@@ -748,6 +756,13 @@ const styles = StyleSheet.create({
   chakraRainbow: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 16,
+  },
+  standardControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
     marginBottom: 16,
   },
   rainbowDot: {
