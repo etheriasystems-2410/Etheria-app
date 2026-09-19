@@ -152,6 +152,7 @@ const translations = {
     helpCenter: 'Help Center',
     contactUs: 'Contact Us',
     privacyPolicy: 'Privacy Policy',
+    privacyPolicyOnline: 'Privacy Policy (Online)',
     termsOfService: 'Terms of Service',
     about: 'About',
     version: 'Version',

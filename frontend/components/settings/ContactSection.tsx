@@ -91,6 +91,18 @@ export default function ContactSection({
 
       <TouchableOpacity
         style={commonStyles.settingItem}
+        onPress={() => Linking.openURL('https://www.etheriasystems.online/app-privacy')}
+      >
+        <Ionicons name="shield-outline" size={24} color="#b794f6" />
+        <View style={commonStyles.settingTextContainer}>
+          <Text style={commonStyles.settingText}>{t('privacyPolicyOnline')}</Text>
+          <Text style={commonStyles.settingSubtext}>www.etheriasystems.online/app-privacy</Text>
+        </View>
+        <Ionicons name="open-outline" size={20} color="#9f7aea" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={commonStyles.settingItem}
         onPress={onCommunityGuidelines}
       >
         <Ionicons name="people-circle" size={24} color="#b794f6" />
