@@ -12,6 +12,7 @@ import {
   Platform,
   FlatList,
   Modal,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -679,7 +680,7 @@ export default function Community() {
                   <Ionicons name="chatbubble-outline" size={18} color="#9f7aea" />
                   <Text style={styles.statText}>{post.comment_count}</Text>
                 </View>
-                {post.author_id !== user?._id && (
+                {post.author_id !== user?.user_id && (
                   <>
                     <TouchableOpacity
                       style={styles.flagButton}
@@ -750,7 +751,7 @@ export default function Community() {
               )}
               <Text style={[styles.commentAuthor, comment.is_admin && styles.adminAuthor]}>{comment.author_name}</Text>
               <Text style={styles.commentTime}>{formatTime(comment.created_at)}</Text>
-              {comment.author_id !== user?._id && (
+              {comment.author_id !== user?.user_id && (
                 <>
                   <TouchableOpacity
                     style={styles.flagButtonSmall}
@@ -830,7 +831,7 @@ export default function Community() {
         contentContainerStyle={styles.chatMessagesContent}
         onContentSizeChange={() => chatScrollRef.current?.scrollToEnd()}
         renderItem={({ item }) => {
-          const isOwnMessage = item.author_id === user?._id;
+          const isOwnMessage = item.author_id === user?.user_id;
           return (
             <View style={[
               styles.chatBubble,
@@ -958,7 +959,7 @@ export default function Community() {
                   • No hate speech, discrimination, or harassment{'\n'}
                   • No spam, advertisements, or promotional content{'\n'}
                   • Keep discussions relevant and constructive{'\n'}
-                  • Respect others' spiritual beliefs and practices
+                  • Respect others&apos; spiritual beliefs and practices
                 </Text>
               </View>
 

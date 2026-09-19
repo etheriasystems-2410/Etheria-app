@@ -8,13 +8,13 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { commonStyles } from './commonStyles';
 import { THEMES, ThemeColors } from '../../contexts/ThemeContext';
-import { Language } from '../../contexts/LanguageContext';
+import { Language, TranslationKeys } from '../../contexts/LanguageContext';
 
 interface Props {
   theme: ThemeColors;
   themeName: string;
   language: Language;
-  t: (key: string) => string;
+  t: (key: TranslationKeys) => string;
   onOpenTheme: () => void;
   onOpenLanguage: () => void;
 }

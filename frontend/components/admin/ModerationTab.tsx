@@ -99,7 +99,7 @@ export default function ModerationTab({
               <View style={styles.flagContentPreview}>
                 <Text style={styles.flagReason}>{flag.reason}</Text>
                 <Text style={styles.flagContentText} numberOfLines={2}>
-                  "{flag.content}"
+                  &quot;{flag.content}&quot;
                 </Text>
               </View>
               <View style={styles.flagFooter}>
@@ -160,7 +160,7 @@ export default function ModerationTab({
         <View style={styles.emailInfoBox}>
           <Ionicons name="information-circle" size={16} color="#9f7aea" />
           <Text style={styles.emailInfoText}>
-            Auto-checks every 5 minutes. Replies to "Flagged for Review" emails are processed automatically.
+            Auto-checks every 5 minutes. Replies to &quot;Flagged for Review&quot; emails are processed automatically.
           </Text>
         </View>
       </View>

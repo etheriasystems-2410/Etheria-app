@@ -669,7 +669,7 @@ export default function Journal() {
               <View style={styles.modalLimitWarning}>
                 <Ionicons name="warning" size={20} color="#ef4444" />
                 <Text style={styles.modalLimitText}>
-                  You've reached your weekly limit of 5 entries. Upgrade to continue!
+                  You&apos;ve reached your weekly limit of 5 entries. Upgrade to continue!
                 </Text>
               </View>
             )}
@@ -729,7 +729,7 @@ export default function Journal() {
                 (saving || (journalStatus && !journalStatus.unlimited && journalStatus.entries_remaining === 0)) && styles.saveButtonDisabled
               ]} 
               onPress={saveEntry}
-              disabled={saving || (journalStatus && !journalStatus.unlimited && journalStatus.entries_remaining === 0)}
+              disabled={!!(saving || (journalStatus && !journalStatus.unlimited && journalStatus.entries_remaining === 0))}
             >
               {saving ? (
                 <ActivityIndicator color="#fff" size="small" />

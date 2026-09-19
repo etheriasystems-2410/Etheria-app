@@ -117,7 +117,7 @@ export default function DailyCardWidget() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Ionicons name="sparkles" size={14} color="#fbbf24" />
-            <Text style={styles.headerLabel}>Today's Oracle</Text>
+            <Text style={styles.headerLabel}>Today&apos;s Oracle</Text>
           </View>
           <View style={styles.streakPill}>
             <Text style={styles.streakEmoji}>{data.streak_emoji}</Text>
@@ -154,7 +154,7 @@ export default function DailyCardWidget() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Today's Card</Text>
+              <Text style={styles.modalTitle}>Today&apos;s Card</Text>
               <TouchableOpacity onPress={() => setShowDetail(false)}>
                 <Ionicons name="close" size={24} color="#e9d5ff" />
               </TouchableOpacity>

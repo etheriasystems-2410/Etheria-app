@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { commonStyles } from './commonStyles';
-import { Language } from '../../contexts/LanguageContext';
+import { Language, TranslationKeys } from '../../contexts/LanguageContext';
 import { ThemeColors } from '../../contexts/ThemeContext';
 
 interface Props {
@@ -23,7 +23,7 @@ interface Props {
   languageCode: string;
   availableLanguages: Language[];
   onSelect: (code: string) => void;
-  t: (key: string) => string;
+  t: (key: TranslationKeys) => string;
 }
 
 export default function LanguageModal({

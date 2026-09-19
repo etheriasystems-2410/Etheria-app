@@ -55,7 +55,7 @@ export default function MyCircleScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
 
-  const auth = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  const auth: Record<string, string> = authToken ? { Authorization: `Bearer ${authToken}` } : {};
 
   const load = useCallback(async () => {
     if (!authToken) return;

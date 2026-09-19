@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { commonStyles } from './commonStyles';
 import { ThemeColors } from '../../contexts/ThemeContext';
+import { TranslationKeys } from '../../contexts/LanguageContext';
 
 interface ThemeOption {
   id: string;
@@ -34,7 +35,7 @@ interface Props {
   isPremium: boolean;
   onSelect: (id: string) => void;
   onLockedTap: () => void;
-  t: (key: string) => string;
+  t: (key: TranslationKeys) => string;
 }
 
 export default function ThemeModal({

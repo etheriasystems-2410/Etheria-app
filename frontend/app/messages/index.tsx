@@ -123,7 +123,7 @@ export default function MessagesScreen() {
           <Ionicons name="chatbubbles-outline" size={48} color={palette.lavender} />
           <Text style={styles.emptyText}>No messages yet</Text>
           <Text style={styles.emptySub}>
-            Open a fellow seeker's profile in the Community to start a conversation.
+            Open a fellow seeker&apos;s profile in the Community to start a conversation.
           </Text>
         </View>
       ) : (

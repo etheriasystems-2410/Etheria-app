@@ -47,7 +47,7 @@ interface Winner {
   contest_id?: string;
 }
 
-const authHeaders = async () => {
+const authHeaders = async (): Promise<Record<string, string>> => {
   const token = await AsyncStorage.getItem('session_token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };

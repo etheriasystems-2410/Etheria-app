@@ -425,7 +425,7 @@ export default function BinauralMeditation() {
           <Text style={styles.infoTitle}>Real Binaural Beats</Text>
           <Text style={styles.infoText}>
             Experience actual binaural beat audio that synchronizes your brainwaves. 
-            Each ear receives a different frequency, creating a perceived "beat" that 
+            Each ear receives a different frequency, creating a perceived &quot;beat&quot; that 
             entrains your brain to the desired state.
           </Text>
           <Text style={styles.infoImportant}>🎧 Stereo Headphones Required</Text>
@@ -520,7 +520,7 @@ export default function BinauralMeditation() {
             <Text style={styles.techText}>
               Your left ear receives {selectedProgram?.base_frequency || 200} Hz while your right ear receives{' '}
               {selectedProgram ? selectedProgram.base_frequency + selectedProgram.beat_frequency : 207.83} Hz.
-              Your brain perceives the difference as a {selectedProgram?.beat_frequency || 7.83} Hz "beat",
+              Your brain perceives the difference as a {selectedProgram?.beat_frequency || 7.83} Hz &quot;beat&quot;,
               entraining your brainwaves to that frequency.
             </Text>
           </View>

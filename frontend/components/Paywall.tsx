@@ -171,7 +171,7 @@ export function Paywall({ visible, onClose, feature }: PaywallProps) {
             
             {feature && (
               <Text style={styles.featureNote}>
-                "{feature}" requires a premium subscription
+                &quot;{feature}&quot; requires a premium subscription
               </Text>
             )}
 

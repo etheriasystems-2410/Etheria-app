@@ -143,7 +143,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   overallCard: {
-    backgroundColor: 'linear-gradient(135deg, #2d1b4e 0%, #1a0a2e 100%)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,

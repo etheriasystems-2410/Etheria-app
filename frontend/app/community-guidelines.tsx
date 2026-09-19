@@ -61,9 +61,9 @@ export default function CommunityGuidelines() {
             <Text style={styles.bulletItem}>• Refrain from hate speech, discrimination, or harassment</Text>
             <Text style={styles.bulletItem}>• Not post spam, advertisements, or promotional content</Text>
             <Text style={styles.bulletItem}>• Keep discussions relevant and constructive</Text>
-            <Text style={styles.bulletItem}>• Respect others' spiritual beliefs and practices</Text>
+            <Text style={styles.bulletItem}>• Respect others&apos; spiritual beliefs and practices</Text>
             <Text style={styles.bulletItem}>• Not share misleading health or medical advice</Text>
-            <Text style={styles.bulletItem}>• Protect personal privacy (yours and others')</Text>
+            <Text style={styles.bulletItem}>• Protect personal privacy (yours and others&apos;)</Text>
           </View>
         </View>
 

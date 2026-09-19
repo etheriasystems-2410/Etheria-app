@@ -70,7 +70,7 @@ interface Props {
   onCertificateChange?: (cert: Certificate) => void;
 }
 
-const authHeaders = async () => {
+const authHeaders = async (): Promise<Record<string, string>> => {
   const token = await AsyncStorage.getItem('session_token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };

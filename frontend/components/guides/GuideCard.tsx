@@ -9,10 +9,11 @@
  *  - `elementOverride` → e.g. 'Custom' instead of guide.element
  */
 import React, { ReactNode } from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View , StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Guide } from '../../constants/guides';
 import { styles } from './styles';
+
 
 interface GuideCardProps {
   guide: Guide;
@@ -92,8 +93,6 @@ export default function GuideCard({
     </TouchableOpacity>
   );
 }
-
-import { StyleSheet } from 'react-native';
 const guideCardExtraStyles = StyleSheet.create({
   familiarityBadge: {
     position: 'absolute',

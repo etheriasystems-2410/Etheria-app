@@ -23,6 +23,8 @@ export interface JournalEntry {
     module_name?: string;
     astral_level?: number;
     astral_title?: string;
+    symbols?: string[];
+    feelings?: string[];
   };
 }
 

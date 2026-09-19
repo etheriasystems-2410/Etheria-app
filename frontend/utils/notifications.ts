@@ -8,6 +8,8 @@ import Constants from 'expo-constants';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -147,6 +149,7 @@ export async function updateScheduledNotifications(preferences: NotificationPref
         data: { screen: 'oracle' },
       },
       trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
         hour: hours,
         minute: minutes,
         repeats: true,

@@ -28,8 +28,8 @@ function ProtectedLayout() {  const { isAuthenticated, loading, user } = useAuth
     if (loading) return;
 
     const inAuthGroup = segments[0] === 'auth';
-    const isHomePage = segments.length === 0 || (segments.length === 1 && segments[0] === '(drawer)');
-    const isIndexPage = segments[0] === 'index' || segments.length === 0;
+    const isHomePage = segments.length < 1 || (segments.length === 1 && segments[0] === '(drawer)');
+    const isIndexPage = segments[0] === 'index' || segments.length < 1;
     const isTermsAcceptanceGate = segments[0] === 'terms-acceptance';
 
     // ─── Authenticated users who haven't accepted Terms of Use ──────────

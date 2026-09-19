@@ -255,8 +255,8 @@ export default function AIGuidedMeditation() {
   };
 
   // Parse script for pause markers and split into segments
-  const parseScriptWithPauses = (script: string): Array<{type: 'text' | 'pause', content: string, duration?: number}> => {
-    const segments: Array<{type: 'text' | 'pause', content: string, duration?: number}> = [];
+  const parseScriptWithPauses = (script: string): {type: 'text' | 'pause', content: string, duration?: number}[] => {
+    const segments: {type: 'text' | 'pause', content: string, duration?: number}[] = [];
     
     // Regex to match ONLY explicit pause markers with brackets/parentheses:
     // [pause for X seconds], [PAUSE Xs], (pause X seconds), [X second pause], etc.
@@ -301,7 +301,7 @@ export default function AIGuidedMeditation() {
   };
 
   // Play segments with pauses
-  const playSegmentsWithPauses = async (segments: Array<{type: 'text' | 'pause', content: string, duration?: number}>, startIndex: number = 0) => {
+  const playSegmentsWithPauses = async (segments: {type: 'text' | 'pause', content: string, duration?: number}[], startIndex: number = 0) => {
     for (let i = startIndex; i < segments.length; i++) {
       if (isMutedRef.current) {
         setIsPlaying(false);

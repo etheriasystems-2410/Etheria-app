@@ -678,7 +678,7 @@ export default function ChakraMeditation() {
                   <Text style={styles.chakraInfoTitle}>{selectedChakra.name}</Text>
                   <Text style={styles.chakraInfoSanskrit}>{selectedChakra.sanskrit}</Text>
                   <Text style={styles.chakraInfoLocation}>{selectedChakra.location} • {selectedChakra.element}</Text>
-                  <Text style={styles.chakraAffirmation}>"{selectedChakra.affirmation}"</Text>
+                  <Text style={styles.chakraAffirmation}>&quot;{selectedChakra.affirmation}&quot;</Text>
                 </View>
               )}
             </>

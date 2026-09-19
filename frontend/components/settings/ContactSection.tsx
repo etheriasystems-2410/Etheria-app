@@ -10,9 +10,10 @@ import { Linking, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { commonStyles } from './commonStyles';
+import { TranslationKeys } from '../../contexts/LanguageContext';
 
 interface Props {
-  t: (key: string) => string;
+  t: (key: TranslationKeys) => string;
   onFeedback: () => void;
   onEmailUs: () => void;
   onPrivacy: () => void;

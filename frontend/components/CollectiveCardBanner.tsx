@@ -69,7 +69,7 @@ export default function CollectiveCardBanner() {
         <View style={s.bannerHeader}>
           <View style={s.bannerHeaderLeft}>
             <Ionicons name="globe" size={14} color="#fbbf24" />
-            <Text style={s.bannerEyebrow}>TODAY'S COLLECTIVE READING</Text>
+            <Text style={s.bannerEyebrow}>TODAY&apos;S COLLECTIVE READING</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color="#fbbf24" />
         </View>
@@ -105,7 +105,7 @@ export default function CollectiveCardBanner() {
               ) : null}
               <Text style={s.modalMeaning}>{data.card.meaning}</Text>
               <View style={s.promptBox}>
-                <Text style={s.promptLabel}>TODAY'S COMMUNITY PROMPT</Text>
+                <Text style={s.promptLabel}>TODAY&apos;S COMMUNITY PROMPT</Text>
                 <Text style={s.promptText}>{data.prompt}</Text>
               </View>
               <Text style={s.hint}>Share what stirs in your day with the community below.</Text>

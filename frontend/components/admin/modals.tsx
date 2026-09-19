@@ -389,7 +389,7 @@ export function FlagDetailModal({
               <View style={styles.flagDetailSection}>
                 <Text style={styles.flagDetailLabel}>Flagged Content ({selectedFlag.content_type})</Text>
                 <View style={styles.flagContentCard}>
-                  <Text style={styles.flagContentFullText}>"{selectedFlag.content}"</Text>
+                  <Text style={styles.flagContentFullText}>&quot;{selectedFlag.content}&quot;</Text>
                 </View>
               </View>
 

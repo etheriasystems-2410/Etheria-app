@@ -18,7 +18,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
 import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
-import { useRouter } from 'expo-router';
+import { useRouter , useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -45,7 +45,6 @@ import GuideCard from '../components/guides/GuideCard';
 import ChatHeader from '../components/guides/ChatHeader';
 import { useSpiritGuideAudio } from '../hooks/useSpiritGuideAudio';
 import { useBottomSafePad } from '../hooks/useBottomSafePad';
-import { useLocalSearchParams } from 'expo-router';
 import CompanionGuideSection from '../components/CompanionGuideSection';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -402,7 +401,7 @@ export default function SpiritGuides() {
                 for (let i = 0; i < introMsgs.length; i++) {
                   const a = introMsgs[i].audioBase64;
                   if (!a) continue;
-                  // eslint-disable-next-line no-await-in-loop
+                   
                   await audio.playAudioAndWait(a, i, 120);
                 }
               }
@@ -497,7 +496,7 @@ export default function SpiritGuides() {
               const a = pairMsgs[i].audioBase64;
               if (!a) continue;
               const gap = i === pairMsgs.length - 1 ? 400 : 120;
-              // eslint-disable-next-line no-await-in-loop
+               
               await audio.playAudioAndWait(a, startIndex + i, gap);
             }
           }
