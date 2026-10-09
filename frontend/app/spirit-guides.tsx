@@ -15,6 +15,7 @@ import {
   Image as RNImage,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 
 import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
@@ -131,6 +132,31 @@ export default function SpiritGuides() {
 
   const bgScale = bgPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
   const bgOpacity = bgPulse.interpolate({ inputRange: [0, 1], outputRange: [0.22, 0.42] });
+
+  // ── Chat-background video ─────────────────────────────────────────────
+  // Elemental guides carry a looping animation video; it replaces the static
+  // portrait as the dimmed chat backdrop. Guides without a video fall back
+  // to the breathing image below.
+  const guideVideoSource = selectedGuide?.video ?? null;
+  const bgPlayer = useVideoPlayer(guideVideoSource, (player) => {
+    player.loop = true;
+    player.muted = true;
+    if (guideVideoSource) player.play();
+  });
+  const prevVideoRef = useRef(guideVideoSource);
+  useEffect(() => {
+    if (prevVideoRef.current !== guideVideoSource) {
+      prevVideoRef.current = guideVideoSource;
+      if (guideVideoSource) {
+        bgPlayer.replace(guideVideoSource);
+        bgPlayer.loop = true;
+        bgPlayer.muted = true;
+        bgPlayer.play();
+      } else {
+        bgPlayer.pause();
+      }
+    }
+  }, [guideVideoSource, bgPlayer]);
 
   useEffect(() => {
     if (hasAccess) {
@@ -889,10 +915,10 @@ export default function SpiritGuides() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={100}
     >
-      {/* Guide portrait as breathing background. Sits behind everything
+      {/* Guide video (or portrait) as background. Sits behind everything
           else, gently scales + brightens while the guide is thinking or
           speaking, and settles to a subtle dim glow when idle. */}
-      {selectedGuide?.image ? (
+      {selectedGuide ? (
         <Animated.View
           pointerEvents="none"
           style={[
@@ -900,11 +926,20 @@ export default function SpiritGuides() {
             { opacity: bgOpacity, transform: [{ scale: bgScale }] },
           ]}
         >
-          <RNImage
-            source={selectedGuide.image}
-            style={chatBgStyles.bgImage}
-            resizeMode="cover"
-          />
+          {selectedGuide.video ? (
+            <VideoView
+              player={bgPlayer}
+              style={chatBgStyles.bgImage}
+              contentFit="cover"
+              nativeControls={false}
+            />
+          ) : (
+            <RNImage
+              source={selectedGuide.image}
+              style={chatBgStyles.bgImage}
+              resizeMode="cover"
+            />
+          )}
         </Animated.View>
       ) : null}
       {/* Dark scrim over the portrait so message text stays readable
