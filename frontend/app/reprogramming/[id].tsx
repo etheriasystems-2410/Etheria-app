@@ -31,6 +31,7 @@ import LightTherapyController from '../../components/LightTherapyController';
 import ReprogrammingVisuals, {
   type ReprogrammingTheme,
 } from '../../components/ReprogrammingVisuals';
+import { AudioCreditsModal } from '../../components/AudioCreditsModal';
 import SessionDrawer, {
   SessionDrawerSection,
 } from '../../components/SessionDrawer';
@@ -85,6 +86,7 @@ export default function ReprogrammingSession() {
   const router = useRouter();
   const bottomPad = useBottomSafePad();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [creditsOpen, setCreditsOpen] = useState(false);
 
   const [meta, setMeta] = useState<SessionMeta | null>(null);
   const [metaLoading, setMetaLoading] = useState(true);
@@ -793,6 +795,16 @@ export default function ReprogrammingSession() {
               { label: 'Full', value: 0.5 },
             ]}
           />
+          <TouchableOpacity
+            style={styles.creditsLinkBtn}
+            onPress={() => setCreditsOpen(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="information-circle-outline" size={15} color={themeColor} />
+            <Text style={[styles.creditsLinkText, { color: themeColor }]}>
+              Audio Credits
+            </Text>
+          </TouchableOpacity>
         </SessionDrawerSection>
 
         <SessionDrawerSection title="Light Therapy" icon="bulb" accentColor={themeColor}>
@@ -805,6 +817,12 @@ export default function ReprogrammingSession() {
           />
         </SessionDrawerSection>
       </SessionDrawer>
+
+      <AudioCreditsModal
+        visible={creditsOpen}
+        onClose={() => setCreditsOpen(false)}
+        accentColor={themeColor}
+      />
     </CosmicBackdrop>
   );
 }
@@ -1240,5 +1258,19 @@ const styles = StyleSheet.create({
   },
   volumeBtnTextActive: {
     color: '#0f0321',
+  },
+  creditsLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    alignSelf: 'flex-start',
+  },
+  creditsLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
