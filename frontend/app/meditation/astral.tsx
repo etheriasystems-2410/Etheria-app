@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
+  ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { BackgroundImage } from '../../components/BackgroundImage';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +15,11 @@ import { useRouter } from 'expo-router';
 import { useBottomSafePad } from '../../hooks/useBottomSafePad';
 import { useAuth } from '../../contexts/AuthContext';
 import { Paywall } from '../../components/Paywall';
+import { AudioPlayerManager, setupAudioMode } from '../../utils/audioPlayer';
+import AmbientMusicMixer from '../../components/AmbientMusicMixer';
+import LightTherapyController from '../../components/LightTherapyController';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface AstralLevel {
   id: string;
@@ -60,12 +68,75 @@ export default function AstralTravel() {
   const [sessionActive, setSessionActive] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
+  // Audio control state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(0.8);
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+
+  const audioPlayerRef = useRef<AudioPlayerManager | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const breatheAnim = useRef(new Animated.Value(1)).current;
+
   // Check premium access on mount
   React.useEffect(() => {
     if (!isPremium) {
       setShowPaywall(true);
     }
+    setupAudioMode();
+    return () => {
+      stopSession();
+    };
   }, [isPremium]);
+
+  // Breathing animation effect during active session
+  useEffect(() => {
+    if (sessionActive && isPlaying && !isPaused) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(breatheAnim, {
+            toValue: 1.3,
+            duration: 4000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(breatheAnim, {
+            toValue: 1,
+            duration: 4000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [sessionActive, isPlaying, isPaused]);
+
+  // Timer Countdown Effect
+  useEffect(() => {
+    if (sessionActive && isPlaying && !isPaused && timeRemaining > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current as any);
+            stopSession();
+            Alert.alert(
+              'Session Complete',
+              'Your astral journey has concluded. Gently return to your physical awareness.'
+            );
+            return 0;
+          }
+          return prev - 1;
+        });
+        setSessionDuration((prev) => prev + 1);
+      }, 1000);
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+      };
+    }
+  }, [sessionActive, isPlaying, isPaused, timeRemaining]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -80,16 +151,93 @@ export default function AstralTravel() {
     }
   };
 
-  const startSession = () => {
-    if (selectedLevel) {
-      setSessionActive(true);
+  const startSession = async () => {
+    if (!selectedLevel) return;
+
+    setSessionActive(true);
+    setIsLoadingAudio(true);
+    setTimeRemaining(selectedLevel.duration * 60);
+    setSessionDuration(0);
+
+    try {
+      // Use theta binaural / astral frequency stream
+      const streamingUrl = `${BACKEND_URL}/api/meditation/binaural/stream/theta?duration=${selectedLevel.duration}`;
+
+      if (audioPlayerRef.current) {
+        await audioPlayerRef.current.unload();
+      }
+
+      const player = new AudioPlayerManager();
+      await player.loadAndPlay(streamingUrl, {
+        loop: true,
+        volume: isMuted ? 0 : volume,
+      });
+
+      audioPlayerRef.current = player;
+      setIsPlaying(true);
+      setIsPaused(false);
+    } catch (error) {
+      console.error('Error playing astral sound:', error);
+    } finally {
+      setIsLoadingAudio(false);
     }
+  };
+
+  const stopSession = async () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (audioPlayerRef.current) {
+      try {
+        await audioPlayerRef.current.unload();
+      } catch (e) {
+        console.warn('Audio cleanup error:', e);
+      }
+      audioPlayerRef.current = null;
+    }
+    setIsPlaying(false);
+    setIsPaused(false);
+    setSessionActive(false);
+  };
+
+  const togglePause = async () => {
+    if (!audioPlayerRef.current) return;
+    if (isPaused) {
+      await audioPlayerRef.current.play();
+      setIsPaused(false);
+    } else {
+      await audioPlayerRef.current.pause();
+      setIsPaused(true);
+    }
+  };
+
+  const toggleMute = async () => {
+    const nextMute = !isMuted;
+    setIsMuted(nextMute);
+    if (audioPlayerRef.current) {
+      await audioPlayerRef.current.setVolume(nextMute ? 0 : volume);
+    }
+  };
+
+  const handleVolumeChange = async (v: number) => {
+    setVolume(v);
+    setIsMuted(false);
+    if (audioPlayerRef.current) {
+      await audioPlayerRef.current.setVolume(v);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (sessionActive && selectedLevel) {
     return (
       <View style={styles.container}>
-        <View style={styles.sessionContainer}>
+        <ScrollView contentContainerStyle={styles.sessionContainer}>
           <View style={styles.cosmicBackground}>
             <View style={styles.orb1} />
             <View style={styles.orb2} />
@@ -102,20 +250,103 @@ export default function AstralTravel() {
               Close your eyes, relax your body completely, and follow the guidance...
             </Text>
 
-            <View style={styles.breathingCircle}>
-              <View style={styles.breathingInner}>
-                <Text style={styles.breathingText}>Breathe</Text>
-              </View>
+            {/* Timer Display */}
+            <View style={styles.timerDisplay}>
+              <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
+              <Text style={styles.timerSubtext}>remaining</Text>
             </View>
 
-            <TouchableOpacity
-              style={styles.endButton}
-              onPress={() => setSessionActive(false)}
+            {/* Breathing Circle */}
+            <Animated.View
+              style={[
+                styles.breathingCircle,
+                { transform: [{ scale: breatheAnim }] },
+              ]}
             >
+              <View style={styles.breathingInner}>
+                <Ionicons name="planet" size={32} color="#fff" />
+                <Text style={styles.breathingText}>Breathe</Text>
+              </View>
+            </Animated.View>
+
+            {isLoadingAudio ? (
+              <View style={styles.audioStatusRow}>
+                <ActivityIndicator size="small" color="#c4b5fd" />
+                <Text style={styles.audioStatusText}>Preparing audio frequency...</Text>
+              </View>
+            ) : null}
+
+            {/* Standard Media Player Controls */}
+            <View style={styles.audioControlsRow}>
+              <TouchableOpacity
+                style={[styles.audioCtrlBtn, isMuted && styles.audioCtrlBtnActive]}
+                onPress={toggleMute}
+              >
+                <Ionicons
+                  name={isMuted ? 'volume-mute' : 'volume-high'}
+                  size={24}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.playPauseBtn}
+                onPress={togglePause}
+              >
+                <Ionicons
+                  name={isPaused ? 'play' : 'pause'}
+                  size={36}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.stopCtrlBtn}
+                onPress={stopSession}
+              >
+                <Ionicons name="stop" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Volume Presets */}
+            <View style={styles.volumeRow}>
+              <Ionicons name="volume-low" size={16} color="#9f7aea" />
+              {[0.2, 0.4, 0.6, 0.8, 1.0].map((v) => (
+                <TouchableOpacity
+                  key={v}
+                  style={[
+                    styles.volumePill,
+                    volume >= v && !isMuted && styles.volumePillActive,
+                  ]}
+                  onPress={() => handleVolumeChange(v)}
+                >
+                  <Text style={styles.volumePillText}>{Math.round(v * 100)}%</Text>
+                </TouchableOpacity>
+              ))}
+              <Ionicons name="volume-high" size={16} color="#9f7aea" />
+            </View>
+
+            {/* Ambient Music & Light Therapy */}
+            <View style={{ width: '100%', marginTop: 16 }}>
+              <AmbientMusicMixer
+                active={isPlaying}
+                paused={isPaused}
+                accentColor="#7c3aed"
+              />
+              <LightTherapyController
+                active={isPlaying}
+                paused={isPaused}
+                accentColor="#a855f7"
+                autoFrequencyHz={6}
+              />
+            </View>
+
+            <TouchableOpacity style={styles.endButton} onPress={stopSession}>
+              <Ionicons name="close-circle" size={20} color="#fff" />
               <Text style={styles.endButtonText}>End Session</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -458,6 +689,82 @@ const styles = StyleSheet.create({
   },
   endButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#e9d5ff',
+  },
+  timerDisplay: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  timerText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#e9d5ff',
+  },
+  timerSubtext: {
+    fontSize: 14,
+    color: '#c4b5fd',
+  },
+  audioStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 12,
+  },
+  audioStatusText: {
+    color: '#c4b5fd',
+    fontSize: 14,
+  },
+  audioControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    marginVertical: 16,
+  },
+  audioCtrlBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(124, 58, 237, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  audioCtrlBtnActive: {
+    backgroundColor: '#ef4444',
+  },
+  playPauseBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#7c3aed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stopCtrlBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  volumeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 12,
+  },
+  volumePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(45, 27, 78, 0.8)',
+  },
+  volumePillActive: {
+    backgroundColor: '#7c3aed',
+  },
+  volumePillText: {
+    fontSize: 11,
     fontWeight: '600',
     color: '#e9d5ff',
   },

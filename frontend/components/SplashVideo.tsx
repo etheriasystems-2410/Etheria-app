@@ -17,13 +17,12 @@ import { setAudioModeAsync } from 'expo-audio';
 const SPLASH_VIDEO = require('../assets/video/splash-video.mp4');
 
 const MAX_DURATION_MS = 9000;     // safety: never block app longer than this
-const HOLD_AFTER_END_MS = 2500;   // hold final frame for a beat after end
-const FADE_OUT_MS = 700;
-// On web autoplay of MP4 can be flaky/blocked → fall back to a longer black
-// hold so users still get the brand pause without a broken-video gap.
-const WEB_BLACK_HOLD_MS = 2200;
+const HOLD_AFTER_END_MS = 1500;   // hold final frame briefly before cross-fade
+const FADE_OUT_MS = 1000;         // smooth 1-second cross-fade into home screen
+// On web autoplay of MP4 can be flaky/blocked → fall back to a black hold
+const WEB_BLACK_HOLD_MS = 1800;
 // Native fallback if expo-video is missing / crashes
-const NATIVE_FALLBACK_HOLD_MS = 1600;
+const NATIVE_FALLBACK_HOLD_MS = 1400;
 
 // Lazily require expo-video so a missing native module never crashes the
 // module load itself — the caller code below handles the missing case.
