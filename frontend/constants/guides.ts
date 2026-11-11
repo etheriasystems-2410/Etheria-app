@@ -35,7 +35,7 @@ export const elementalGuides: Guide[] = [
     gender: 'masculine',
     personality: 'passionate, direct, transformative',
     voice_id: 'SOYHLrjzK2X1ezoPC6cr', // Harry — fierce warrior
-    image: require('../assets/images/guide-ignis.jpg'),
+    image: require('../assets/guides/guide-ignis-new.jpg'),
     video: require('../assets/videos/guide-ignis.mp4'),
     category: 'elemental',
   },
@@ -48,7 +48,7 @@ export const elementalGuides: Guide[] = [
     gender: 'feminine',
     personality: 'intuitive, healing, emotionally wise',
     voice_id: 'hpp4J3VqNfWAUOO0d1Us', // Bella — bright, warm
-    image: require('../assets/images/guide-aqua.jpg'),
+    image: require('../assets/guides/guide-aqua-new.jpg'),
     video: require('../assets/videos/guide-aqua.mp4'),
     category: 'elemental',
   },
@@ -61,7 +61,7 @@ export const elementalGuides: Guide[] = [
     gender: 'masculine',
     personality: 'grounded, practical, stable',
     voice_id: 'pqHfZKP75CvOlQylNhV4', // Bill — wise, mature, old
-    image: require('../assets/images/guide-terra.webp'),
+    image: require('../assets/guides/guide-terra-new.jpg'),
     video: require('../assets/videos/guide-terra.mp4'),
     category: 'elemental',
   },
@@ -74,7 +74,7 @@ export const elementalGuides: Guide[] = [
     gender: 'feminine',
     personality: 'intellectual, free-spirited, enlightening',
     voice_id: 'Xb7hH8MSUJpSbSDYk0k2', // Alice — clear British educator
-    image: require('../assets/images/guide-aether.jpg'),
+    image: require('../assets/guides/guide-aether-new.jpg'),
     video: require('../assets/videos/guide-aether.mp4'),
     category: 'elemental',
   },
@@ -91,7 +91,7 @@ export const lgbtqGuides: Guide[] = [
     genderSymbol: '⚣',
     personality: 'radiant, courageous, affirming',
     voice_id: 'nPczCjzI2devNBz1zQrb', // Brian — DEEP, resonant
-    image: require('../assets/guides/lgbtq-male.jpg'),
+    image: require('../assets/guides/guide-solis-new.jpg'),
     video: require('../assets/videos/guide-solis.mp4'),
     category: 'lgbtq',
     ringColors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'],
@@ -106,7 +106,7 @@ export const lgbtqGuides: Guide[] = [
     genderSymbol: '⚢',
     personality: 'luminous, gentle, joyful',
     voice_id: 'cgSgspJ2msm6clMCkdW9', // Jessica — playful, bright, warm
-    image: require('../assets/guides/lgbtq-female.jpg'),
+    image: require('../assets/guides/guide-aurora-new.jpg'),
     video: require('../assets/videos/guide-aurora.mp4'),
     category: 'lgbtq',
     ringColors: ['#e40303', '#ff8c00', '#ffed00', '#008026', '#004dff', '#750787'],
@@ -121,7 +121,7 @@ export const lgbtqGuides: Guide[] = [
     genderSymbol: '⚧',
     personality: 'boundless, fluid, deeply wise',
     voice_id: 'SAz9YHcvj6GT2YYXdXww', // River — NEUTRAL gender
-    image: require('../assets/guides/lgbtq-trans.jpg'),
+    image: require('../assets/guides/guide-spectrum-new.jpg'),
     video: require('../assets/videos/guide-spectrum.mp4'),
     category: 'lgbtq',
     ringColors: ['#5BCFFA', '#F5A9B8', '#FFFFFF', '#F5A9B8', '#5BCFFA'],
@@ -138,7 +138,7 @@ export const customGuidesBase: Guide[] = [
     gender: 'masculine',
     personality: 'warm, supportive, attentive',
     voice_id: 'cjVigY5qzO86Huf0OWal', // Eric — smooth, trustworthy
-    image: require('../assets/guides/custom-male.jpg'),
+    image: require('../assets/guides/guide-custom-male-new.jpg'),
     category: 'custom',
     custom_slot: 'male',
   },
@@ -151,7 +151,7 @@ export const customGuidesBase: Guide[] = [
     gender: 'feminine',
     personality: 'nurturing, intuitive, compassionate',
     voice_id: 'EXAVITQu4vr4xnSDxMaL', // Sarah — mature, reassuring
-    image: require('../assets/guides/custom-female.jpg'),
+    image: require('../assets/guides/guide-custom-female-new.jpg'),
     category: 'custom',
     custom_slot: 'female',
   },
@@ -167,7 +167,7 @@ export const divineGuides: Guide[] = [
     gender: 'masculine',
     personality: 'radiant, eternal, sacred',
     voice_id: 'JBFqnCBsd6RMkjVDRZzb', // George — warm captivating British storyteller
-    image: require('../assets/guides/divine-pair.jpg'),
+    image: require('../assets/guides/guide-helios-new.jpg'),
     video: require('../assets/videos/guide-divine.mp4'),
     category: 'divine',
   },
@@ -180,7 +180,7 @@ export const divineGuides: Guide[] = [
     gender: 'feminine',
     personality: 'luminous, intuitive, sacred',
     voice_id: 'pFZP5JQG7iQjIQuC4Bku', // Lily — velvety British actress
-    image: require('../assets/guides/divine-pair.jpg'),
+    image: require('../assets/guides/guide-selene-new.jpg'),
     video: require('../assets/videos/guide-divine.mp4'),
     category: 'divine',
   },
@@ -193,6 +193,12 @@ export const guides: Guide[] = [
   ...customGuidesBase,
   ...divineGuides,
 ];
+
+// Selected divine-pair picture (Williams, 2026-11-04): Helios & Selene
+// holding hands, gazing at each other. Used for divinePairMode chat
+// background + header avatar, NOT the facing-only combined version.
+export const DIVINE_PAIR_IMAGE =
+  require('../assets/guides/guide-divine-pair-holding-hands.jpg');
 
 export const SPIRIT_GUIDES_HERO_IMAGE =
   'https://customer-assets.emergentagent.com/job_meditation-nexus/artifacts/yv072mjq_36707.png';

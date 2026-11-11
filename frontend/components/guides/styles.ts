@@ -332,19 +332,25 @@ export const styles = StyleSheet.create({
   messagesContent: {
     padding: 16,
   },
+  // Glassmorphism (2026-11-04): frosted-glass bubbles — translucent fill
+  // + light border + BlurView child in spirit-guides.tsx. Text colours
+  // below stay white / light lavender for contrast on the picture bg.
   messageBubble: {
     maxWidth: '80%',
     padding: 12,
     borderRadius: 16,
     marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#7c3aed',
+    backgroundColor: 'rgba(124, 58, 237, 0.18)',
   },
   assistantMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#2d1b4e',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
   messageText: {
     fontSize: 16,
@@ -363,14 +369,17 @@ export const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#1a0033',
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
     borderTopWidth: 1,
-    borderTopColor: '#2d1b4e',
+    borderTopColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'flex-end',
+    overflow: 'hidden',
   },
   input: {
     flex: 1,
-    backgroundColor: '#2d1b4e',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -729,6 +738,26 @@ export const styles = StyleSheet.create({
     color: '#e9d5ff',
     fontSize: 15,
     marginTop: 4,
+  },
+  editorLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#e9d5ff',
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  editorInputMultiline: {
+    backgroundColor: 'rgba(45,27,78,0.6)',
+    borderColor: 'rgba(168,85,247,0.45)',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#e9d5ff',
+    fontSize: 15,
+    marginTop: 4,
+    minHeight: 72,
+    textAlignVertical: 'top',
   },
   renameButtons: {
     flexDirection: 'row',

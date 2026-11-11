@@ -25,8 +25,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { Asset } from 'expo-asset';
 import { CosmicBackdrop } from '../../components/ui';
 import { AudioPlayerManager } from '../../utils/audioPlayer';
+import { SESSION_MUSIC } from '../../constants/sessionMusic';
+import { REPROGRAMMING_SET_VIDEOS } from '../../constants/setVideos';
 import LightTherapyController from '../../components/LightTherapyController';
 import ReprogrammingVisuals, {
   type ReprogrammingTheme,
@@ -318,23 +321,49 @@ export default function ReprogrammingSession() {
       await player.loadAndPlay(uri, { loop: false, volume: voiceVolume });
       playerRef.current = player;
 
-      // Fetch + start the hypnotic session-audio bed (random of 5 tracks).
-      // Plays looped underneath the voice at the persisted bed volume so
-      // voice stays dominant.
+      // Session-matched music bed (see constants/sessionMusic.ts): the
+      // bed for THIS session, tuned to its frequency at its BPM, played
+      // looped underneath the voice at the persisted bed volume so voice
+      // stays dominant. The old random-pick endpoint is kept ONLY as a
+      // fallback if the matched bed asset fails to resolve — a mismatched
+      // track is never chosen when the matched one is available.
       try {
-        const sr = await fetch(`${BACKEND_URL}/api/reprogramming/session-audio`);
-        if (sr.ok) {
-          const sdata = await sr.json();
-          if (sdata?.url) {
-            const sPlayer = new AudioPlayerManager();
-            await sPlayer.loadAndPlay(sdata.url, {
-              loop: true,
-              volume: bedVolume,
-            });
-            sessionAudioRef.current = sPlayer;
-            setSessionAudioBpm(
-              typeof sdata.bpm === 'number' ? sdata.bpm : null,
-            );
+        const matched = SESSION_MUSIC[meta.id];
+        let bedStarted = false;
+        if (matched) {
+          try {
+            const asset = Asset.fromModule(matched.asset);
+            await asset.downloadAsync();
+            const bedUri = asset.localUri || asset.uri;
+            if (bedUri) {
+              const sPlayer = new AudioPlayerManager();
+              await sPlayer.loadAndPlay(bedUri, {
+                loop: true,
+                volume: bedVolume,
+              });
+              sessionAudioRef.current = sPlayer;
+              setSessionAudioBpm(matched.bpm);
+              bedStarted = true;
+            }
+          } catch {
+            /* fall through to the legacy random endpoint below */
+          }
+        }
+        if (!bedStarted) {
+          const sr = await fetch(`${BACKEND_URL}/api/reprogramming/session-audio`);
+          if (sr.ok) {
+            const sdata = await sr.json();
+            if (sdata?.url) {
+              const sPlayer = new AudioPlayerManager();
+              await sPlayer.loadAndPlay(sdata.url, {
+                loop: true,
+                volume: bedVolume,
+              });
+              sessionAudioRef.current = sPlayer;
+              setSessionAudioBpm(
+                typeof sdata.bpm === 'number' ? sdata.bpm : null,
+              );
+            }
           }
         }
       } catch {
@@ -577,6 +606,8 @@ export default function ReprogrammingSession() {
               paused={!playing}
               theme={inferVisualTheme(meta)}
               audioBpm={sessionAudioBpm}
+              videoUri={REPROGRAMMING_SET_VIDEOS[meta?.id || '']?.video ?? null}
+              videoCredit={REPROGRAMMING_SET_VIDEOS[meta?.id || '']?.credit ?? null}
             />
 
             <View style={styles.playerHaloWrap}>
@@ -605,6 +636,13 @@ export default function ReprogrammingSession() {
             <Text style={styles.timerSub}>
               Session ends in about {selectedDuration} minutes
             </Text>
+            {SESSION_MUSIC[meta?.id || ''] ? (
+              <Text style={styles.musicLine}>
+                Music bed: {SESSION_MUSIC[meta!.id].frequencyHz} Hz ·{' '}
+                {SESSION_MUSIC[meta!.id].bpm} BPM ·{' '}
+                {SESSION_MUSIC[meta!.id].association}
+              </Text>
+            ) : null}
 
             {/* Progress bar — tap anywhere to scrub the session timeline.
                 The audio itself continues to loop, so scrubbing is loop-safe. */}
@@ -812,8 +850,9 @@ export default function ReprogrammingSession() {
             active={sessionActive}
             paused={!playing}
             accentColor={themeColor}
-            autoFrequencyHz={6}
+            autoFrequencyHz={SESSION_MUSIC[meta?.id || '']?.bandHz ?? 6}
             musicBpm={sessionAudioBpm}
+            maxPulseHz={2}
           />
         </SessionDrawerSection>
       </SessionDrawer>
@@ -1088,6 +1127,13 @@ const styles = StyleSheet.create({
     color: '#9f7aea',
     fontSize: 12,
     marginTop: 4,
+  },
+  musicLine: {
+    color: '#c4b5fd',
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 4,
+    textAlign: 'center',
   },
   progressWrap: {
     width: '100%',

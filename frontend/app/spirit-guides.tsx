@@ -15,8 +15,8 @@ import {
   Image as RNImage,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 import SubscriptionOnlyBanner from '../components/SubscriptionOnlyBanner';
 import { useRouter , useLocalSearchParams } from 'expo-router';
@@ -38,9 +38,20 @@ import {
   divineGuides,
   guides,
   SPIRIT_GUIDES_HERO_IMAGE,
+  DIVINE_PAIR_IMAGE,
 } from '../constants/guides';
 import { styles } from '../components/guides/styles';
 import RenameModal from '../components/guides/RenameModal';
+import CustomGuideEditor, { CustomGuideEditorDraft } from '../components/guides/CustomGuideEditor';
+import {
+  loadCustomPersonality,
+  saveCustomPersonality as saveCustomPersonalityLocal,
+  customPersonalityPayload,
+} from '../utils/customGuidePersonality';
+import type {
+  CustomGuideSlot,
+  CustomGuidePersonality,
+} from '../utils/customGuidePersonality';
 import BirthdayPicker from '../components/guides/BirthdayPicker';
 import GuideCard from '../components/guides/GuideCard';
 import ChatHeader from '../components/guides/ChatHeader';
@@ -80,6 +91,15 @@ export default function SpiritGuides() {
   const [renameModal, setRenameModal] = useState<null | 'male' | 'female'>(null);
   const [renameInput, setRenameInput] = useState<string>('');
   const [renameSaving, setRenameSaving] = useState<boolean>(false);
+  // Custom-guide personalities, built from scratch per slot (2026-11-04).
+  // Stored locally (AsyncStorage); sent with every custom-guide chat
+  // request as `custom_personality` (see backend/routes/spirit_guides.py).
+  const [personalityModal, setPersonalityModal] = useState<null | 'male' | 'female'>(null);
+  const [personalitySaving, setPersonalitySaving] = useState<boolean>(false);
+  const [customPersonalities, setCustomPersonalities] = useState<{
+    male: CustomGuidePersonality | null;
+    female: CustomGuidePersonality | null;
+  }>({ male: null, female: null });
   const [divinePairMode, setDivinePairMode] = useState<boolean>(false);
 
   // Per-guide familiarity (message_count + tier_label + tier_symbol). Loaded
@@ -133,36 +153,22 @@ export default function SpiritGuides() {
   const bgScale = bgPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
   const bgOpacity = bgPulse.interpolate({ inputRange: [0, 1], outputRange: [0.22, 0.42] });
 
-  // ── Chat-background video ─────────────────────────────────────────────
-  // Elemental guides carry a looping animation video; it replaces the static
-  // portrait as the dimmed chat backdrop. Guides without a video fall back
-  // to the breathing image below.
-  const guideVideoSource = selectedGuide?.video ?? null;
-  const bgPlayer = useVideoPlayer(guideVideoSource, (player) => {
-    player.loop = true;
-    player.muted = true;
-    if (guideVideoSource) player.play();
-  });
-  const prevVideoRef = useRef(guideVideoSource);
-  useEffect(() => {
-    if (prevVideoRef.current !== guideVideoSource) {
-      prevVideoRef.current = guideVideoSource;
-      if (guideVideoSource) {
-        bgPlayer.replace(guideVideoSource);
-        bgPlayer.loop = true;
-        bgPlayer.muted = true;
-        bgPlayer.play();
-      } else {
-        bgPlayer.pause();
-      }
-    }
-  }, [guideVideoSource, bgPlayer]);
+  // ── Chat-background picture (2026-11-04) ─────────────────────────────
+  // The selected guide's NEW picture is always the chat background — the
+  // looping guide video no longer replaces it. Guide videos stay in
+  // guides.ts (video field) for future preview use, but never override
+  // this picture background. In divinePairMode the background is the
+  // selected holding-hands Helios & Selene picture.
+  const chatBgImage = divinePairMode
+    ? DIVINE_PAIR_IMAGE
+    : selectedGuide?.image ?? null;
 
   useEffect(() => {
     if (hasAccess) {
       checkBirthdayStored();
       setupAudioMode();
       loadCustomGuideInfo();
+      loadCustomPersonalities();
       loadFamiliarity();
     }
   }, [hasAccess, previewAsFree]);
@@ -297,6 +303,95 @@ export default function SpiritGuides() {
       Alert.alert('Couldn’t save', 'Please try again in a moment.');
     } finally {
       setRenameSaving(false);
+    }
+  };
+
+
+  const loadCustomPersonalities = async () => {
+    const [male, female] = await Promise.all([
+      loadCustomPersonality('male'),
+      loadCustomPersonality('female'),
+    ]);
+    setCustomPersonalities({ male, female });
+  };
+
+  const openPersonalityEditor = (slot: 'male' | 'female') => {
+    if (!customUnlocked) {
+      setShowPaywall(true);
+      return;
+    }
+    setPersonalityModal(slot);
+  };
+
+  const slotForGuide = (guide: Guide): CustomGuideSlot | null => {
+    if (guide.custom_slot === 'male' || guide.custom_slot === 'female') return guide.custom_slot;
+    if (guide.category !== 'custom') return null;
+    return guide.gender === 'feminine' ? 'female' : 'male';
+  };
+
+  // Save from CustomGuideEditor. Name (if changed) goes through the same
+  // /custom-names endpoint as RenameModal, so rename is not bypassed or
+  // broken; personality itself is saved locally (see utils/customGuidePersonality).
+  const saveCustomPersonality = async (draft: CustomGuideEditorDraft) => {
+    if (!personalityModal) return;
+    const slot = personalityModal;
+    if (!draft.name) {
+      Alert.alert('Name required', 'Give your guide a name, or cancel.');
+      return;
+    }
+    setPersonalitySaving(true);
+    try {
+      const currentName = slot === 'male' ? customNames.male : customNames.female;
+      if (draft.name !== currentName) {
+        const token = await AsyncStorage.getItem('session_token');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const body: any = {};
+        if (slot === 'male') {
+          body.male_name = draft.name;
+          body.female_name = customNames.female;
+        } else {
+          body.male_name = customNames.male;
+          body.female_name = draft.name;
+        }
+        const res = await fetch(`${BACKEND_URL}/api/spirit-guides/custom-names`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) {
+          Alert.alert('Sign in required', 'Please sign in to customize your guides.');
+          setPersonalityModal(null);
+          return;
+        }
+        if (res.status === 403) {
+          setPersonalityModal(null);
+          setShowPaywall(true);
+          return;
+        }
+        if (!res.ok) throw new Error('name save failed');
+        const data = await res.json();
+        setCustomNames({
+          male: data.male_name || 'Male Guide',
+          female: data.female_name || 'Female Guide',
+        });
+      }
+      await saveCustomPersonalityLocal(slot, draft.personality);
+      setCustomPersonalities((prev) => ({
+        ...prev,
+        [slot]:
+          !draft.personality.description.trim() &&
+          !draft.personality.tone.trim() &&
+          !draft.personality.about.trim()
+            ? null
+            : draft.personality,
+      }));
+      setPersonalityModal(null);
+    } catch (e) {
+      console.warn('Personality save failed', e);
+      Alert.alert('Couldn’t save', 'Please try again in a moment.');
+    } finally {
+      setPersonalitySaving(false);
     }
   };
 
@@ -541,6 +636,18 @@ export default function SpiritGuides() {
           language: languageCode,
           voice_id: selectedGuide.voice_id,
           gender: selectedGuide.gender,
+          // Custom guides only: the user-built personality for this slot.
+          // The backend (spirit_guides.py) uses this as the chat system
+          // prompt instead of the generic Male/Female Guide text.
+          custom_personality:
+            selectedGuide.category === 'custom'
+              ? customPersonalityPayload(
+                  (() => {
+                    const slot = slotForGuide(selectedGuide);
+                    return slot ? customPersonalities[slot] : null;
+                  })(),
+                )
+              : null,
         }),
       });
       const data = await response.json();
@@ -796,7 +903,7 @@ export default function SpiritGuides() {
             </View>
             <Text style={styles.sectionSub}>
               {customUnlocked
-                ? 'Tap the pencil to give your guide a name'
+                ? 'Tap the pencil to name your guide, or the sliders to build its personality from scratch'
                 : 'Personal companions — name them, befriend them, walk with them'}
             </Text>
             {customGuides.map((guide) => (
@@ -810,16 +917,34 @@ export default function SpiritGuides() {
                 familiarityLabel={famFor(guide.name).label}
                 onPress={() => selectGuide(guide)}
                 extraOverlay={
-                  <TouchableOpacity
-                    style={styles.renameButton}
-                    onPress={(e) => {
-                      e?.stopPropagation?.();
-                      openRenameModal(guide.custom_slot as 'male' | 'female');
-                    }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Ionicons name="pencil" size={14} color="#fbbf24" />
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      style={styles.renameButton}
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        openRenameModal(guide.custom_slot as 'male' | 'female');
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityLabel="Rename guide"
+                    >
+                      <Ionicons name="pencil" size={14} color="#fbbf24" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.renameButton}
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        openPersonalityEditor(guide.custom_slot as 'male' | 'female');
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityLabel={
+                        customPersonalities[guide.custom_slot as 'male' | 'female']
+                          ? 'Edit guide personality'
+                          : 'Create guide personality'
+                      }
+                    >
+                      <Ionicons name="sliders-horizontal" size={14} color="#fbbf24" />
+                    </TouchableOpacity>
+                  </View>
                 }
               />
             ))}
@@ -899,6 +1024,20 @@ export default function SpiritGuides() {
           onClose={() => setRenameModal(null)}
         />
 
+        <CustomGuideEditor
+          visible={personalityModal !== null}
+          slot={personalityModal}
+          initialName={
+            personalityModal === 'male' ? customNames.male : customNames.female
+          }
+          initialPersonality={
+            personalityModal ? customPersonalities[personalityModal] : null
+          }
+          saving={personalitySaving}
+          onSave={saveCustomPersonality}
+          onClose={() => setPersonalityModal(null)}
+        />
+
         <Paywall
           visible={showPaywall}
           onClose={() => setShowPaywall(false)}
@@ -915,10 +1054,11 @@ export default function SpiritGuides() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={100}
     >
-      {/* Guide video (or portrait) as background. Sits behind everything
-          else, gently scales + brightens while the guide is thinking or
-          speaking, and settles to a subtle dim glow when idle. */}
-      {selectedGuide ? (
+      {/* Guide picture as background (2026-11-04). Sits behind everything
+          else, semi-transparent (opacity 0.22 idle → 0.42 while the guide
+          is thinking/talking), gently breathing (scale 1 → 1.08). A dark
+          scrim below keeps message text readable. */}
+      {chatBgImage ? (
         <Animated.View
           pointerEvents="none"
           style={[
@@ -926,20 +1066,11 @@ export default function SpiritGuides() {
             { opacity: bgOpacity, transform: [{ scale: bgScale }] },
           ]}
         >
-          {selectedGuide.video ? (
-            <VideoView
-              player={bgPlayer}
-              style={chatBgStyles.bgImage}
-              contentFit="cover"
-              nativeControls={false}
-            />
-          ) : (
-            <RNImage
-              source={selectedGuide.image}
-              style={chatBgStyles.bgImage}
-              resizeMode="cover"
-            />
-          )}
+          <RNImage
+            source={chatBgImage}
+            style={chatBgStyles.bgImage}
+            resizeMode="cover"
+          />
         </Animated.View>
       ) : null}
       {/* Dark scrim over the portrait so message text stays readable
@@ -960,6 +1091,14 @@ export default function SpiritGuides() {
         }}
         onToggleMute={audio.toggleMute}
         onSaveJournal={saveChatToJournal}
+        onEditPersonality={
+          selectedGuide.category === 'custom' && !divinePairMode
+            ? () => {
+                const slot = slotForGuide(selectedGuide);
+                if (slot) openPersonalityEditor(slot);
+              }
+            : undefined
+        }
         onSwitchGuide={() => {
           setSelectedGuide(null);
           setMessages([]);
@@ -994,6 +1133,9 @@ export default function SpiritGuides() {
               message.role === 'user' ? styles.userMessage : styles.assistantMessage,
             ]}
           >
+            {Platform.OS !== 'web' ? (
+              <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+            ) : null}
             <Text
               style={[
                 styles.messageText,
@@ -1054,12 +1196,18 @@ export default function SpiritGuides() {
 
         {loading && (
           <View style={[styles.messageBubble, styles.assistantMessage]}>
+            {Platform.OS !== 'web' ? (
+              <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+            ) : null}
             <ActivityIndicator size="small" color="#e9d5ff" />
           </View>
         )}
       </ScrollView>
 
       <View style={styles.inputContainer}>
+        {Platform.OS !== 'web' ? (
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+        ) : null}
         <TextInput
           style={styles.input}
           value={inputText}
@@ -1077,6 +1225,23 @@ export default function SpiritGuides() {
           <Ionicons name="send" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      {/* Personality editor is also mounted in chat view, so the header's
+          edit-personality button works mid-conversation (the selection-view
+          mount above is unmounted while chatting). */}
+      <CustomGuideEditor
+        visible={personalityModal !== null}
+        slot={personalityModal}
+        initialName={
+          personalityModal === 'male' ? customNames.male : customNames.female
+        }
+        initialPersonality={
+          personalityModal ? customPersonalities[personalityModal] : null
+        }
+        saving={personalitySaving}
+        onSave={saveCustomPersonality}
+        onClose={() => setPersonalityModal(null)}
+      />
     </KeyboardAvoidingView>
   );
 }

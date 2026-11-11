@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { BackgroundImage } from '../../components/BackgroundImage';
+import { MEDITATION_SET_VIDEOS } from '../../constants/setVideos';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useBottomSafePad } from '../../hooks/useBottomSafePad';
@@ -192,6 +193,8 @@ export default function TimedMeditation() {
       source={require('../../assets/backgrounds/timed-bg.jpg')}
       opacity={0.3}
       overlayColor="rgba(15, 3, 33, 0.7)"
+      videoSource={MEDITATION_SET_VIDEOS.timed.video}
+      credit={MEDITATION_SET_VIDEOS.timed.credit}
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>

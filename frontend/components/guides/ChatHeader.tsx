@@ -11,7 +11,7 @@
 import React from 'react';
 import { Animated, Image, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Guide } from '../../constants/guides';
+import { Guide, DIVINE_PAIR_IMAGE } from '../../constants/guides';
 import { styles } from './styles';
 
 interface ChatHeaderProps {
@@ -28,6 +28,8 @@ interface ChatHeaderProps {
    *  swaps the current guide (replaces the floating "Switch Guide" pill
    *  that used to overlap the header). */
   onSwitchGuide?: () => void;
+  /** Optional — custom guides only: opens the personality editor. */
+  onEditPersonality?: () => void;
 }
 
 export default function ChatHeader({
@@ -41,7 +43,11 @@ export default function ChatHeader({
   onToggleMute,
   onSaveJournal,
   onSwitchGuide,
+  onEditPersonality,
 }: ChatHeaderProps) {
+  // Divine pair mode uses the holding-hands combined picture for the
+  // header avatar too (landscape cover-cropped into the circle).
+  const headerImage = divinePairMode ? DIVINE_PAIR_IMAGE : selectedGuide.image;
   return (
     <View style={styles.chatHeader}>
       <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -82,14 +88,14 @@ export default function ChatHeader({
             ]}
           />
         ) : null}
-        {selectedGuide.image ? (
+        {headerImage ? (
           <View
             style={[
               styles.chatHeaderImageContainer,
               isTalking && { borderColor: selectedGuide.color },
             ]}
           >
-            <Image source={selectedGuide.image} style={styles.chatHeaderImage} resizeMode="cover" />
+            <Image source={headerImage} style={styles.chatHeaderImage} resizeMode="cover" />
           </View>
         ) : (
           <View style={[styles.chatHeaderIcon, { backgroundColor: selectedGuide.color }]}>
@@ -112,6 +118,15 @@ export default function ChatHeader({
       </View>
 
       <View style={styles.chatHeaderRight}>
+        {onEditPersonality ? (
+          <TouchableOpacity
+            style={styles.saveJournalButton}
+            onPress={onEditPersonality}
+            accessibilityLabel="Edit guide personality"
+          >
+            <Ionicons name="sliders-horizontal" size={18} color="#fbbf24" />
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity style={styles.saveJournalButton} onPress={onSaveJournal}>
           <Ionicons name="book" size={18} color="#10b981" />
         </TouchableOpacity>

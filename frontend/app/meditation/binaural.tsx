@@ -17,6 +17,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import SubscriptionOnlyBanner from '../../components/SubscriptionOnlyBanner';
 import { Paywall } from '../../components/Paywall';
 import { AudioPlayerManager, setupAudioMode } from '../../utils/audioPlayer';
+import SetVideoBackground from '../../components/SetVideoBackground';
+import { MEDITATION_SET_VIDEOS } from '../../constants/setVideos';
 import AmbientMusicMixer from '../../components/AmbientMusicMixer';
 import LightTherapyController from '../../components/LightTherapyController';
 
@@ -411,6 +413,12 @@ export default function BinauralMeditation() {
 
   return (
     <View style={styles.container}>
+      {/* Set video background (native only; static dark background on web).
+          Rendered first so header + list sit above it. */}
+      <SetVideoBackground video={MEDITATION_SET_VIDEOS.binaural.video} opacity={0.55} />
+      <Text style={styles.videoCredit} pointerEvents="none">
+        {MEDITATION_SET_VIDEOS.binaural.credit}
+      </Text>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push('/meditation')} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#e9d5ff" />
@@ -540,6 +548,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f0321',
+  },
+  videoCredit: {
+    position: 'absolute',
+    bottom: 6,
+    right: 10,
+    zIndex: 2,
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 9,
+    fontStyle: 'italic',
+    letterSpacing: 0.3,
   },
   centerContent: {
     justifyContent: 'center',

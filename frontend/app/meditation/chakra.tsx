@@ -12,6 +12,7 @@ import {
   Easing,
 } from 'react-native';
 import { BackgroundImage } from '../../components/BackgroundImage';
+import { MEDITATION_SET_VIDEOS } from '../../constants/setVideos';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useBottomSafePad } from '../../hooks/useBottomSafePad';
@@ -411,6 +412,8 @@ export default function ChakraMeditation() {
       source={require('../../assets/backgrounds/chakra-bg.png')}
       opacity={0.3}
       overlayColor="rgba(15, 3, 33, 0.7)"
+      videoSource={MEDITATION_SET_VIDEOS.chakra.video}
+      credit={MEDITATION_SET_VIDEOS.chakra.credit}
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>

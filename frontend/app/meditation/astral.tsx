@@ -10,6 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { BackgroundImage } from '../../components/BackgroundImage';
+import { MEDITATION_SET_VIDEOS } from '../../constants/setVideos';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useBottomSafePad } from '../../hooks/useBottomSafePad';
@@ -356,6 +357,8 @@ export default function AstralTravel() {
       source={require('../../assets/backgrounds/astral-bg.jpg')}
       opacity={0.3}
       overlayColor="rgba(15, 3, 33, 0.7)"
+      videoSource={MEDITATION_SET_VIDEOS.astral.video}
+      credit={MEDITATION_SET_VIDEOS.astral.credit}
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push('/meditation')} style={styles.backButton}>

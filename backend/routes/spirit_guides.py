@@ -43,6 +43,17 @@ def _is_pride_month_now() -> bool:
 
 
 # Models
+class CustomPersonality(BaseModel):
+    # User-built, from scratch, per custom-guide slot (frontend, 2026-11-04).
+    # Free text only — no preset list. Stored locally on the device by the
+    # frontend (AsyncStorage); sent with each chat request so the server
+    # prompt actually uses it. Backend storage (users doc) is NOT added
+    # in this pass — see module note in frontend/utils/customGuidePersonality.ts.
+    description: Optional[str] = None
+    tone: Optional[str] = None
+    about: Optional[str] = None
+
+
 class SpiritGuideMessage(BaseModel):
     guide: str
     element: str
@@ -51,6 +62,7 @@ class SpiritGuideMessage(BaseModel):
     language: str = "en"
     voice_id: Optional[str] = None  # Frontend may pass a voice hint (used when guide is a renamed Custom Guide)
     gender: Optional[str] = None    # Frontend may pass gender hint for renamed Custom Guides ("masculine"/"feminine")
+    custom_personality: Optional[CustomPersonality] = None  # Custom guides only
 
 
 class SpiritGuideResponse(BaseModel):
@@ -146,6 +158,28 @@ async def chat_with_spirit_guide(message: SpiritGuideMessage, request: Request):
                 system_message = GUIDE_PERSONALITIES["Female Guide"]
         if not system_message:
             system_message = GUIDE_PERSONALITIES["Aether"]
+
+    # User-built custom personality (2026-11-04): for custom guides only,
+    # this REPLACES the generic Male/Female Guide personality, so the
+    # personality the user wrote from scratch is what the chat answers as
+    # — not a saved-and-ignored field. Fields are capped to keep prompts sane.
+    if message.custom_personality and (category == "custom" or message.element == "Custom"):
+        cp = message.custom_personality
+        parts = []
+        desc = (cp.description or "").strip()[:1000]
+        tone = (cp.tone or "").strip()[:200]
+        about = (cp.about or "").strip()[:2000]
+        if desc:
+            parts.append(f"Personality and traits: {desc}")
+        if tone:
+            parts.append(f"Tone and style: {tone}")
+        if about:
+            parts.append(f"What you are like: {about}")
+        if parts:
+            system_message = (
+                "You are a personal spirit guide, created from scratch by the seeker. "
+                + " ".join(parts)
+            )
 
     # Use the actual guide name (possibly custom-renamed) in the prompt
     display_name = message.guide

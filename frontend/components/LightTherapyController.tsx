@@ -50,6 +50,16 @@ interface Props {
   autoFrequencyHz?: number;
   /** BPM of the currently playing music track (drives Beat-sync mode). */
   musicBpm?: number | null;
+  /**
+   * Optional cap on the actual torch/overlay pulse rate, in Hz. When set,
+   * the effective pulse rate is clamped to this value in every mode, so a
+   * session-matched light stays a gentle pulse even if the selected
+   * frequency preset (e.g. Beta 20 Hz / Gamma 40 Hz) would otherwise
+   * strobe rapidly. The preset still selects the hue; only the rate is
+   * capped. Reprogramming sessions pass 2. Other uses leave it unset and
+   * keep their existing behaviour.
+   */
+  maxPulseHz?: number | null;
 }
 
 type PulseMode = 'frequency' | 'beat' | 'random';
@@ -88,6 +98,7 @@ export default function LightTherapyController({
   accentColor = '#fbbf24',
   autoFrequencyHz,
   musicBpm,
+  maxPulseHz = null,
 }: Props) {
   const [enabled, setEnabled] = useState(false);
   const [freq, setFreq] = useState<PresetFreq>(matchPreset(autoFrequencyHz));
@@ -153,8 +164,14 @@ export default function LightTherapyController({
       ? randomActiveMode
       : (mode as 'frequency' | 'beat');
   const canBeat = beatHz != null;
-  const activeHz =
+  const rawActiveHz =
     effectiveMode === 'beat' && canBeat ? (beatHz as number) : freq.hz;
+  // Gentle-pulse cap (reprogramming sessions): never pulse faster than
+  // maxPulseHz, in any mode. Beat-sync pulses (BPM/60 = 1.0–1.8 Hz for the
+  // session beds) already pass; frequency presets above the cap are
+  // clamped, keeping their hue but not their strobe rate.
+  const activeHz =
+    maxPulseHz && maxPulseHz > 0 ? Math.min(rawActiveHz, maxPulseHz) : rawActiveHz;
 
   const startPulsing = useCallback(() => {
     stopPulsing();

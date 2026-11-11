@@ -171,8 +171,16 @@ interface Props {
   theme?: ReprogrammingTheme;
   /** Optional additional custom affirmations to intersperse. */
   extraSubliminals?: string[];
-  /** Optional royalty-free video URL that loops behind the subliminals. */
-  videoUri?: string | null;
+  /**
+   * Optional royalty-free video that loops behind the subliminals.
+   * A string URL = dynamic/fetch video; a number = a bundled set-video
+   * asset (require result). When a set video is given it WINS: the
+   * dynamic theme fetch below is skipped entirely, and only runs as a
+   * fallback when no set video is provided (unknown session id).
+   */
+  videoUri?: string | number | null;
+  /** Creator credit for a bundled set video, e.g. "Video: Gylfi via Pixabay". */
+  videoCredit?: string | null;
   /**
    * BPM of the current session bed. When provided, the mandala glow-pulse
    * and subliminal flash cadence lock to the audio's tempo so the whole
@@ -187,6 +195,7 @@ export default function ReprogrammingVisuals({
   theme = 'default',
   extraSubliminals,
   videoUri = null,
+  videoCredit = null,
   audioBpm = null,
 }: Props) {
   const th = THEMES[theme] || THEMES.default;
@@ -281,9 +290,10 @@ export default function ReprogrammingVisuals({
             audioBpm={audioBpm}
           />
 
-          {/* Attribution — bottom-right, tiny */}
-          {attribution ? (
-            <Text style={styles.attribution}>{attribution}</Text>
+          {/* Attribution — bottom-right, tiny. Set-video credit wins
+              over the dynamic-fetch attribution when both exist. */}
+          {videoCredit || attribution ? (
+            <Text style={styles.attribution}>{videoCredit || attribution}</Text>
           ) : null}
         </View>
       ) : null}
@@ -434,8 +444,8 @@ function SubliminalTextFlash({
 // VideoLoop — plays a muted, looping royalty-free video underneath the
 // mandala. Wired up but only used when a URL is provided.
 // ───────────────────────────────────────────────────────────────────────
-function VideoLoop({ uri }: { uri: string }) {
-  const player = useVideoPlayer(uri, (p) => {
+function VideoLoop({ uri }: { uri: string | number }) {
+  const player = useVideoPlayer(uri as any, (p) => {
     p.loop = true;
     p.muted = true;
     p.play();
